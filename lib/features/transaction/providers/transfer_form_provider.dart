@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/transfer.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../home/providers/home_providers.dart';
+import '../widgets/custom_numeric_keypad.dart';
 
 class TransferFormState {
   final int? fromAccountId;
@@ -114,25 +115,15 @@ class TransferFormNotifier extends StateNotifier<TransferFormState> {
   }
 
   void appendKey(String key) {
-    String current = state.rawAmount;
-    if (current == '0') {
-      if (key == '000' || key == '0') return;
-      current = key;
-    } else {
-      if (current.length >= 10) return;
-      current = current + key;
-    }
-    state = state.copyWith(rawAmount: current);
+    final next = CustomNumericKeypad.applyKey(state.rawAmount, key);
+    if (next == state.rawAmount) return;
+    state = state.copyWith(rawAmount: next);
   }
 
   void backspace() {
-    String current = state.rawAmount;
-    if (current.length <= 1) {
-      current = '0';
-    } else {
-      current = current.substring(0, current.length - 1);
-    }
-    state = state.copyWith(rawAmount: current);
+    state = state.copyWith(
+      rawAmount: CustomNumericKeypad.applyBackspace(state.rawAmount),
+    );
   }
 
   void clearAmount() {
@@ -189,7 +180,14 @@ class TransferFormNotifier extends StateNotifier<TransferFormState> {
       // Trigger refresh saldo di seluruh aplikasi
       ref.read(homeRefreshTriggerProvider.notifier).state++;
       if (mounted) {
-        state = state.copyWith(isSubmitting: false);
+        state = TransferFormState(
+          fromAccountId: state.fromAccountId,
+          toAccountId: state.toAccountId,
+          rawAmount: '0',
+          note: '',
+          date: DateTime.now(),
+          isSubmitting: false,
+        );
       }
       return true;
     } catch (e) {

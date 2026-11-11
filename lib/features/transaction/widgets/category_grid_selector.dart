@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_typography.dart';
+import '../../../../core/utils/color_helper.dart';
 import '../../../../core/utils/icon_helper.dart';
 import '../../../../data/models/category.dart';
 
@@ -39,7 +40,7 @@ class CategoryGridSelector extends StatelessWidget {
             itemBuilder: (context, index) {
               final cat = categories[index];
               final isSelected = cat.id == selectedCategoryId;
-              final color = Color(int.parse(cat.colorHex));
+              final color = ColorHelper.parseHex(cat.colorHex);
               final icon = IconHelper.getIcon(cat.iconCodePoint);
 
               return InkWell(
@@ -89,7 +90,7 @@ class CategoryGridSelector extends StatelessWidget {
                           fontSize: 11,
                           fontWeight:
                               isSelected ? FontWeight.bold : FontWeight.w500,
-                          color: isSelected ? color : AppColors.textPrimary,
+                          color: isSelected ? color : AppColors.textPrimaryOf(context),
                         ),
                       ),
                     ],

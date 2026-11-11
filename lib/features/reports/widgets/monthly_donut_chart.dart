@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_typography.dart';
+import '../../../../core/utils/color_helper.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../data/repositories/report_repository.dart';
 import '../providers/report_providers.dart';
@@ -28,9 +29,9 @@ class MonthlyDonutChart extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -38,13 +39,18 @@ class MonthlyDonutChart extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Komposisi Pengeluaran',
-                style: AppTypography.titleMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+              Expanded(
+                child: Text(
+                  'Komposisi Pengeluaran',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.titleMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
                 '${categoryExpenses.length} Kategori',
                 style: AppTypography.labelSmall,
@@ -85,7 +91,7 @@ class MonthlyDonutChart extends ConsumerWidget {
                   ),
                 ),
                 // Teks di tengah Donut
-                _buildCenterInfo(touchedIndex),
+                _buildCenterInfo(context, touchedIndex),
               ],
             ),
           ),
@@ -99,7 +105,7 @@ class MonthlyDonutChart extends ConsumerWidget {
       final item = categoryExpenses[i];
       final isTouched = i == touchedIndex;
       final radius = isTouched ? 42.0 : 34.0;
-      final color = Color(int.parse(item.colorHex));
+      final color = ColorHelper.parseHex(item.colorHex);
 
       return PieChartSectionData(
         color: color,
@@ -115,12 +121,12 @@ class MonthlyDonutChart extends ConsumerWidget {
     });
   }
 
-  Widget _buildCenterInfo(int? touchedIndex) {
+  Widget _buildCenterInfo(BuildContext context, int? touchedIndex) {
     if (touchedIndex != null &&
         touchedIndex >= 0 &&
         touchedIndex < categoryExpenses.length) {
       final touchedItem = categoryExpenses[touchedIndex];
-      final color = Color(int.parse(touchedItem.colorHex));
+      final color = ColorHelper.parseHex(touchedItem.colorHex);
 
       return Column(
         mainAxisSize: MainAxisSize.min,
@@ -146,7 +152,7 @@ class MonthlyDonutChart extends ConsumerWidget {
           Text(
             '${touchedItem.percentage.toStringAsFixed(1)}%',
             style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.textSecondaryOf(context),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -159,7 +165,10 @@ class MonthlyDonutChart extends ConsumerWidget {
       children: [
         Text(
           'Total Keluar',
-          style: AppTypography.labelSmall.copyWith(fontSize: 11),
+          style: AppTypography.labelSmall.copyWith(
+            fontSize: 11,
+            color: AppColors.textSecondaryOf(context),
+          ),
         ),
         const SizedBox(height: 2),
         Text(

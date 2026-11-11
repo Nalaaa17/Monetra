@@ -3,6 +3,7 @@ import '../../../data/models/category.dart';
 import '../../../data/models/transaction.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../home/providers/home_providers.dart';
+import '../widgets/custom_numeric_keypad.dart';
 
 class TransactionFormState {
   final String type; // 'expense' | 'income'
@@ -34,6 +35,7 @@ class TransactionFormState {
     String? rawAmount,
     int? selectedAccountId,
     int? selectedCategoryId,
+    bool clearCategory = false,
     String? note,
     DateTime? date,
     bool? isSubmitting,
@@ -43,7 +45,8 @@ class TransactionFormState {
       type: type ?? this.type,
       rawAmount: rawAmount ?? this.rawAmount,
       selectedAccountId: selectedAccountId ?? this.selectedAccountId,
-      selectedCategoryId: selectedCategoryId ?? this.selectedCategoryId,
+      selectedCategoryId:
+          clearCategory ? null : (selectedCategoryId ?? this.selectedCategoryId),
       note: note ?? this.note,
       date: date ?? this.date,
       isSubmitting: isSubmitting ?? this.isSubmitting,
@@ -54,6 +57,7 @@ class TransactionFormState {
 
 final categoriesByTypeProvider =
     FutureProvider.family<List<Category>, String>((ref, type) async {
+  ref.watch(homeRefreshTriggerProvider);
   final repo = ref.watch(categoryRepositoryProvider);
   return await repo.getAllCategories(type: type);
 });
@@ -66,6 +70,7 @@ final transactionFormNotifierProvider =
 
 class TransactionFormNotifier extends StateNotifier<TransactionFormState> {
   final Ref ref;
+  int _categoryRequestToken = 0;
 
   TransactionFormNotifier(this.ref)
       : super(TransactionFormState(date: DateTime.now())) {
@@ -73,11 +78,14 @@ class TransactionFormNotifier extends StateNotifier<TransactionFormState> {
   }
 
   void _initDefaults() async {
+    final requestedType = state.type;
+    final token = ++_categoryRequestToken;
+
     final accountRepo = ref.read(accountRepositoryProvider);
     final accounts = await accountRepo.getAllAccounts();
     if (!mounted) return;
 
-    if (accounts.isNotEmpty) {
+    if (accounts.isNotEmpty && state.selectedAccountId == null) {
       // Default ke Mandiri atau Cash (operasional harian) jika ada
       final defaultAcc = accounts.firstWhere(
         (a) =>
@@ -88,10 +96,14 @@ class TransactionFormNotifier extends StateNotifier<TransactionFormState> {
       state = state.copyWith(selectedAccountId: defaultAcc.id);
     }
 
-    // Default category pertama untuk expense
+    // Default category pertama untuk tipe awal (abaikan jika tipe sudah berubah)
     final categoryRepo = ref.read(categoryRepositoryProvider);
-    final categories = await categoryRepo.getAllCategories(type: state.type);
-    if (!mounted) return;
+    final categories = await categoryRepo.getAllCategories(type: requestedType);
+    if (!mounted ||
+        state.type != requestedType ||
+        token != _categoryRequestToken) {
+      return;
+    }
 
     if (categories.isNotEmpty) {
       state = state.copyWith(selectedCategoryId: categories.first.id);
@@ -99,25 +111,15 @@ class TransactionFormNotifier extends StateNotifier<TransactionFormState> {
   }
 
   void appendKey(String key) {
-    String current = state.rawAmount;
-    if (current == '0') {
-      if (key == '000' || key == '0') return;
-      current = key;
-    } else {
-      if (current.length >= 10) return; // Maksimal 9.999.999.999
-      current = current + key;
-    }
-    state = state.copyWith(rawAmount: current);
+    final next = CustomNumericKeypad.applyKey(state.rawAmount, key);
+    if (next == state.rawAmount) return;
+    state = state.copyWith(rawAmount: next);
   }
 
   void backspace() {
-    String current = state.rawAmount;
-    if (current.length <= 1) {
-      current = '0';
-    } else {
-      current = current.substring(0, current.length - 1);
-    }
-    state = state.copyWith(rawAmount: current);
+    state = state.copyWith(
+      rawAmount: CustomNumericKeypad.applyBackspace(state.rawAmount),
+    );
   }
 
   void clearAmount() {
@@ -126,11 +128,16 @@ class TransactionFormNotifier extends StateNotifier<TransactionFormState> {
 
   void setType(String newType) async {
     if (state.type == newType) return;
-    state = state.copyWith(type: newType, selectedCategoryId: null);
+    final token = ++_categoryRequestToken;
+    state = state.copyWith(type: newType, clearCategory: true);
 
     final categoryRepo = ref.read(categoryRepositoryProvider);
     final categories = await categoryRepo.getAllCategories(type: newType);
-    if (!mounted) return;
+    if (!mounted ||
+        state.type != newType ||
+        token != _categoryRequestToken) {
+      return;
+    }
 
     if (categories.isNotEmpty) {
       state = state.copyWith(selectedCategoryId: categories.first.id);
@@ -195,7 +202,16 @@ class TransactionFormNotifier extends StateNotifier<TransactionFormState> {
       // Trigger pembaruan saldo di Home & History
       ref.read(homeRefreshTriggerProvider.notifier).state++;
       if (mounted) {
-        state = state.copyWith(isSubmitting: false);
+        // Reset state form bersih agar tidak ada sisa nominal/catatan saat layar ditutup
+        state = TransactionFormState(
+          type: state.type,
+          rawAmount: '0',
+          selectedAccountId: state.selectedAccountId,
+          selectedCategoryId: state.selectedCategoryId,
+          note: '',
+          date: DateTime.now(),
+          isSubmitting: false,
+        );
       }
       return true;
     } catch (e) {

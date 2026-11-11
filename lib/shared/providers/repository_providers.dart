@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/account_repository.dart';
 import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/goal_repository.dart';
+import '../../data/repositories/recurring_transaction_repository.dart';
 import '../../data/repositories/report_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/transfer_repository.dart';
@@ -28,4 +29,9 @@ final reportRepositoryProvider = Provider<ReportRepository>((ref) {
 
 final goalRepositoryProvider = Provider<GoalRepository>((ref) {
   return GoalRepository();
+});
+
+final recurringTransactionRepositoryProvider =
+    Provider<RecurringTransactionRepository>((ref) {
+  return RecurringTransactionRepository();
 });

@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/bank_logo_helper.dart';
+import '../../../core/utils/color_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/icon_helper.dart';
-import '../../../data/models/account.dart';
 import '../../../data/repositories/account_repository.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../home/providers/home_providers.dart';
+import '../widgets/account_form_modal.dart';
 
 class ManageAccountsScreen extends ConsumerWidget {
   const ManageAccountsScreen({super.key});
@@ -15,6 +16,7 @@ class ManageAccountsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accountsAsync = ref.watch(accountsWithBalanceProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -26,32 +28,106 @@ class ManageAccountsScreen extends ConsumerWidget {
       ),
       body: accountsAsync.when(
         data: (accounts) {
-          return ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          return Column(
             children: [
-              Text(
-                'Daftar Akun Aktif',
-                style: AppTypography.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              ...accounts.map((acc) => _buildAccountItem(context, ref, acc)),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton.icon(
-                  onPressed: () => _showAddAccountDialog(context, ref),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 16),
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          Text(
+                            'Daftar Akun (${accounts.length})',
+                            style: AppTypography.titleLarge,
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary
+                                  .withValues(alpha: isDark ? 0.2 : 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Tap label untuk ubah kelompok',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark
+                                    ? AppColors.primary
+                                    : AppColors.primaryDark,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text(
-                    'Tambah Dompet / Rekening Baru',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    const SizedBox(height: 12),
+                    if (accounts.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardColor,
+                          borderRadius: BorderRadius.circular(16),
+                          border:
+                              Border.all(color: Theme.of(context).dividerColor),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'Belum ada akun terdaftar. Tambahkan dompet atau rekening pertama Anda.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      )
+                    else
+                      ...accounts
+                          .map((acc) => _buildAccountItem(context, ref, acc)),
+                  ],
+                ),
+              ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () => showAccountFormModal(context, ref),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_rounded),
+                          SizedBox(width: 8),
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'Tambah Dompet / Rekening Baru',
+                                maxLines: 1,
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -69,55 +145,197 @@ class ManageAccountsScreen extends ConsumerWidget {
     WidgetRef ref,
     AccountWithBalance item,
   ) {
-    final color = Color(int.parse(item.colorHex));
-    final icon = IconHelper.getIcon(item.iconCodePoint);
+    final color = ColorHelper.parseHex(item.colorHex);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSavings = item.account.category == 'tabungan';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withValues(alpha: isDark ? 0.4 : 0.25)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            backgroundColor: color.withValues(alpha: 0.15),
-            radius: 22,
-            child: Icon(icon, color: color, size: 22),
+          Row(
+            children: [
+              BankLogoHelper.buildAccountBadge(
+                context: context,
+                accountName: item.name,
+                accountColor: color,
+                logoKey: item.logoKey,
+                iconCodePoint: item.iconCodePoint,
+                size: 42,
+                iconSize: 22,
+                borderRadius: 12,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: isDark ? 0.25 : 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        item.type.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 118),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      item.allocatedInGoals > 0 ? 'Saldo Bebas' : 'Saldo',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.labelSmall,
+                    ),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        CurrencyFormatter.format(item.balance),
+                        style: AppTypography.titleMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    if (item.allocatedInGoals > 0)
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          'Target: ${CurrencyFormatter.format(item.allocatedInGoals)}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? const Color(0xFFFBBF24)
+                                : const Color(0xFFD97706),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  style: AppTypography.titleMedium.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () => _toggleAccountCategory(context, ref, item),
+            borderRadius: BorderRadius.circular(6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: isSavings
+                    ? const Color(0xFF059669)
+                        .withValues(alpha: isDark ? 0.25 : 0.15)
+                    : const Color(0xFF0284C7)
+                        .withValues(alpha: isDark ? 0.25 : 0.15),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: isSavings
+                      ? const Color(0xFF059669).withValues(alpha: 0.4)
+                      : const Color(0xFF0284C7).withValues(alpha: 0.4),
+                  width: 0.8,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  item.type.toUpperCase(),
-                  style: AppTypography.labelSmall.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.bold,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSavings ? Icons.savings_rounded : Icons.bolt_rounded,
+                    size: 12,
+                    color: isSavings
+                        ? const Color(0xFF059669)
+                        : const Color(0xFF0284C7),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      isSavings ? 'Tabungan' : 'Uang Harian',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: isSavings
+                            ? (isDark
+                                ? const Color(0xFF34D399)
+                                : const Color(0xFF059669))
+                            : (isDark
+                                ? const Color(0xFF38BDF8)
+                                : const Color(0xFF0284C7)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.sync_rounded,
+                    size: 11,
+                    color: isSavings
+                        ? const Color(0xFF059669)
+                        : const Color(0xFF0284C7),
+                  ),
+                ],
+              ),
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          const SizedBox(height: 8),
+          Divider(height: 1, color: Theme.of(context).dividerColor),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Text('Saldo', style: AppTypography.labelSmall),
-              Text(
-                CurrencyFormatter.format(item.balance),
-                style: AppTypography.titleMedium.copyWith(
-                  fontWeight: FontWeight.bold,
+              TextButton.icon(
+                onPressed: () =>
+                    showAccountFormModal(context, ref, existing: item),
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                label: const Text('Edit', style: TextStyle(fontSize: 12)),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondaryOf(context),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+              const SizedBox(width: 4),
+              TextButton.icon(
+                onPressed: () => _confirmDeleteAccount(context, ref, item),
+                icon: const Icon(Icons.delete_outline_rounded,
+                    size: 16, color: AppColors.danger),
+                label: const Text('Hapus',
+                    style: TextStyle(fontSize: 12, color: AppColors.danger)),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.danger,
+                  visualDensity: VisualDensity.compact,
                 ),
               ),
             ],
@@ -127,139 +345,92 @@ class ManageAccountsScreen extends ConsumerWidget {
     );
   }
 
-  void _showAddAccountDialog(BuildContext context, WidgetRef ref) {
-    final nameController = TextEditingController();
-    final balanceController = TextEditingController(text: '0');
-    String selectedType = 'bank';
-    String selectedColor = '0xFF0284C7'; // Blue
-    int selectedIcon = Icons.account_balance_rounded.codePoint;
+  Future<void> _toggleAccountCategory(
+    BuildContext context,
+    WidgetRef ref,
+    AccountWithBalance item,
+  ) async {
+    final newCategory =
+        item.account.category == 'tabungan' ? 'harian' : 'tabungan';
+    final targetLabel =
+        newCategory == 'tabungan' ? 'Uang Tabungan' : 'Uang Harian';
 
-    final colorOptions = [
-      '0xFF0284C7', // Biru
-      '0xFFF59E0B', // Emas
-      '0xFF10B981', // Hijau
-      '0xFF8B5CF6', // Ungu
-      '0xFFEC4899', // Pink
-      '0xFF6B7280', // Abu
-    ];
+    final repo = ref.read(accountRepositoryProvider);
+    await repo.updateAccountCategory(item.account.id!, newCategory);
+    ref.read(homeRefreshTriggerProvider.notifier).state++;
 
-    showDialog(
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text('Akun "${item.name}" kini dialokasikan ke $targetLabel'),
+          backgroundColor: newCategory == 'tabungan'
+              ? const Color(0xFF059669)
+              : const Color(0xFF0284C7),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteAccount(
+    BuildContext context,
+    WidgetRef ref,
+    AccountWithBalance item,
+  ) async {
+    final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: const Text('Tambah Dompet Baru'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nama Akun / Dompet',
-                    hintText: 'Misal: BCA, GoPay, OVO, Bibit',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: balanceController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Saldo Awal (Rp)',
-                    hintText: '0',
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Text('Tipe Akun:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 6),
-                DropdownButton<String>(
-                  value: selectedType,
-                  isExpanded: true,
-                  items: const [
-                    DropdownMenuItem(value: 'bank', child: Text('Bank (Rekening)')),
-                    DropdownMenuItem(value: 'cash', child: Text('Cash (Tunai)')),
-                    DropdownMenuItem(value: 'ewallet', child: Text('E-Wallet (Dompet Digital)')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() {
-                        selectedType = val;
-                        if (val == 'bank') selectedIcon = Icons.account_balance_rounded.codePoint;
-                        if (val == 'cash') selectedIcon = Icons.payments_rounded.codePoint;
-                        if (val == 'ewallet') selectedIcon = Icons.wallet_rounded.codePoint;
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: 14),
-                const Text('Pilih Warna:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: colorOptions.map((c) {
-                    final color = Color(int.parse(c));
-                    final isSelected = selectedColor == c;
-                    return InkWell(
-                      onTap: () => setState(() => selectedColor = c),
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: color,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isSelected ? Colors.black : Colors.transparent,
-                            width: 2.5,
-                          ),
-                        ),
-                        child: isSelected
-                            ? const Icon(Icons.check, size: 16, color: Colors.white)
-                            : null,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
+      builder: (ctx) => AlertDialog(
+        title: Text('Hapus Akun "${item.name}"?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Apakah Anda yakin ingin menghapus akun ini?',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final name = nameController.text.trim();
-                final initBal =
-                    int.tryParse(balanceController.text.replaceAll('.', '')) ?? 0;
-                if (name.isEmpty) return;
-
-                final repo = ref.read(accountRepositoryProvider);
-                await repo.insertAccount(
-                  Account(
-                    name: name,
-                    type: selectedType,
-                    colorHex: selectedColor,
-                    iconCodePoint: selectedIcon,
-                    initialBalance: initBal,
-                    createdAt: DateTime.now(),
-                  ),
-                );
-
-                ref.read(homeRefreshTriggerProvider.notifier).state++;
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Akun "$name" berhasil ditambahkan!')),
-                  );
-                }
-              },
-              child: const Text('Simpan'),
+            const SizedBox(height: 10),
+            Text(
+              '⚠️ Peringatan: Seluruh riwayat transaksi, jadwal berulang, transfer, dan impian tabungan yang menggunakan akun "${item.name}" akan ikut terhapus secara permanen.',
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.danger,
+                height: 1.4,
+              ),
             ),
           ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Hapus Akun'),
+          ),
+        ],
       ),
     );
+
+    if (confirm == true) {
+      final repo = ref.read(accountRepositoryProvider);
+      await repo.deleteAccount(item.account.id!);
+      ref.read(homeRefreshTriggerProvider.notifier).state++;
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Akun "${item.name}" berhasil dihapus.'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
   }
 }
-

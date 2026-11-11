@@ -1,32 +1,57 @@
 import '../database/app_database.dart';
 import '../models/account.dart';
+import '../models/goal.dart';
+import '../models/transaction.dart';
+import '../services/notification_service.dart';
+
+class BalanceProjectionWarning {
+  final String accountName;
+  final int projectedBalance;
+
+  const BalanceProjectionWarning({
+    required this.accountName,
+    required this.projectedBalance,
+  });
+}
 
 class AccountWithBalance {
   final Account account;
-  final int balance;
+  final int balance; // Saldo bebas / siap pakai (sudah dikurangi alokasi Goal)
+  final int allocatedInGoals; // Dana yang disisihkan di Target/Goal
 
   const AccountWithBalance({
     required this.account,
     required this.balance,
+    this.allocatedInGoals = 0,
   });
 
+  int get physicalBalance => balance + allocatedInGoals;
   int get id => account.id!;
   String get name => account.name;
   String get type => account.type;
   String get colorHex => account.colorHex;
   int get iconCodePoint => account.iconCodePoint;
+  String? get logoKey => account.logoKey;
 }
 
 class BalanceSummary {
-  final int dailySpendingBalance; // Mandiri + Cash (Uang Harian)
-  final int savingsBalance; // Seabank (Tabungan)
-  final int totalNetWorth; // Total Keseluruhan
+  final int dailySpendingBalance; // Saldo bebas Uang Harian
+  final int savingsBalance; // Saldo bebas Tabungan
+  final int totalNetWorth; // Total saldo bebas siap pakai (tidak rancu dengan dana Target)
+  final int allocatedInGoals; // Total dana yang disisihkan di Target
+  final List<String> dailyAccountNames;
+  final List<String> savingsAccountNames;
 
   const BalanceSummary({
     required this.dailySpendingBalance,
     required this.savingsBalance,
     required this.totalNetWorth,
+    this.allocatedInGoals = 0,
+    this.dailyAccountNames = const [],
+    this.savingsAccountNames = const [],
   });
+
+  int get totalPhysicalNetWorth => totalNetWorth + allocatedInGoals;
 }
 
 class AccountRepository {
@@ -99,11 +124,39 @@ class AccountRepository {
     final totalTransferOut =
         (transferOutResult.first['total'] as num?)?.toInt() ?? 0;
 
+    // 6. Sum dana yang disisihkan di Target/Goal (belum direalisasikan)
+    final allocatedInGoals = await calculateGoalAllocatedForAccount(accountId);
+
     return initialBalance +
         totalIncome -
         totalExpense +
         totalTransferIn -
-        totalTransferOut;
+        totalTransferOut -
+        allocatedInGoals;
+  }
+
+  /// Menghitung total dana yang sedang disisihkan di Target dari rekening ini
+  Future<int> calculateGoalAllocatedForAccount(int accountId) async {
+    final db = await AppDatabase.instance;
+    final result = await db.rawQuery('''
+      SELECT COALESCE(SUM(gc.amount), 0) as total
+      FROM goal_contributions gc
+      JOIN goals g ON gc.goalId = g.id
+      WHERE gc.sourceAccountId = ? AND gc.isRealized = 0
+    ''', [accountId]);
+    return (result.first['total'] as num?)?.toInt() ?? 0;
+  }
+
+  /// Menghitung seluruh dana aktif yang terkunci di semua Target
+  Future<int> calculateTotalAllocatedInGoals() async {
+    final db = await AppDatabase.instance;
+    final result = await db.rawQuery('''
+      SELECT COALESCE(SUM(gc.amount), 0) as total
+      FROM goal_contributions gc
+      JOIN goals g ON gc.goalId = g.id
+      WHERE gc.isRealized = 0
+    ''');
+    return (result.first['total'] as num?)?.toInt() ?? 0;
   }
 
   Future<List<AccountWithBalance>> getAllAccountsWithBalances({
@@ -114,34 +167,37 @@ class AccountRepository {
 
     for (final acc in accounts) {
       final balance = await calculateAccountBalance(acc.id!);
-      result.add(AccountWithBalance(account: acc, balance: balance));
+      final allocated = await calculateGoalAllocatedForAccount(acc.id!);
+      result.add(AccountWithBalance(
+        account: acc,
+        balance: balance,
+        allocatedInGoals: allocated,
+      ));
     }
 
     return result;
   }
 
-  /// Perhitungan agregasi PRD §5.3:
-  /// Uang Harian = Mandiri + Cash
-  /// Tabungan = Seabank
-  /// Total = Uang Harian + Tabungan (atau seluruh akun)
   Future<BalanceSummary> getBalanceSummary() async {
     final accountsWithBalance = await getAllAccountsWithBalances();
+    final totalAllocatedInGoals = await calculateTotalAllocatedInGoals();
 
     int dailySpending = 0;
     int savings = 0;
     int total = 0;
+    final List<String> dailyNames = [];
+    final List<String> savingsNames = [];
 
     for (final item in accountsWithBalance) {
       total += item.balance;
-      final nameLower = item.name.toLowerCase();
+      final isSavings = item.account.category == 'tabungan';
 
-      if (nameLower.contains('seabank')) {
+      if (isSavings) {
         savings += item.balance;
-      } else if (nameLower.contains('mandiri') || nameLower.contains('cash')) {
-        dailySpending += item.balance;
+        savingsNames.add(item.name);
       } else {
-        // Jika akun bank lain, kelompokkan ke harian jika operasional
         dailySpending += item.balance;
+        dailyNames.add(item.name);
       }
     }
 
@@ -149,7 +205,97 @@ class AccountRepository {
       dailySpendingBalance: dailySpending,
       savingsBalance: savings,
       totalNetWorth: total,
+      allocatedInGoals: totalAllocatedInGoals,
+      dailyAccountNames: dailyNames,
+      savingsAccountNames: savingsNames,
     );
+  }
+
+  /// Memeriksa apakah perubahan transaksi (edit nominal/tipe/akun)
+  /// menyebabkan saldo akun terkait menjadi minus atau semakin minus.
+  Future<BalanceProjectionWarning?> checkEditTransactionBalanceWarning({
+    required TransactionModel original,
+    required String newType,
+    required int newAmount,
+    required int newAccountId,
+  }) async {
+    final newAcc = await getAccountById(newAccountId);
+    final currentNewBal = await calculateAccountBalance(newAccountId);
+    final newEffect = newType == 'income' ? newAmount : -newAmount;
+    final oldEffect = original.isIncome ? original.amount : -original.amount;
+
+    if (newAccountId == original.accountId) {
+      final projected = currentNewBal - oldEffect + newEffect;
+      if (projected < 0 && (currentNewBal >= 0 || projected < currentNewBal)) {
+        return BalanceProjectionWarning(
+          accountName: newAcc?.name ?? 'Akun ini',
+          projectedBalance: projected,
+        );
+      }
+      return null;
+    }
+
+    final projectedNew = currentNewBal + newEffect;
+    if (projectedNew < 0 &&
+        (currentNewBal >= 0 || projectedNew < currentNewBal)) {
+      return BalanceProjectionWarning(
+        accountName: newAcc?.name ?? 'Akun tujuan',
+        projectedBalance: projectedNew,
+      );
+    }
+
+    final oldAcc = await getAccountById(original.accountId);
+    final currentOldBal = await calculateAccountBalance(original.accountId);
+    final projectedOld = currentOldBal - oldEffect;
+    if (projectedOld < 0 &&
+        (currentOldBal >= 0 || projectedOld < currentOldBal)) {
+      return BalanceProjectionWarning(
+        accountName: oldAcc?.name ?? 'Akun asal',
+        projectedBalance: projectedOld,
+      );
+    }
+
+    return null;
+  }
+
+  /// Memeriksa apakah perubahan transfer menyebabkan salah satu akun terkait
+  /// (termasuk akun tujuan lama saat nominal/akun berubah) menjadi minus.
+  Future<BalanceProjectionWarning?> checkEditTransferBalanceWarning({
+    required int oldFromAccountId,
+    required int oldToAccountId,
+    required int oldAmount,
+    required int newFromAccountId,
+    required int newToAccountId,
+    required int newAmount,
+  }) async {
+    final affectedIds = <int>{
+      oldFromAccountId,
+      oldToAccountId,
+      newFromAccountId,
+      newToAccountId,
+    };
+
+    for (final accId in affectedIds) {
+      int delta = 0;
+      if (accId == oldFromAccountId) delta += oldAmount;
+      if (accId == oldToAccountId) delta -= oldAmount;
+      if (accId == newFromAccountId) delta -= newAmount;
+      if (accId == newToAccountId) delta += newAmount;
+
+      if (delta >= 0) continue;
+
+      final currentBal = await calculateAccountBalance(accId);
+      final projected = currentBal + delta;
+      if (projected < 0 && (currentBal >= 0 || projected < currentBal)) {
+        final acc = await getAccountById(accId);
+        return BalanceProjectionWarning(
+          accountName: acc?.name ?? 'Akun ini',
+          projectedBalance: projected,
+        );
+      }
+    }
+
+    return null;
   }
 
   Future<int> insertAccount(Account account) async {
@@ -165,6 +311,145 @@ class AccountRepository {
       where: 'id = ?',
       whereArgs: [account.id],
     );
+  }
+
+  Future<int> updateAccountCategory(int id, String category) async {
+    final db = await AppDatabase.instance;
+    return await db.update(
+      'accounts',
+      {'category': category},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> deleteAccount(int id) async {
+    final db = await AppDatabase.instance;
+    final List<int> deletedGoalIds = [];
+    final List<Goal> rescheduledOtherGoals = [];
+
+    final deletedRows = await db.transaction((txn) async {
+      // 1. Kumpulkan semua goal yang dimiliki oleh akun ini untuk cancel notifikasinya
+      final ownedGoalRows = await txn.query(
+        'goals',
+        columns: ['id'],
+        where: 'sourceAccountId = ?',
+        whereArgs: [id],
+      );
+      for (final r in ownedGoalRows) {
+        final gid = r['id'] as int?;
+        if (gid != null) deletedGoalIds.add(gid);
+      }
+
+      // 2. Hitung kontribusi aktif (belum realized) dari akun ini pada goal milik akun LAIN
+      final affectedOtherRows = await txn.rawQuery('''
+        SELECT gc.goalId, COALESCE(SUM(gc.amount), 0) as removedLocked
+        FROM goal_contributions gc
+        JOIN goals g ON gc.goalId = g.id
+        WHERE gc.sourceAccountId = ? AND g.sourceAccountId != ? AND gc.isRealized = 0
+        GROUP BY gc.goalId
+      ''', [id, id]);
+
+      // Hapus kontribusi milik goal yang ikut terhapus maupun yang berasal dari akun ini
+      if (deletedGoalIds.isNotEmpty) {
+        final placeholders = List.filled(deletedGoalIds.length, '?').join(',');
+        await txn.delete(
+          'goal_contributions',
+          where: 'goalId IN ($placeholders)',
+          whereArgs: deletedGoalIds,
+        );
+      }
+      await txn.delete(
+        'goal_contributions',
+        where: 'sourceAccountId = ?',
+        whereArgs: [id],
+      );
+
+      // Sinkronkan collectedAmount & status pada goal akun lain yang setorannya terhapus
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      for (final row in affectedOtherRows) {
+        final otherGoalId = row['goalId'] as int;
+        final removedLocked = (row['removedLocked'] as num?)?.toInt() ?? 0;
+        if (removedLocked <= 0) continue;
+
+        final goalMaps = await txn.query(
+          'goals',
+          where: 'id = ?',
+          whereArgs: [otherGoalId],
+          limit: 1,
+        );
+        if (goalMaps.isEmpty) continue;
+
+        final otherGoal = Goal.fromMap(goalMaps.first);
+        final updatedCollected =
+            (otherGoal.collectedAmount - removedLocked).clamp(0, otherGoal.collectedAmount);
+        final deadlineDay = DateTime(
+          otherGoal.deadline.year,
+          otherGoal.deadline.month,
+          otherGoal.deadline.day,
+        );
+        final String updatedStatus;
+        if (updatedCollected >= otherGoal.targetAmount) {
+          updatedStatus = 'done';
+        } else if (deadlineDay.isBefore(today)) {
+          updatedStatus = 'missed';
+        } else {
+          updatedStatus = 'active';
+        }
+
+        await txn.update(
+          'goals',
+          {
+            'collectedAmount': updatedCollected,
+            'status': updatedStatus,
+          },
+          where: 'id = ?',
+          whereArgs: [otherGoalId],
+        );
+
+        rescheduledOtherGoals.add(
+          otherGoal.copyWith(
+            collectedAmount: updatedCollected,
+            status: updatedStatus,
+          ),
+        );
+      }
+
+      // 3. Hapus transaksi, transfer, jadwal berulang, goal milik akun ini, dan akun itu sendiri
+      await txn.delete('transactions', where: 'accountId = ?', whereArgs: [id]);
+      await txn.delete(
+        'transfers',
+        where: 'fromAccountId = ? OR toAccountId = ?',
+        whereArgs: [id, id],
+      );
+      await txn.delete(
+        'recurring_transactions',
+        where: 'accountId = ?',
+        whereArgs: [id],
+      );
+      await txn.delete('goals', where: 'sourceAccountId = ?', whereArgs: [id]);
+      return await txn.delete('accounts', where: 'id = ?', whereArgs: [id]);
+    });
+
+    for (final gid in deletedGoalIds) {
+      await NotificationService.cancelGoalReminder(gid);
+    }
+    for (final g in rescheduledOtherGoals) {
+      if (g.id == null) continue;
+      if (g.reminderEnabled && !g.isDone && g.status == 'active') {
+        await NotificationService.scheduleGoalReminder(
+          goalId: g.id!,
+          goalName: g.name,
+          deadline: g.deadline,
+          remainingAmount: g.remainingAmount,
+        );
+      } else {
+        await NotificationService.cancelGoalReminder(g.id!);
+      }
+    }
+
+    return deletedRows;
   }
 
   Future<int> archiveAccount(int id) async {

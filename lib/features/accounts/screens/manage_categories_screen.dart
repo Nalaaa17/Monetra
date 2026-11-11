@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/color_helper.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../data/models/category.dart';
 import '../../../shared/providers/repository_providers.dart';
@@ -45,7 +46,7 @@ class _ManageCategoriesScreenState
           controller: _tabController,
           indicatorColor: AppColors.primary,
           labelColor: AppColors.primaryDark,
-          unselectedLabelColor: AppColors.textSecondary,
+          unselectedLabelColor: AppColors.textSecondaryOf(context),
           tabs: const [
             Tab(text: '💸 Pengeluaran'),
             Tab(text: '💰 Pemasukan'),
@@ -90,10 +91,10 @@ class _ManageCategoriesScreenState
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           itemCount: categories.length,
           separatorBuilder: (context, index) =>
-              const Divider(height: 12, color: AppColors.divider),
+              Divider(height: 12, color: Theme.of(context).dividerColor),
           itemBuilder: (context, index) {
             final cat = categories[index];
-            final color = Color(int.parse(cat.colorHex));
+            final color = ColorHelper.parseHex(cat.colorHex);
             final icon = IconHelper.getIcon(cat.iconCodePoint);
 
             return ListTile(
@@ -111,7 +112,7 @@ class _ManageCategoriesScreenState
               subtitle: Text(
                 cat.isActive ? 'Aktif' : 'Disembunyikan',
                 style: AppTypography.labelSmall.copyWith(
-                  color: cat.isActive ? const Color(0xFF059669) : AppColors.textSecondary,
+                  color: cat.isActive ? const Color(0xFF059669) : AppColors.textSecondaryOf(context),
                 ),
               ),
               trailing: Switch(
@@ -159,7 +160,7 @@ class _ManageCategoriesScreenState
       Icons.home_repair_service_rounded,
     ];
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
@@ -196,7 +197,9 @@ class _ManageCategoriesScreenState
                         decoration: BoxDecoration(
                           color: isSelected
                               ? AppColors.primary.withValues(alpha: 0.2)
-                              : const Color(0xFFF3F4F6),
+                              : (Theme.of(ctx).brightness == Brightness.dark
+                                  ? const Color(0xFF334155)
+                                  : const Color(0xFFF3F4F6)),
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                             color: isSelected
@@ -214,10 +217,11 @@ class _ManageCategoriesScreenState
                 const Text('Pilih Warna:',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                 const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
                   children: colorOptions.map((c) {
-                    final color = Color(int.parse(c));
+                    final color = ColorHelper.parseHex(c);
                     final isSelected = selectedColor == c;
                     return InkWell(
                       onTap: () => setState(() => selectedColor = c),
@@ -229,7 +233,9 @@ class _ManageCategoriesScreenState
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: isSelected
-                                ? Colors.black
+                                ? (Theme.of(ctx).brightness == Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black)
                                 : Colors.transparent,
                             width: 2,
                           ),
@@ -269,17 +275,18 @@ class _ManageCategoriesScreenState
                 ref.read(homeRefreshTriggerProvider.notifier).state++;
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text('Kategori "$name" berhasil disimpan!')),
-                  );
                 }
+                if (!mounted) return;
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  SnackBar(
+                      content: Text('Kategori "$name" berhasil disimpan!')),
+                );
               },
               child: const Text('Simpan'),
             ),
           ],
         ),
       ),
-    );
+    ).whenComplete(nameController.dispose);
   }
 }

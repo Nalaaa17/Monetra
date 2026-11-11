@@ -10,12 +10,20 @@ class AppDatabase {
   static const int _dbVersion = 1;
 
   static Database? _database;
+  static Future<Database>? _initFuture;
   static String? testDbPath;
 
   static Future<Database> get instance async {
     if (_database != null) return _database!;
-    _database = await _initDatabase();
-    return _database!;
+    _initFuture ??= _initDatabase();
+    try {
+      final db = await _initFuture!;
+      _database = db;
+      return db;
+    } catch (e) {
+      _initFuture = null;
+      rethrow;
+    }
   }
 
   static Future<Database> _initDatabase() async {
@@ -67,14 +75,107 @@ class AppDatabase {
       CREATE TABLE IF NOT EXISTS goal_contributions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         goalId INTEGER NOT NULL,
+        sourceAccountId INTEGER,
         amount INTEGER NOT NULL,
         date TEXT NOT NULL,
         note TEXT,
-        FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+        isRealized INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE,
+        FOREIGN KEY (sourceAccountId) REFERENCES accounts(id) ON DELETE CASCADE
       )
     ''');
 
+    // Pastikan kolom category (harian / tabungan) ada di tabel accounts
+    try {
+      await db.execute("ALTER TABLE accounts ADD COLUMN category TEXT DEFAULT 'harian'");
+      await db.execute("UPDATE accounts SET category = 'tabungan' WHERE LOWER(name) LIKE '%seabank%'");
+    } catch (_) {}
+
+    // Pastikan kolom logoKey ada di tabel accounts
+    try {
+      await db.execute("ALTER TABLE accounts ADD COLUMN logoKey TEXT");
+    } catch (_) {}
+
+    // Pastikan kolom sourceAccountId dan isRealized ada di goal_contributions
+    try {
+      await db.execute('ALTER TABLE goal_contributions ADD COLUMN sourceAccountId INTEGER');
+    } catch (_) {}
+
+    try {
+      await db.execute('ALTER TABLE goal_contributions ADD COLUMN isRealized INTEGER NOT NULL DEFAULT 0');
+    } catch (_) {}
+
+    try {
+      await db.execute('''
+        UPDATE goal_contributions
+        SET sourceAccountId = (SELECT sourceAccountId FROM goals WHERE goals.id = goal_contributions.goalId)
+        WHERE sourceAccountId IS NULL
+      ''');
+    } catch (_) {}
+
+    // Pastikan tabel app_settings ada untuk menyimpan preferensi lokal (tema, auto-backup)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
+
+    // Pastikan tabel recurring_transactions ada pada database lama maupun baru
+    await _ensureRecurringTable(db);
+
     return db;
+  }
+
+  static Future<void> _ensureRecurringTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS recurring_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        type TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        accountId INTEGER NOT NULL,
+        categoryId INTEGER,
+        note TEXT,
+        frequency TEXT NOT NULL,
+        dayOfMonth INTEGER NOT NULL DEFAULT 1,
+        dayOfWeek INTEGER NOT NULL DEFAULT 1,
+        nextRunDate TEXT NOT NULL,
+        lastRunDate TEXT,
+        isActive INTEGER NOT NULL DEFAULT 1,
+        createdAt TEXT NOT NULL,
+        FOREIGN KEY (accountId) REFERENCES accounts(id) ON DELETE CASCADE,
+        FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE SET NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_recurring_active_next
+      ON recurring_transactions(isActive, nextRunDate)
+    ''');
+  }
+
+  static bool get isOpen => _database != null;
+
+  static Future<String?> getSetting(String key) async {
+    final db = await instance;
+    final rows = await db.query(
+      'app_settings',
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['value'] as String?;
+  }
+
+  static Future<void> setSetting(String key, String value) async {
+    final db = await instance;
+    await db.insert(
+      'app_settings',
+      {'key': key, 'value': value},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   static Future<void> _onCreate(Database db, int version) async {
@@ -84,10 +185,12 @@ class AppDatabase {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         type TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'harian',
         colorHex TEXT NOT NULL,
         iconCodePoint INTEGER NOT NULL,
         initialBalance INTEGER NOT NULL DEFAULT 0,
         isArchived INTEGER NOT NULL DEFAULT 0,
+        logoKey TEXT,
         createdAt TEXT NOT NULL
       )
     ''');
@@ -157,12 +260,26 @@ class AppDatabase {
       CREATE TABLE goal_contributions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         goalId INTEGER NOT NULL,
+        sourceAccountId INTEGER,
         amount INTEGER NOT NULL,
         date TEXT NOT NULL,
         note TEXT,
-        FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE
+        isRealized INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (goalId) REFERENCES goals(id) ON DELETE CASCADE,
+        FOREIGN KEY (sourceAccountId) REFERENCES accounts(id) ON DELETE CASCADE
       )
     ''');
+
+    // 7. Table: app_settings
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
+
+    // 8. Table: recurring_transactions
+    await _ensureRecurringTable(db);
 
     // Seed Data Awal
     await _seedInitialData(db);
@@ -184,6 +301,12 @@ class AppDatabase {
 
   /// Tutup database (berguna saat test atau reset)
   static Future<void> close() async {
+    if (_initFuture != null) {
+      try {
+        _database ??= await _initFuture;
+      } catch (_) {}
+      _initFuture = null;
+    }
     if (_database != null) {
       await _database!.close();
       _database = null;

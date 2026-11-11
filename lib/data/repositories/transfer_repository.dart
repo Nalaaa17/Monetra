@@ -61,15 +61,45 @@ class TransferRepository {
     return TransferModel.fromMap(maps.first);
   }
 
-  Future<List<TransferDetail>> getAllTransfers({int? accountId}) async {
+  Future<List<TransferDetail>> getAllTransfers({
+    int? accountId,
+    List<int>? accountIds,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    if (accountId == null && accountIds != null && accountIds.isEmpty) {
+      return [];
+    }
+
     final db = await AppDatabase.instance;
-    String whereSql = '';
-    List<dynamic> whereArgs = [];
+    final whereClauses = <String>[];
+    final whereArgs = <dynamic>[];
 
     if (accountId != null) {
-      whereSql = 'WHERE tr.fromAccountId = ? OR tr.toAccountId = ?';
-      whereArgs = [accountId, accountId];
+      whereClauses.add('(tr.fromAccountId = ? OR tr.toAccountId = ?)');
+      whereArgs.addAll([accountId, accountId]);
+    } else if (accountIds != null && accountIds.isNotEmpty) {
+      final placeholders = List.filled(accountIds.length, '?').join(',');
+      whereClauses.add(
+        '(tr.fromAccountId IN ($placeholders) OR tr.toAccountId IN ($placeholders))',
+      );
+      whereArgs.addAll(accountIds);
+      whereArgs.addAll(accountIds);
     }
+
+    if (startDate != null) {
+      final start = DateTime(startDate.year, startDate.month, startDate.day);
+      whereClauses.add('tr.date >= ?');
+      whereArgs.add(start.toIso8601String());
+    }
+    if (endDate != null) {
+      final nextDay = DateTime(endDate.year, endDate.month, endDate.day + 1);
+      whereClauses.add('tr.date < ?');
+      whereArgs.add(nextDay.toIso8601String());
+    }
+
+    final whereSql =
+        whereClauses.isNotEmpty ? 'WHERE ${whereClauses.join(' AND ')}' : '';
 
     final results = await db.rawQuery('''
       SELECT 

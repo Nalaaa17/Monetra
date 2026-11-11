@@ -106,7 +106,7 @@ class _SplashScreenState extends State<SplashScreen>
                         Text(
                           'Pencatatan Keuangan Pribadi',
                           style: AppTypography.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.textSecondaryOf(context),
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
@@ -127,7 +127,7 @@ class _SplashScreenState extends State<SplashScreen>
                     Text(
                       'Multi-Wallet • Offline-First',
                       style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.textSecondary,
+                        color: AppColors.textSecondaryOf(context),
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -135,7 +135,7 @@ class _SplashScreenState extends State<SplashScreen>
                     Text(
                       'v1.0.0',
                       style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.textSecondary.withValues(alpha: 0.6),
+                        color: AppColors.textSecondaryOf(context).withValues(alpha: 0.6),
                         fontSize: 10,
                       ),
                     ),

@@ -48,6 +48,9 @@ class DateFormatter {
     return '$dayName, ${date.day} $monthName ${date.year}';
   }
 
+  /// Nama singkat bulan dalam Bahasa Indonesia (`Jan`..`Des`)
+  static String shortMonthName(int month) => _months[(month - 1).clamp(0, 11)];
+
   /// Format: "November 2026"
   static String formatMonthYear(DateTime date) {
     final monthName = _monthsFull[date.month - 1];

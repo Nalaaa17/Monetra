@@ -4,16 +4,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../home/providers/home_providers.dart';
 import '../providers/transaction_form_provider.dart';
 import '../widgets/account_chips_selector.dart';
+import '../widgets/balance_warning_dialog.dart';
 import '../widgets/category_grid_selector.dart';
 import '../widgets/custom_numeric_keypad.dart';
+import '../widgets/discard_changes_dialog.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
-  const AddTransactionScreen({super.key});
+  final String? initialType;
+  const AddTransactionScreen({super.key, this.initialType});
 
   @override
   ConsumerState<AddTransactionScreen> createState() =>
@@ -22,17 +26,32 @@ class AddTransactionScreen extends ConsumerStatefulWidget {
 
 class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   late ConfettiController _confettiController;
+  late final TextEditingController _noteController;
+  bool _isSaving = false;
+  bool _allowPop = false;
 
   @override
   void initState() {
     super.initState();
     _confettiController =
         ConfettiController(duration: const Duration(milliseconds: 600));
+    _noteController = TextEditingController();
+
+    if (widget.initialType != null &&
+        (widget.initialType == 'expense' || widget.initialType == 'income')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref
+            .read(transactionFormNotifierProvider.notifier)
+            .setType(widget.initialType!);
+      });
+    }
   }
 
   @override
   void dispose() {
     _confettiController.dispose();
+    _noteController.dispose();
     super.dispose();
   }
 
@@ -46,8 +65,22 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
     final isExpense = formState.isExpense;
     final themeColor = isExpense ? AppColors.danger : AppColors.tertiary;
+    final isBusy = _isSaving || formState.isSubmitting;
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+    final hasUnsavedChanges =
+        formState.amount > 0 || formState.note.trim().isNotEmpty;
 
-    return Scaffold(
+    return PopScope(
+      canPop: _allowPop || !hasUnsavedChanges || isBusy,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final discard = await confirmDiscardChangesDialog(context);
+        if (discard && context.mounted) {
+          setState(() => _allowPop = true);
+          context.pop();
+        }
+      },
+      child: Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
@@ -159,9 +192,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   width: double.infinity,
                   height: 48,
                   child: ElevatedButton(
-                    onPressed: formState.isSubmitting
-                        ? null
-                        : _handleSave,
+                    onPressed: isBusy ? null : _handleSave,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.black,
@@ -170,7 +201,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: formState.isSubmitting
+                    child: isBusy
                         ? const SizedBox(
                             height: 20,
                             width: 20,
@@ -184,11 +215,17 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             children: [
                               const Icon(Icons.check_circle_outline, size: 20),
                               const SizedBox(width: 8),
-                              Text(
-                                'Simpan Transaksi',
-                                style: AppTypography.titleMedium.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    'Simpan Transaksi',
+                                    maxLines: 1,
+                                    style: AppTypography.titleMedium.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -197,12 +234,22 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 ),
               ),
 
-              // Keypad Angka Bawah
-              CustomNumericKeypad(
-                onKeyPress: formNotifier.appendKey,
-                onBackspace: formNotifier.backspace,
-                onClear: formNotifier.clearAmount,
-              ),
+              // Keypad Angka Bawah (sembunyikan otomatis saat keyboard teks catatan terbuka)
+              if (!isKeyboardOpen)
+                CustomNumericKeypad(
+                  onKeyPress: (key) {
+                    FocusScope.of(context).unfocus();
+                    formNotifier.appendKey(key);
+                  },
+                  onBackspace: () {
+                    FocusScope.of(context).unfocus();
+                    formNotifier.backspace();
+                  },
+                  onClear: () {
+                    FocusScope.of(context).unfocus();
+                    formNotifier.clearAmount();
+                  },
+                ),
             ],
           ),
 
@@ -226,6 +273,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -233,10 +281,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     TransactionFormState formState,
     TransactionFormNotifier formNotifier,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pillBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
+
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.divider,
+        color: pillBg,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -267,16 +318,22 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text('💸 ', style: TextStyle(fontSize: 16)),
-                    Text(
-                      'Pengeluaran',
-                      style: AppTypography.titleMedium.copyWith(
-                        fontSize: 14,
-                        color: formState.isExpense
-                            ? AppColors.danger
-                            : AppColors.textSecondary,
-                        fontWeight: formState.isExpense
-                            ? FontWeight.bold
-                            : FontWeight.w600,
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Pengeluaran',
+                          maxLines: 1,
+                          style: AppTypography.titleMedium.copyWith(
+                            fontSize: 14,
+                            color: formState.isExpense
+                                ? AppColors.danger
+                                : AppColors.textSecondaryOf(context),
+                            fontWeight: formState.isExpense
+                                ? FontWeight.bold
+                                : FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -310,16 +367,22 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text('💰 ', style: TextStyle(fontSize: 16)),
-                    Text(
-                      'Pemasukan',
-                      style: AppTypography.titleMedium.copyWith(
-                        fontSize: 14,
-                        color: formState.isIncome
-                            ? const Color(0xFF059669)
-                            : AppColors.textSecondary,
-                        fontWeight: formState.isIncome
-                            ? FontWeight.bold
-                            : FontWeight.w600,
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Pemasukan',
+                          maxLines: 1,
+                          style: AppTypography.titleMedium.copyWith(
+                            fontSize: 14,
+                            color: formState.isIncome
+                                ? const Color(0xFF059669)
+                                : AppColors.textSecondaryOf(context),
+                            fontWeight: formState.isIncome
+                                ? FontWeight.bold
+                                : FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -338,7 +401,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -355,7 +418,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               style: AppTypography.headlineLarge.copyWith(
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
-                color: formState.amount > 0 ? themeColor : AppColors.textSecondary,
+                color: formState.amount > 0 ? themeColor : AppColors.textSecondaryOf(context),
               ),
             ),
           ),
@@ -366,23 +429,24 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   Widget _buildNoteInput(TransactionFormNotifier notifier, String currentNote) {
     return TextField(
+      controller: _noteController,
       onChanged: notifier.setNote,
       decoration: InputDecoration(
         hintText: 'Catatan (misal: Bensin, Bayar Ressa, Makan siang)',
         hintStyle: AppTypography.bodyMedium,
-        prefixIcon: const Icon(Icons.edit_note_rounded,
-            color: AppColors.textSecondary),
+        prefixIcon: Icon(Icons.edit_note_rounded,
+            color: AppColors.textSecondaryOf(context)),
         filled: true,
         fillColor: Theme.of(context).cardColor,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.divider),
+          borderSide: BorderSide(color: Theme.of(context).dividerColor),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.divider),
+          borderSide: BorderSide(color: Theme.of(context).dividerColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -393,65 +457,75 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   void _handleSave() async {
+    if (_isSaving) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _isSaving = true);
+
     final notifier = ref.read(transactionFormNotifierProvider.notifier);
 
-    final isMinusWarning = await notifier.checkBalanceWarning();
-    if (!mounted) return;
-
-    if (isMinusWarning) {
-      final proceed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Peringatan Saldo'),
-          content: const Text(
-            'Nominal pengeluaran ini melebihi saldo akun saat ini. Tetap simpan sebagai saldo minus sementara?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.danger,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Tetap Simpan'),
-            ),
-          ],
-        ),
-      );
-
-      if (proceed != true) return;
-    }
-
-    final success = await notifier.submit();
-    if (!mounted) return;
-
-    if (success) {
-      _confettiController.play();
-      await Future.delayed(const Duration(milliseconds: 400));
+    try {
+      final isMinusWarning = await notifier.checkBalanceWarning();
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: const [
-              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Text('✨ Transaksi berhasil dicatat!'),
-            ],
+      if (isMinusWarning) {
+        final proceed = await showInsufficientBalanceWarningDialog(context);
+        if (!proceed) {
+          if (mounted) setState(() => _isSaving = false);
+          return;
+        }
+      }
+
+      final savedType = ref.read(transactionFormNotifierProvider).type;
+      final success = await notifier.submit();
+      if (!mounted) return;
+
+      if (success) {
+        _allowPop = true;
+        _noteController.clear();
+        _confettiController.play();
+        await Future.delayed(const Duration(milliseconds: 400));
+        if (!mounted) return;
+
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    '✨ Transaksi berhasil dicatat!',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF059669),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'Catat Lagi',
+              textColor: AppColors.primary,
+              onPressed: () {
+                AppRouter.router
+                    .push('${AppRouter.addTransaction}?type=$savedType');
+              },
+            ),
           ),
-          backgroundColor: const Color(0xFF059669),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          duration: const Duration(milliseconds: 1500),
-        ),
-      );
-      context.pop();
+        );
+        context.pop();
+        return;
+      }
+
+      if (mounted) setState(() => _isSaving = false);
+    } catch (_) {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 }

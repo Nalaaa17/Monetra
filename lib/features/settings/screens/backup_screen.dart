@@ -19,6 +19,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   BackupStats? _stats;
   List<File> _backupFiles = [];
   bool _isLoading = true;
+  bool _autoBackupEnabled = true;
+  String? _lastAutoBackupDate;
 
   @override
   void initState() {
@@ -30,10 +32,14 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     setState(() => _isLoading = true);
     final stats = await BackupService.getCurrentStats();
     final files = await BackupService.listBackupFiles();
+    final autoEnabled = await BackupService.isAutoBackupEnabled();
+    final lastAutoDate = await BackupService.getLastAutoBackupDate();
     if (mounted) {
       setState(() {
         _stats = stats;
         _backupFiles = files;
+        _autoBackupEnabled = autoEnabled;
+        _lastAutoBackupDate = lastAutoDate;
         _isLoading = false;
       });
     }
@@ -42,7 +48,6 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.surface,
       appBar: AppBar(
         title: Text(
           'Cadangan & Pemulihan Data',
@@ -97,9 +102,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,17 +112,25 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: const [
-                  Icon(Icons.shield_outlined,
-                      size: 20, color: Color(0xFF059669)),
-                  SizedBox(width: 8),
-                  Text(
-                    'Data Finansial Monetra',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                ],
+              Expanded(
+                child: Row(
+                  children: const [
+                    Icon(Icons.shield_outlined,
+                        size: 20, color: Color(0xFF059669)),
+                    SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Data Finansial Monetra',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Image.asset(
                 'assets/images/logo.png',
                 width: 24,
@@ -131,14 +144,18 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             'Seluruh data Monetra tersimpan 100% lokal offline di memori HP Anda. Buat cadangan secara berkala agar catatan harian tidak hilang saat ganti perangkat atau update.',
             style: AppTypography.bodyMedium,
           ),
-          const Divider(height: 24, color: AppColors.divider),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+          Divider(height: 24, color: Theme.of(context).dividerColor),
+          Wrap(
+            alignment: WrapAlignment.spaceAround,
+            spacing: 16,
+            runSpacing: 12,
             children: [
               _buildStatItem('Transaksi', '${_stats?.transactionsCount ?? 0}'),
+              _buildStatItem('Rutin', '${_stats?.recurringCount ?? 0}'),
               _buildStatItem('Akun', '${_stats?.accountsCount ?? 0}'),
               _buildStatItem('Kategori', '${_stats?.categoriesCount ?? 0}'),
               _buildStatItem('Transfer', '${_stats?.transfersCount ?? 0}'),
+              _buildStatItem('Target', '${_stats?.goalsCount ?? 0}'),
             ],
           ),
         ],
@@ -163,10 +180,15 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   }
 
   Widget _buildBackupActionCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final parsedAutoDate = _lastAutoBackupDate != null
+        ? DateTime.tryParse(_lastAutoBackupDate!)
+        : null;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB),
+        color: isDark ? const Color(0xFF2A2415) : const Color(0xFFFFFBEB),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
       ),
@@ -178,20 +200,22 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               const Icon(Icons.cloud_upload_outlined,
                   color: AppColors.primaryDark),
               const SizedBox(width: 8),
-              Text(
-                'Buat Cadangan Baru (File JSON)',
-                style: AppTypography.titleMedium.copyWith(
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  'Buat Cadangan Baru (File JSON)',
+                  style: AppTypography.titleMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            'Simpan seluruh transaksi, dompet, dan histori ke file JSON aman di folder Dokumen HP.',
+            'Simpan seluruh transaksi, dompet, target, dan histori ke file JSON aman di folder Dokumen HP.',
             style: AppTypography.bodyMedium,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
             height: 46,
@@ -211,6 +235,29 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               ),
             ),
           ),
+          Divider(height: 22, color: Theme.of(context).dividerColor),
+          SwitchListTile(
+            value: _autoBackupEnabled,
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: AppColors.primaryDark,
+            title: const Text(
+              'Auto-Backup Harian Otomatis',
+              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              parsedAutoDate != null
+                  ? 'Terakhir otomatis: ${DateFormatter.formatShort(parsedAutoDate)}'
+                  : 'Otomatis membuat cadangan maksimal 1x/hari saat aplikasi dibuka',
+              style: const TextStyle(fontSize: 11.5),
+            ),
+            onChanged: (val) async {
+              await BackupService.setAutoBackupEnabled(val);
+              if (val) {
+                await BackupService.runDailyAutoBackupIfNeeded();
+              }
+              await _loadBackupInfo();
+            },
+          ),
         ],
       ),
     );
@@ -220,15 +267,15 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Center(
         child: Column(
           children: [
-            const Icon(Icons.folder_open_rounded,
-                size: 36, color: AppColors.textSecondary),
+            Icon(Icons.folder_open_rounded,
+                size: 36, color: AppColors.textSecondaryOf(context)),
             const SizedBox(height: 8),
             Text(
               'Belum ada file cadangan yang dibuat',
@@ -244,35 +291,68 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     final fileName = file.path.split(Platform.pathSeparator).last;
     final lastModified = file.lastModifiedSync();
     final fileSizeKb = (file.lengthSync() / 1024).toStringAsFixed(1);
+    final isAuto = BackupService.isAutoBackupFile(file);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
           CircleAvatar(
             backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-            child: const Icon(Icons.description_outlined,
-                color: AppColors.primaryDark, size: 20),
+            child: Icon(
+                isAuto
+                    ? Icons.schedule_rounded
+                    : Icons.description_outlined,
+                color: AppColors.primaryDark,
+                size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  fileName,
-                  style: AppTypography.titleMedium.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        fileName,
+                        style: AppTypography.titleMedium.copyWith(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: (isAuto
+                                ? const Color(0xFF0284C7)
+                                : const Color(0xFF059669))
+                            .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isAuto ? 'Otomatis' : 'Manual',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: isAuto
+                              ? const Color(0xFF0284C7)
+                              : const Color(0xFF059669),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -283,8 +363,8 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             ),
           ),
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded,
-                color: AppColors.textSecondary),
+            icon: Icon(Icons.more_vert_rounded,
+                color: AppColors.textSecondaryOf(context)),
             onSelected: (val) {
               if (val == 'restore') {
                 _handleRestoreFile(file);
@@ -337,18 +417,18 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
-              Icon(Icons.code_rounded, color: AppColors.textPrimary, size: 20),
-              SizedBox(width: 8),
-              Text(
+            children: [
+              Icon(Icons.code_rounded, color: AppColors.textPrimaryOf(context), size: 20),
+              const SizedBox(width: 8),
+              const Text(
                 'Pulihkan dari Teks JSON',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
@@ -474,7 +554,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   void _showPasteRestoreDialog() {
     final textController = TextEditingController();
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Tempel Teks JSON'),
@@ -494,7 +574,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                 decoration: InputDecoration(
                   hintText: '{\n  "app": "Monetra",\n  ...\n}',
                   filled: true,
-                  fillColor: const Color(0xFFF9FAFB),
+                  fillColor: Theme.of(ctx).brightness == Brightness.dark
+                      ? const Color(0xFF1E293B)
+                      : const Color(0xFFF9FAFB),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -519,7 +601,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                 await _loadBackupInfo();
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
-                  ScaffoldMessenger.of(ctx).showSnackBar(
+                }
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Data berhasil dipulihkan dari teks!'),
                       backgroundColor: Color(0xFF059669),
@@ -541,6 +625,6 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
           ),
         ],
       ),
-    );
+    ).whenComplete(textController.dispose);
   }
 }

@@ -8,6 +8,27 @@ class CustomNumericKeypad extends StatelessWidget {
   final VoidCallback onBackspace;
   final VoidCallback onClear;
 
+  /// Menerapkan input tombol keypad ('0'-'9' atau '000') ke string nominal mentah.
+  static String applyKey(
+    String currentRaw,
+    String key, {
+    int maxLength = 10,
+  }) {
+    final base = currentRaw.isEmpty ? '0' : currentRaw;
+    if (base == '0') {
+      if (key == '000' || key == '0') return '0';
+      return key;
+    }
+    if (base.length + key.length > maxLength) return base;
+    return base + key;
+  }
+
+  /// Menghapus 1 digit terakhir dari string nominal mentah.
+  static String applyBackspace(String currentRaw) {
+    if (currentRaw.length <= 1) return '0';
+    return currentRaw.substring(0, currentRaw.length - 1);
+  }
+
   const CustomNumericKeypad({
     super.key,
     required this.onKeyPress,
@@ -19,10 +40,10 @@ class CustomNumericKeypad extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: const [
           BoxShadow(
             color: Color(0x0D000000),
             blurRadius: 10,
@@ -33,26 +54,27 @@ class CustomNumericKeypad extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildRow(['1', '2', '3']),
+          _buildRow(context, ['1', '2', '3']),
           const SizedBox(height: 8),
-          _buildRow(['4', '5', '6']),
+          _buildRow(context, ['4', '5', '6']),
           const SizedBox(height: 8),
-          _buildRow(['7', '8', '9']),
+          _buildRow(context, ['7', '8', '9']),
           const SizedBox(height: 8),
-          _buildBottomRow(),
+          _buildBottomRow(context),
           const SizedBox(height: 4),
         ],
       ),
     );
   }
 
-  Widget _buildRow(List<String> keys) {
+  Widget _buildRow(BuildContext context, List<String> keys) {
     return Row(
       children: keys.map((key) {
         return Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: _buildKeyButton(
+              context: context,
               child: Text(
                 key,
                 style: AppTypography.titleLarge.copyWith(
@@ -71,7 +93,7 @@ class CustomNumericKeypad extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomRow() {
+  Widget _buildBottomRow(BuildContext context) {
     return Row(
       children: [
         // 000 (Rupiah shortcut)
@@ -79,6 +101,7 @@ class CustomNumericKeypad extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: _buildKeyButton(
+              context: context,
               child: Text(
                 '000',
                 style: AppTypography.titleMedium.copyWith(
@@ -99,6 +122,7 @@ class CustomNumericKeypad extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: _buildKeyButton(
+              context: context,
               child: Text(
                 '0',
                 style: AppTypography.titleLarge.copyWith(
@@ -118,10 +142,11 @@ class CustomNumericKeypad extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: _buildKeyButton(
-              child: const Icon(
+              context: context,
+              child: Icon(
                 Icons.backspace_outlined,
                 size: 22,
-                color: AppColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               onTap: () {
                 HapticFeedback.lightImpact();
@@ -139,12 +164,16 @@ class CustomNumericKeypad extends StatelessWidget {
   }
 
   Widget _buildKeyButton({
+    required BuildContext context,
     required Widget child,
     required VoidCallback onTap,
     VoidCallback? onLongPress,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final btnBg = isDark ? const Color(0xFF334155) : const Color(0xFFF9FAFB);
+
     return Material(
-      color: const Color(0xFFF9FAFB),
+      color: btnBg,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,

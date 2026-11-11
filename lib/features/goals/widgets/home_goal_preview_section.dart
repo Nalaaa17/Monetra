@@ -25,19 +25,25 @@ class HomeGoalPreviewSection extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: const [
-                    Icon(Icons.track_changes_rounded,
-                        size: 20, color: AppColors.primaryDark),
-                    SizedBox(width: 8),
-                    Text(
-                      'Target Mendekati Jatuh Tempo',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                const Expanded(
+                  child: Row(
+                    children: [
+                      Icon(Icons.track_changes_rounded,
+                          size: 20, color: AppColors.primaryDark),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Target Mendekati Jatuh Tempo',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 TextButton(
                   onPressed: () => context.push(AppRouter.goals),
@@ -58,7 +64,9 @@ class HomeGoalPreviewSection extends ConsumerWidget {
   Widget _buildUrgentGoalCard(BuildContext context, GoalDetail goal) {
     final progress = (goal.progressPercentage / 100).clamp(0.0, 1.0);
     final days = goal.daysRemaining;
-    final deadlineText = days <= 0 ? 'Hari Ini!' : '$days hari lagi';
+    final deadlineText = days < 0
+        ? 'Terlewat!'
+        : (days == 0 ? 'Hari Ini!' : '$days hari lagi');
 
     return InkWell(
       onTap: () => context.push(AppRouter.goals),
@@ -72,7 +80,7 @@ class HomeGoalPreviewSection extends ConsumerWidget {
           border: Border.all(
             color: goal.isUrgent
                 ? AppColors.danger.withValues(alpha: 0.4)
-                : AppColors.divider,
+                : Theme.of(context).dividerColor,
           ),
         ),
         child: Column(
@@ -116,14 +124,29 @@ class HomeGoalPreviewSection extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Terkumpul: ${CurrencyFormatter.format(goal.collectedAmount)}',
-                  style: AppTypography.labelSmall,
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Terkumpul: ${CurrencyFormatter.format(goal.collectedAmount)}',
+                      maxLines: 1,
+                      style: AppTypography.labelSmall,
+                    ),
+                  ),
                 ),
-                Text(
-                  'Target: ${CurrencyFormatter.format(goal.targetAmount)}',
-                  style: AppTypography.labelSmall.copyWith(
-                    fontWeight: FontWeight.bold,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'Target: ${CurrencyFormatter.format(goal.targetAmount)}',
+                      maxLines: 1,
+                      style: AppTypography.labelSmall.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -134,7 +157,9 @@ class HomeGoalPreviewSection extends ConsumerWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 6,
-                backgroundColor: const Color(0xFFF3F4F6),
+                backgroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF334155)
+                    : const Color(0xFFE5E7EB),
                 valueColor: AlwaysStoppedAnimation<Color>(
                   goal.isUrgent ? AppColors.danger : AppColors.primary,
                 ),

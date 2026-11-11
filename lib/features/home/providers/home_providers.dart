@@ -8,6 +8,10 @@ final homeRefreshTriggerProvider = StateProvider<int>((ref) => 0);
 
 final balanceSummaryProvider = FutureProvider<BalanceSummary>((ref) async {
   ref.watch(homeRefreshTriggerProvider);
+  await ref.read(goalRepositoryProvider).syncRecurringGoals();
+  await ref
+      .read(recurringTransactionRepositoryProvider)
+      .syncRecurringTransactions();
   final repo = ref.watch(accountRepositoryProvider);
   return await repo.getBalanceSummary();
 });
@@ -15,6 +19,10 @@ final balanceSummaryProvider = FutureProvider<BalanceSummary>((ref) async {
 final accountsWithBalanceProvider =
     FutureProvider<List<AccountWithBalance>>((ref) async {
   ref.watch(homeRefreshTriggerProvider);
+  await ref.read(goalRepositoryProvider).syncRecurringGoals();
+  await ref
+      .read(recurringTransactionRepositoryProvider)
+      .syncRecurringTransactions();
   final repo = ref.watch(accountRepositoryProvider);
   return await repo.getAllAccountsWithBalances();
 });
@@ -22,6 +30,9 @@ final accountsWithBalanceProvider =
 final recentTransactionsProvider =
     FutureProvider<List<TransactionDetail>>((ref) async {
   ref.watch(homeRefreshTriggerProvider);
+  await ref
+      .read(recurringTransactionRepositoryProvider)
+      .syncRecurringTransactions();
   final repo = ref.watch(transactionRepositoryProvider);
   return await repo.getRecentTransactionDetails(limit: 5);
 });

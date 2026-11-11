@@ -6,6 +6,7 @@ class TransactionDetail {
   final TransactionModel transaction;
   final String accountName;
   final String accountColorHex;
+  final String? accountLogoKey;
   final String? categoryName;
   final int? categoryIconCodePoint;
   final String? categoryColorHex;
@@ -14,6 +15,7 @@ class TransactionDetail {
     required this.transaction,
     required this.accountName,
     required this.accountColorHex,
+    this.accountLogoKey,
     this.categoryName,
     this.categoryIconCodePoint,
     this.categoryColorHex,
@@ -90,6 +92,7 @@ class TransactionRepository {
         t.*,
         a.name as accountName,
         a.colorHex as accountColorHex,
+        a.logoKey as accountLogoKey,
         c.name as categoryName,
         c.iconCodePoint as categoryIconCodePoint,
         c.colorHex as categoryColorHex
@@ -106,6 +109,7 @@ class TransactionRepository {
         transaction: transaction,
         accountName: row['accountName'] as String,
         accountColorHex: row['accountColorHex'] as String,
+        accountLogoKey: row['accountLogoKey'] as String?,
         categoryName: row['categoryName'] as String?,
         categoryIconCodePoint: row['categoryIconCodePoint'] as int?,
         categoryColorHex: row['categoryColorHex'] as String?,
@@ -115,9 +119,16 @@ class TransactionRepository {
 
   Future<List<TransactionDetail>> getAllTransactionDetails({
     int? accountId,
+    List<int>? accountIds,
     int? categoryId,
     String? type,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
+    if (accountId == null && accountIds != null && accountIds.isEmpty) {
+      return [];
+    }
+
     final db = await AppDatabase.instance;
     final whereClauses = <String>[];
     final whereArgs = <dynamic>[];
@@ -125,6 +136,10 @@ class TransactionRepository {
     if (accountId != null) {
       whereClauses.add('t.accountId = ?');
       whereArgs.add(accountId);
+    } else if (accountIds != null && accountIds.isNotEmpty) {
+      final placeholders = List.filled(accountIds.length, '?').join(',');
+      whereClauses.add('t.accountId IN ($placeholders)');
+      whereArgs.addAll(accountIds);
     }
     if (categoryId != null) {
       whereClauses.add('t.categoryId = ?');
@@ -133,6 +148,16 @@ class TransactionRepository {
     if (type != null) {
       whereClauses.add('t.type = ?');
       whereArgs.add(type);
+    }
+    if (startDate != null) {
+      final start = DateTime(startDate.year, startDate.month, startDate.day);
+      whereClauses.add('t.date >= ?');
+      whereArgs.add(start.toIso8601String());
+    }
+    if (endDate != null) {
+      final nextDay = DateTime(endDate.year, endDate.month, endDate.day + 1);
+      whereClauses.add('t.date < ?');
+      whereArgs.add(nextDay.toIso8601String());
     }
 
     final whereSql =
@@ -143,6 +168,7 @@ class TransactionRepository {
         t.*,
         a.name as accountName,
         a.colorHex as accountColorHex,
+        a.logoKey as accountLogoKey,
         c.name as categoryName,
         c.iconCodePoint as categoryIconCodePoint,
         c.colorHex as categoryColorHex
@@ -159,6 +185,7 @@ class TransactionRepository {
         transaction: transaction,
         accountName: row['accountName'] as String,
         accountColorHex: row['accountColorHex'] as String,
+        accountLogoKey: row['accountLogoKey'] as String?,
         categoryName: row['categoryName'] as String?,
         categoryIconCodePoint: row['categoryIconCodePoint'] as int?,
         categoryColorHex: row['categoryColorHex'] as String?,
@@ -173,25 +200,66 @@ class TransactionRepository {
   /// Total keluar: Rp ... · Total masuk: Rp ...
   Future<List<DailyTransactionsGroup>> getGroupedTransactionsByDate({
     int? accountId,
+    List<int>? accountIds,
     int? categoryId,
     String? type,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? searchQuery,
   }) async {
+    final normalizedQuery = searchQuery?.trim().toLowerCase() ?? '';
+    final numericQuery = normalizedQuery.replaceAll(RegExp(r'[^0-9]'), '');
+    final isNumericSearch = normalizedQuery.isNotEmpty &&
+        numericQuery.isNotEmpty &&
+        RegExp(r'^[rp\s\.\,0-9]+$').hasMatch(normalizedQuery);
+
     // 1. Ambil transaksi (income / expense)
     final bool includeTx = type != 'transfer';
-    final allDetails = includeTx
+    final rawDetails = includeTx
         ? await getAllTransactionDetails(
             accountId: accountId,
+            accountIds: accountIds,
             categoryId: categoryId,
             type: (type == 'expense' || type == 'income') ? type : null,
+            startDate: startDate,
+            endDate: endDate,
           )
         : <TransactionDetail>[];
 
+    final allDetails = normalizedQuery.isEmpty
+        ? rawDetails
+        : rawDetails
+            .where((item) => _matchesTransactionQuery(
+                  item,
+                  normalizedQuery,
+                  numericQuery,
+                  isNumericSearch,
+                ))
+            .toList();
+
     // 2. Ambil transfer jika filter 'Semua' atau 'transfer'
-    final bool includeTransfers = (type == null || type == 'transfer') && categoryId == null;
+    final bool includeTransfers =
+        (type == null || type == 'transfer') && categoryId == null;
     final transferRepo = TransferRepository();
-    final allTransfers = includeTransfers
-        ? await transferRepo.getAllTransfers(accountId: accountId)
+    final rawTransfers = includeTransfers
+        ? await transferRepo.getAllTransfers(
+            accountId: accountId,
+            accountIds: accountIds,
+            startDate: startDate,
+            endDate: endDate,
+          )
         : <TransferDetail>[];
+
+    final allTransfers = normalizedQuery.isEmpty
+        ? rawTransfers
+        : rawTransfers
+            .where((tr) => _matchesTransferQuery(
+                  tr,
+                  normalizedQuery,
+                  numericQuery,
+                  isNumericSearch,
+                ))
+            .toList();
 
     final Map<String, List<TransactionDetail>> txGroupedMap = {};
     final Map<String, List<TransferDetail>> trGroupedMap = {};
@@ -249,5 +317,51 @@ class TransactionRepository {
     // Sort tanggal paling baru di atas
     groups.sort((a, b) => b.date.compareTo(a.date));
     return groups;
+  }
+
+  bool _matchesTransactionQuery(
+    TransactionDetail item,
+    String query,
+    String numericQuery,
+    bool isNumericSearch,
+  ) {
+    final noteMatch = (item.note ?? '').toLowerCase().contains(query);
+    if (noteMatch) return true;
+
+    final categoryMatch =
+        (item.categoryName ?? '').toLowerCase().contains(query);
+    if (categoryMatch) return true;
+
+    final accountMatch = item.accountName.toLowerCase().contains(query);
+    if (accountMatch) return true;
+
+    if (isNumericSearch && item.amount.toString().contains(numericQuery)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  bool _matchesTransferQuery(
+    TransferDetail tr,
+    String query,
+    String numericQuery,
+    bool isNumericSearch,
+  ) {
+    final noteMatch = (tr.note ?? '').toLowerCase().contains(query);
+    if (noteMatch) return true;
+
+    if (query.length >= 3 && 'transfer saldo'.contains(query)) return true;
+
+    if (tr.fromAccountName.toLowerCase().contains(query) ||
+        tr.toAccountName.toLowerCase().contains(query)) {
+      return true;
+    }
+
+    if (isNumericSearch && tr.amount.toString().contains(numericQuery)) {
+      return true;
+    }
+
+    return false;
   }
 }

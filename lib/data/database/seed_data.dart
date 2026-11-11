@@ -7,6 +7,7 @@ class SeedData {
         Account(
           name: 'Seabank',
           type: 'bank',
+          category: 'tabungan',
           colorHex: '0xFF00B0FF',
           iconCodePoint: Icons.account_balance_rounded.codePoint,
           initialBalance: 0,
@@ -15,6 +16,7 @@ class SeedData {
         Account(
           name: 'Mandiri',
           type: 'bank',
+          category: 'harian',
           colorHex: '0xFFF59E0B',
           iconCodePoint: Icons.credit_card_rounded.codePoint,
           initialBalance: 0,
@@ -23,6 +25,7 @@ class SeedData {
         Account(
           name: 'Cash',
           type: 'cash',
+          category: 'harian',
           colorHex: '0xFF10B981',
           iconCodePoint: Icons.payments_rounded.codePoint,
           initialBalance: 0,

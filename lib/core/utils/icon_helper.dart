@@ -19,6 +19,8 @@ class IconHelper {
     Icons.receipt_long_rounded.codePoint: Icons.receipt_long_rounded,
     Icons.movie_rounded.codePoint: Icons.movie_rounded,
     Icons.medical_services_rounded.codePoint: Icons.medical_services_rounded,
+    Icons.sports_esports_rounded.codePoint: Icons.sports_esports_rounded,
+    Icons.inventory_2_rounded.codePoint: Icons.inventory_2_rounded,
     Icons.more_horiz_rounded.codePoint: Icons.more_horiz_rounded,
 
     // Kategori Pemasukan

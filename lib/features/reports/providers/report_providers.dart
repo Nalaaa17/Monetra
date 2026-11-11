@@ -16,5 +16,14 @@ final monthlyReportProvider = FutureProvider<MonthlyReportSummary>((ref) async {
   return await repo.getMonthlyReport(selectedDate.year, selectedDate.month);
 });
 
+final sixMonthTrendProvider =
+    FutureProvider<List<MonthlyCashflowPoint>>((ref) async {
+  ref.watch(homeRefreshTriggerProvider);
+  final selectedDate = ref.watch(selectedReportDateProvider);
+  final repo = ref.watch(reportRepositoryProvider);
+
+  return await repo.getSixMonthTrend(selectedDate.year, selectedDate.month);
+});
+
 final touchedCategoryIndexProvider = StateProvider<int?>((ref) => null);
 

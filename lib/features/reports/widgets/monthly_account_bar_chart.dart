@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_typography.dart';
+import '../../../../core/utils/color_helper.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../data/repositories/report_repository.dart';
 
@@ -27,9 +28,9 @@ class MonthlyAccountBarChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,13 +38,18 @@ class MonthlyAccountBarChart extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Pengeluaran Per Dompet/Bank',
-                style: AppTypography.titleMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+              Expanded(
+                child: Text(
+                  'Pengeluaran Per Dompet/Bank',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.titleMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               const Icon(Icons.bar_chart_rounded,
                   color: AppColors.primaryDark, size: 20),
             ],
@@ -82,11 +88,17 @@ class MonthlyAccountBarChart extends StatelessWidget {
                         if (index >= 0 && index < accountExpenses.length) {
                           return Padding(
                             padding: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              accountExpenses[index].accountName,
-                              style: AppTypography.labelSmall.copyWith(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                            child: SizedBox(
+                              width: 58,
+                              child: Text(
+                                accountExpenses[index].accountName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: AppTypography.labelSmall.copyWith(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           );
@@ -109,7 +121,7 @@ class MonthlyAccountBarChart extends StatelessWidget {
                 borderData: FlBorderData(show: false),
                 barGroups: List.generate(accountExpenses.length, (index) {
                   final acc = accountExpenses[index];
-                  final color = Color(int.parse(acc.colorHex));
+                  final color = ColorHelper.parseHex(acc.colorHex);
 
                   return BarChartGroupData(
                     x: index,

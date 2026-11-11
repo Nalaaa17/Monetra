@@ -10,13 +10,56 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static bool _initialized = false;
+  static bool _tzInitialized = false;
+
+  /// Menginisialisasi database timezone dan mengatur `tz.local` sesuai zona waktu
+  /// perangkat agar jadwal notifikasi tidak jatuh ke UTC (meleset ±7 jam di Indonesia).
+  static String resolveAndSetLocalTimezone({
+    DateTime? referenceNow,
+    Duration? offsetOverride,
+  }) {
+    if (!_tzInitialized) {
+      tz.initializeTimeZones();
+      _tzInitialized = true;
+    }
+
+    final offset =
+        offsetOverride ?? (referenceNow ?? DateTime.now()).timeZoneOffset;
+    String targetLocationName;
+
+    if (offset == const Duration(hours: 7)) {
+      targetLocationName = 'Asia/Jakarta';
+    } else if (offset == const Duration(hours: 8)) {
+      targetLocationName = 'Asia/Makassar';
+    } else if (offset == const Duration(hours: 9)) {
+      targetLocationName = 'Asia/Jayapura';
+    } else {
+      final offsetMs = offset.inMilliseconds;
+      final matched = tz.timeZoneDatabase.locations.values.where(
+        (loc) => loc.currentTimeZone.offset == offsetMs,
+      );
+      targetLocationName =
+          matched.isNotEmpty ? matched.first.name : 'Asia/Jakarta';
+    }
+
+    try {
+      tz.setLocalLocation(tz.getLocation(targetLocationName));
+    } catch (_) {
+      tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+      targetLocationName = 'Asia/Jakarta';
+    }
+
+    return targetLocationName;
+  }
 
   static Future<void> initialize() async {
+    resolveAndSetLocalTimezone();
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      return;
+    }
     if (_initialized) return;
 
     try {
-      tz.initializeTimeZones();
-
       const androidSettings =
           AndroidInitializationSettings('@mipmap/ic_launcher');
       const iosSettings = DarwinInitializationSettings(
@@ -31,6 +74,14 @@ class NotificationService {
       );
 
       await _notificationsPlugin.initialize(initSettings);
+
+      if (Platform.isAndroid) {
+        final androidPlugin = _notificationsPlugin
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        await androidPlugin?.requestNotificationsPermission();
+      }
+
       _initialized = true;
     } catch (e) {
       debugPrint('Notification service initialization note: $e');
@@ -44,6 +95,8 @@ class NotificationService {
     required DateTime deadline,
     required int remainingAmount,
   }) async {
+    resolveAndSetLocalTimezone();
+
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
       // Pada desktop Windows / test, notifikasi native tidak dijalankan
       return;
@@ -52,7 +105,7 @@ class NotificationService {
     try {
       await initialize();
 
-      // Hitung H-3 jam 09:00 pagi
+      // Hitung H-3 jam 09:00 pagi waktu lokal
       final reminderDate = deadline.subtract(const Duration(days: 3));
       final targetDateTime = DateTime(
         reminderDate.year,
@@ -90,16 +143,34 @@ class NotificationService {
         iOS: DarwinNotificationDetails(),
       );
 
-      await _notificationsPlugin.zonedSchedule(
-        goalId,
-        'Pengingat Jatuh Tempo Monetra 🎯',
-        "Target '$goalName' jatuh tempo 3 hari lagi. Kurang ${CurrencyFormatter.format(remainingAmount)}.",
-        scheduledTz,
-        notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-      );
+      final title = 'Pengingat Jatuh Tempo Monetra 🎯';
+      final body =
+          "Target '$goalName' jatuh tempo 3 hari lagi. Kurang ${CurrencyFormatter.format(remainingAmount)}.";
+
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          goalId,
+          title,
+          body,
+          scheduledTz,
+          notificationDetails,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+        );
+      } catch (_) {
+        // Fallback jika izin exact alarm Android 12+ belum diaktifkan pengguna
+        await _notificationsPlugin.zonedSchedule(
+          goalId,
+          title,
+          body,
+          scheduledTz,
+          notificationDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+        );
+      }
     } catch (e) {
       debugPrint('Gagal menjadwalkan notifikasi: $e');
     }
@@ -110,6 +181,10 @@ class NotificationService {
     required String goalName,
     required int remainingAmount,
   }) async {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      return;
+    }
+
     try {
       const androidDetails = AndroidNotificationDetails(
         'goal_reminders_channel',
@@ -135,9 +210,49 @@ class NotificationService {
   }
 
   static Future<void> cancelGoalReminder(int goalId) async {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      return;
+    }
+
     try {
       await _notificationsPlugin.cancel(goalId);
     } catch (_) {}
   }
-}
 
+  /// Menampilkan ringkasan notifikasi ketika transaksi berulang dicatat otomatis.
+  static Future<void> showRecurringRecordedNotification({
+    required int count,
+    required List<String> titles,
+  }) async {
+    if (count <= 0 || kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      return;
+    }
+
+    try {
+      await initialize();
+      const androidDetails = AndroidNotificationDetails(
+        'recurring_transactions_channel',
+        'Transaksi Berulang Otomatis',
+        channelDescription:
+            'Pemberitahuan saat tagihan atau gaji rutin otomatis dicatat oleh Monetra',
+        importance: Importance.defaultImportance,
+        priority: Priority.defaultPriority,
+      );
+      const notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: DarwinNotificationDetails(),
+      );
+
+      final preview = titles.take(2).join(', ');
+      final extra = titles.length > 2 ? ' +${titles.length - 2} lainnya' : '';
+      await _notificationsPlugin.show(
+        900001,
+        'Monetra • $count Transaksi Rutin Dicatat',
+        '$preview$extra otomatis masuk ke catatan & saldo Anda.',
+        notificationDetails,
+      );
+    } catch (e) {
+      debugPrint('Error show recurring notification: $e');
+    }
+  }
+}

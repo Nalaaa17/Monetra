@@ -5,9 +5,11 @@ import '../../features/accounts/screens/manage_categories_screen.dart';
 import '../../features/goals/screens/goals_screen.dart';
 import '../../features/history/screens/history_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/recurring/screens/recurring_transactions_screen.dart';
 import '../../features/reports/screens/reports_screen.dart';
 import '../../features/settings/screens/backup_screen.dart';
 import '../../features/splash/screens/splash_screen.dart';
+import '../../features/tools/screens/money_calculator_screen.dart';
 import '../../features/transaction/screens/add_transaction_screen.dart';
 import '../../features/transaction/screens/transfer_screen.dart';
 
@@ -45,6 +47,8 @@ class AppRouter {
   static const String goals = '/goals';
   static const String reports = '/reports';
   static const String backup = '/backup';
+  static const String calculator = '/calculator';
+  static const String recurring = '/recurring';
   static const String manageAccounts = '/settings/accounts';
   static const String manageCategories = '/settings/categories';
 
@@ -63,8 +67,11 @@ class AppRouter {
       ),
       GoRoute(
         path: addTransaction,
-        pageBuilder: (context, state) =>
-            _buildTransitionPage(const AddTransactionScreen(), state),
+        pageBuilder: (context, state) {
+          final type = state.uri.queryParameters['type'];
+          return _buildTransitionPage(
+              AddTransactionScreen(initialType: type), state);
+        },
       ),
       GoRoute(
         path: history,
@@ -80,6 +87,16 @@ class AppRouter {
         path: backup,
         pageBuilder: (context, state) =>
             _buildTransitionPage(const BackupScreen(), state),
+      ),
+      GoRoute(
+        path: calculator,
+        pageBuilder: (context, state) =>
+            _buildTransitionPage(const MoneyCalculatorScreen(), state),
+      ),
+      GoRoute(
+        path: recurring,
+        pageBuilder: (context, state) =>
+            _buildTransitionPage(const RecurringTransactionsScreen(), state),
       ),
       GoRoute(
         path: reports,

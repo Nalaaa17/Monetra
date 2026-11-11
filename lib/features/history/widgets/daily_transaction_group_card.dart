@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_typography.dart';
+import '../../../../core/utils/bank_logo_helper.dart';
+import '../../../../core/utils/color_helper.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../data/repositories/transaction_repository.dart';
@@ -10,24 +12,33 @@ class DailyTransactionGroupCard extends StatelessWidget {
   final DailyTransactionsGroup group;
   final ValueChanged<TransactionDetail> onItemTap;
   final ValueChanged<TransferDetail>? onTransferTap;
+  final ValueChanged<TransactionDetail>? onItemDelete;
+  final ValueChanged<TransferDetail>? onTransferDelete;
 
   const DailyTransactionGroupCard({
     super.key,
     required this.group,
     required this.onItemTap,
     this.onTransferTap,
+    this.onItemDelete,
+    this.onTransferDelete,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final totalCount = group.items.length + group.transfers.length;
+    final headerBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFFAFAFA);
+    final footerBg = isDark ? const Color(0xFF162032) : const Color(0xFFF9FAFB);
+    final dividerColor = Theme.of(context).dividerColor;
+    final cardBg = Theme.of(context).cardColor;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: cardBg,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: dividerColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -36,138 +47,207 @@ class DailyTransactionGroupCard extends StatelessWidget {
           )
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Group Header: Tanggal
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFAFAFA),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-              border: Border(bottom: BorderSide(color: AppColors.divider)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.event_note_rounded,
-                        size: 18, color: AppColors.primaryDark),
-                    const SizedBox(width: 8),
-                    Text(
-                      DateFormatter.formatRelative(group.date),
-                      style: AppTypography.titleMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(17),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. Group Header: Tanggal
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: headerBg,
+                border: Border(bottom: BorderSide(color: dividerColor)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.event_note_rounded,
+                            size: 18, color: AppColors.primaryDark),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            DateFormatter.formatRelative(group.date),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.titleMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                Text(
-                  '$totalCount transaksi',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.textSecondary,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Text(
+                    '$totalCount transaksi',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textSecondaryOf(context),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          // 2. Transaksi Biasa (Income & Expense)
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            itemCount: group.items.length,
-            separatorBuilder: (context, index) => const Divider(
-              height: 1,
-              indent: 52,
-              endIndent: 16,
-              color: AppColors.divider,
-            ),
-            itemBuilder: (context, index) {
-              final tx = group.items[index];
-              return _buildItemRow(tx);
-            },
-          ),
-
-          // 3. Mutasi Transfer Antar Akun
-          if (group.transfers.isNotEmpty) ...[
-            if (group.items.isNotEmpty)
-              const Divider(height: 1, color: AppColors.divider),
+            // 2. Transaksi Biasa (Income & Expense)
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(vertical: 4),
-              itemCount: group.transfers.length,
-              separatorBuilder: (context, index) => const Divider(
+              itemCount: group.items.length,
+              separatorBuilder: (context, index) => Divider(
                 height: 1,
                 indent: 52,
                 endIndent: 16,
-                color: AppColors.divider,
+                color: dividerColor,
               ),
               itemBuilder: (context, index) {
-                final tr = group.transfers[index];
-                return _buildTransferRow(context, tr);
+                final tx = group.items[index];
+                final row = _buildItemRow(context, tx);
+                if (onItemDelete == null) return row;
+                return _buildSwipeDeleteWrapper(
+                  dismissKey: ValueKey('tx_${tx.id}'),
+                  onDismissed: () => onItemDelete!(tx),
+                  child: row,
+                );
               },
             ),
-          ],
 
-          // 4. Group Footer: Ringkasan ala Notes
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF9FAFB),
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(18)),
-              border: Border(top: BorderSide(color: AppColors.divider)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (group.totalExpense > 0)
-                  Row(
-                    children: [
-                      const Icon(Icons.arrow_upward_rounded,
-                          size: 14, color: AppColors.danger),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Total Keluar: ${CurrencyFormatter.format(group.totalExpense)}',
-                        style: AppTypography.labelSmall.copyWith(
-                          color: AppColors.danger,
-                          fontWeight: FontWeight.w700,
+            // 3. Mutasi Transfer Antar Akun
+            if (group.transfers.isNotEmpty) ...[
+              if (group.items.isNotEmpty)
+                Divider(height: 1, color: dividerColor),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                itemCount: group.transfers.length,
+                separatorBuilder: (context, index) => Divider(
+                  height: 1,
+                  indent: 52,
+                  endIndent: 16,
+                  color: dividerColor,
+                ),
+                itemBuilder: (context, index) {
+                  final tr = group.transfers[index];
+                  final row = _buildTransferRow(context, tr);
+                  if (onTransferDelete == null) return row;
+                  return _buildSwipeDeleteWrapper(
+                    dismissKey: ValueKey('tr_${tr.id}'),
+                    onDismissed: () => onTransferDelete!(tr),
+                    child: row,
+                  );
+                },
+              ),
+            ],
+
+            // 4. Group Footer: Ringkasan ala Notes
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: footerBg,
+                border: Border(top: BorderSide(color: dividerColor)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (group.totalExpense > 0)
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.arrow_upward_rounded,
+                                size: 14, color: AppColors.danger),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Total Keluar: ${CurrencyFormatter.format(group.totalExpense)}',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  )
-                else
-                  const SizedBox.shrink(),
-                if (group.totalIncome > 0)
-                  Row(
-                    children: [
-                      const Icon(Icons.arrow_downward_rounded,
-                          size: 14, color: Color(0xFF059669)),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Total Masuk: ${CurrencyFormatter.format(group.totalIncome)}',
-                        style: AppTypography.labelSmall.copyWith(
-                          color: const Color(0xFF059669),
-                          fontWeight: FontWeight.w700,
+                    )
+                  else
+                    const SizedBox.shrink(),
+                  if (group.totalExpense > 0 && group.totalIncome > 0)
+                    const SizedBox(width: 8),
+                  if (group.totalIncome > 0)
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.arrow_downward_rounded,
+                                size: 14, color: Color(0xFF059669)),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Total Masuk: ${CurrencyFormatter.format(group.totalIncome)}',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: const Color(0xFF059669),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  )
-                else
-                  const SizedBox.shrink(),
-              ],
+                    )
+                  else
+                    const SizedBox.shrink(),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildItemRow(TransactionDetail tx) {
+  Widget _buildSwipeDeleteWrapper({
+    required Key dismissKey,
+    required VoidCallback onDismissed,
+    required Widget child,
+  }) {
+    return Dismissible(
+      key: dismissKey,
+      direction: DismissDirection.endToStart,
+      onDismissed: (_) => onDismissed(),
+      background: Container(
+        color: AppColors.danger,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        alignment: Alignment.centerRight,
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Icon(Icons.delete_outline_rounded, color: Colors.white, size: 22),
+            SizedBox(width: 6),
+            Text(
+              'Hapus',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildItemRow(BuildContext context, TransactionDetail tx) {
     final isIncome = tx.isIncome;
     final color = isIncome ? const Color(0xFF059669) : AppColors.danger;
     final sign = isIncome ? '+ ' : '- ';
@@ -209,30 +289,54 @@ class DailyTransactionGroupCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: Color(int.parse(tx.accountColorHex))
-                              .withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          tx.accountName,
-                          style: AppTypography.labelSmall.copyWith(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Color(int.parse(tx.accountColorHex)),
-                          ),
-                        ),
+                      Builder(
+                        builder: (context) {
+                          final accColor =
+                              ColorHelper.parseHex(tx.accountColorHex);
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: accColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                BankLogoHelper.buildAccountBadge(
+                                  context: context,
+                                  accountName: tx.accountName,
+                                  accountColor: accColor,
+                                  logoKey: tx.accountLogoKey,
+                                  size: 14,
+                                  iconSize: 10,
+                                  borderRadius: 3,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  tx.accountName,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: accColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                       if (tx.categoryName != null) ...[
                         const SizedBox(width: 6),
-                        Text(
-                          '• ${tx.categoryName}',
-                          style: AppTypography.labelSmall.copyWith(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
+                        Expanded(
+                          child: Text(
+                            '• ${tx.categoryName}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.labelSmall.copyWith(
+                              fontSize: 11,
+                              color: AppColors.textSecondaryOf(context),
+                            ),
                           ),
                         ),
                       ],
@@ -250,8 +354,8 @@ class DailyTransactionGroupCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right_rounded,
-                size: 18, color: AppColors.textSecondary),
+            Icon(Icons.chevron_right_rounded,
+                size: 18, color: AppColors.textSecondaryOf(context)),
           ],
         ),
       ),
@@ -293,22 +397,30 @@ class DailyTransactionGroupCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      Text(
-                        tr.fromAccountName,
-                        style: AppTypography.labelSmall.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.danger,
+                      Flexible(
+                        child: Text(
+                          tr.fromAccountName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.labelSmall.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.danger,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Icon(Icons.arrow_forward_rounded,
-                          size: 12, color: AppColors.textSecondary),
+                      Icon(Icons.arrow_forward_rounded,
+                          size: 12, color: AppColors.textSecondaryOf(context)),
                       const SizedBox(width: 4),
-                      Text(
-                        tr.toAccountName,
-                        style: AppTypography.labelSmall.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF059669),
+                      Flexible(
+                        child: Text(
+                          tr.toAccountName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.labelSmall.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF059669),
+                          ),
                         ),
                       ),
                     ],
@@ -325,8 +437,8 @@ class DailyTransactionGroupCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right_rounded,
-                size: 18, color: AppColors.textSecondary),
+            Icon(Icons.chevron_right_rounded,
+                size: 18, color: AppColors.textSecondaryOf(context)),
           ],
         ),
       ),

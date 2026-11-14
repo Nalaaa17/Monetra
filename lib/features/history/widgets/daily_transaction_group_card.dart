@@ -5,6 +5,7 @@ import '../../../../core/utils/bank_logo_helper.dart';
 import '../../../../core/utils/color_helper.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/utils/icon_helper.dart';
 import '../../../../data/repositories/transaction_repository.dart';
 import '../../../../data/repositories/transfer_repository.dart';
 
@@ -27,32 +28,32 @@ class DailyTransactionGroupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final totalCount = group.items.length + group.transfers.length;
-    final headerBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFFAFAFA);
-    final footerBg = isDark ? const Color(0xFF162032) : const Color(0xFFF9FAFB);
-    final dividerColor = Theme.of(context).dividerColor;
+    final dividerColor = Theme.of(context).dividerColor.withValues(alpha: 0.6);
     final cardBg = Theme.of(context).cardColor;
+    final headerBg = isDark
+        ? const Color(0xFF1E2430).withValues(alpha: 0.7)
+        : const Color(0xFFF8FAFC);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: dividerColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+            blurRadius: 10,
             offset: const Offset(0, 3),
-          )
+          ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(17),
+        borderRadius: BorderRadius.circular(19),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Group Header: Tanggal
+            // 1. Group Header: Tanggal & Ringkasan Kas Harian
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
@@ -65,8 +66,18 @@ class DailyTransactionGroupCard extends StatelessWidget {
                   Expanded(
                     child: Row(
                       children: [
-                        const Icon(Icons.event_note_rounded,
-                            size: 18, color: AppColors.primaryDark),
+                        Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                          child: const Icon(
+                            Icons.calendar_today_rounded,
+                            size: 13,
+                            color: AppColors.primaryDark,
+                          ),
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -75,7 +86,7 @@ class DailyTransactionGroupCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: AppTypography.titleMedium.copyWith(
                               fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                              fontSize: 13.5,
                             ),
                           ),
                         ),
@@ -83,12 +94,7 @@ class DailyTransactionGroupCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    '$totalCount transaksi',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.textSecondaryOf(context),
-                    ),
-                  ),
+                  _buildDailyCashflowBadge(group),
                 ],
               ),
             ),
@@ -97,13 +103,13 @@ class DailyTransactionGroupCard extends StatelessWidget {
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              padding: EdgeInsets.zero,
               itemCount: group.items.length,
               separatorBuilder: (context, index) => Divider(
                 height: 1,
-                indent: 52,
+                indent: 64,
                 endIndent: 16,
-                color: dividerColor,
+                color: dividerColor.withValues(alpha: 0.4),
               ),
               itemBuilder: (context, index) {
                 final tx = group.items[index];
@@ -120,17 +126,22 @@ class DailyTransactionGroupCard extends StatelessWidget {
             // 3. Mutasi Transfer Antar Akun
             if (group.transfers.isNotEmpty) ...[
               if (group.items.isNotEmpty)
-                Divider(height: 1, color: dividerColor),
+                Divider(
+                  height: 1,
+                  indent: 64,
+                  endIndent: 16,
+                  color: dividerColor.withValues(alpha: 0.4),
+                ),
               ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: EdgeInsets.zero,
                 itemCount: group.transfers.length,
                 separatorBuilder: (context, index) => Divider(
                   height: 1,
-                  indent: 52,
+                  indent: 64,
                   endIndent: 16,
-                  color: dividerColor,
+                  color: dividerColor.withValues(alpha: 0.4),
                 ),
                 itemBuilder: (context, index) {
                   final tr = group.transfers[index];
@@ -144,74 +155,68 @@ class DailyTransactionGroupCard extends StatelessWidget {
                 },
               ),
             ],
-
-            // 4. Group Footer: Ringkasan ala Notes
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: footerBg,
-                border: Border(top: BorderSide(color: dividerColor)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (group.totalExpense > 0)
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.arrow_upward_rounded,
-                                size: 14, color: AppColors.danger),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Total Keluar: ${CurrencyFormatter.format(group.totalExpense)}',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.danger,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else
-                    const SizedBox.shrink(),
-                  if (group.totalExpense > 0 && group.totalIncome > 0)
-                    const SizedBox(width: 8),
-                  if (group.totalIncome > 0)
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerRight,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.arrow_downward_rounded,
-                                size: 14, color: Color(0xFF059669)),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Total Masuk: ${CurrencyFormatter.format(group.totalIncome)}',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: const Color(0xFF059669),
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  else
-                    const SizedBox.shrink(),
-                ],
-              ),
-            ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildDailyCashflowBadge(DailyTransactionsGroup group) {
+    if (group.totalIncome > 0 && group.totalExpense == 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFF059669).withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          '+${CurrencyFormatter.format(group.totalIncome)}',
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF059669),
+          ),
+        ),
+      );
+    } else if (group.totalExpense > 0 && group.totalIncome == 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: AppColors.danger.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          '-${CurrencyFormatter.format(group.totalExpense)}',
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: AppColors.danger,
+          ),
+        ),
+      );
+    } else if (group.totalIncome > 0 && group.totalExpense > 0) {
+      final net = group.totalIncome - group.totalExpense;
+      final isPos = net >= 0;
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: (isPos ? const Color(0xFF059669) : AppColors.danger)
+              .withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          isPos
+              ? '+${CurrencyFormatter.format(net)}'
+              : '-${CurrencyFormatter.format(-net)}',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: isPos ? const Color(0xFF059669) : AppColors.danger,
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
   }
 
   Widget _buildSwipeDeleteWrapper({
@@ -230,7 +235,7 @@ class DailyTransactionGroupCard extends StatelessWidget {
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Icon(Icons.delete_outline_rounded, color: Colors.white, size: 22),
+            Icon(Icons.delete_outline_rounded, color: Colors.white, size: 20),
             SizedBox(width: 6),
             Text(
               'Hapus',
@@ -250,7 +255,47 @@ class DailyTransactionGroupCard extends StatelessWidget {
   Widget _buildItemRow(BuildContext context, TransactionDetail tx) {
     final isIncome = tx.isIncome;
     final color = isIncome ? const Color(0xFF059669) : AppColors.danger;
-    final sign = isIncome ? '+ ' : '- ';
+    final sign = isIncome ? '+' : '-';
+    final catColor = tx.categoryColorHex != null
+        ? ColorHelper.parseHex(tx.categoryColorHex!)
+        : (isIncome ? const Color(0xFF059669) : AppColors.danger);
+
+    Widget iconWidget;
+    if (tx.categoryIconCodePoint != null) {
+      iconWidget = Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: catColor.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Icon(
+          IconHelper.getIcon(tx.categoryIconCodePoint!),
+          color: catColor,
+          size: 19,
+        ),
+      );
+    } else {
+      iconWidget = Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Icon(
+          isIncome ? Icons.south_west_rounded : Icons.north_east_rounded,
+          color: color,
+          size: 18,
+        ),
+      );
+    }
+
+    final titleText = tx.note?.isNotEmpty == true
+        ? tx.note!
+        : (tx.categoryName ?? (isIncome ? 'Pemasukan' : 'Pengeluaran'));
+
+    final accColor = ColorHelper.parseHex(tx.accountColorHex);
 
     return InkWell(
       onTap: () => onItemTap(tx),
@@ -258,29 +303,16 @@ class DailyTransactionGroupCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: isIncome
-                  ? AppColors.tertiary.withValues(alpha: 0.15)
-                  : AppColors.danger.withValues(alpha: 0.12),
-              child: Icon(
-                isIncome
-                    ? Icons.south_west_rounded
-                    : Icons.north_east_rounded,
-                color: color,
-                size: 18,
-              ),
-            ),
+            iconWidget,
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    tx.note?.isNotEmpty == true
-                        ? tx.note!
-                        : (tx.categoryName ??
-                            (isIncome ? 'Pemasukan' : 'Pengeluaran')),
+                    titleText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTypography.titleMedium.copyWith(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -289,48 +321,43 @@ class DailyTransactionGroupCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      Builder(
-                        builder: (context) {
-                          final accColor =
-                              ColorHelper.parseHex(tx.accountColorHex);
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: accColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: accColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            BankLogoHelper.buildAccountBadge(
+                              context: context,
+                              accountName: tx.accountName,
+                              accountColor: accColor,
+                              logoKey: tx.accountLogoKey,
+                              size: 12,
+                              iconSize: 8,
+                              borderRadius: 3,
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                BankLogoHelper.buildAccountBadge(
-                                  context: context,
-                                  accountName: tx.accountName,
-                                  accountColor: accColor,
-                                  logoKey: tx.accountLogoKey,
-                                  size: 14,
-                                  iconSize: 10,
-                                  borderRadius: 3,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  tx.accountName,
-                                  style: AppTypography.labelSmall.copyWith(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: accColor,
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(width: 4),
+                            Text(
+                              tx.accountName,
+                              style: AppTypography.labelSmall.copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: accColor,
+                              ),
                             ),
-                          );
-                        },
+                          ],
+                        ),
                       ),
-                      if (tx.categoryName != null) ...[
+                      if (tx.note?.isNotEmpty == true &&
+                          tx.categoryName != null) ...[
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            '• ${tx.categoryName}',
+                            tx.categoryName!,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: AppTypography.labelSmall.copyWith(
@@ -345,6 +372,7 @@ class DailyTransactionGroupCard extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             Text(
               '$sign${CurrencyFormatter.format(tx.amount)}',
               style: AppTypography.titleMedium.copyWith(
@@ -353,9 +381,6 @@ class DailyTransactionGroupCard extends StatelessWidget {
                 color: color,
               ),
             ),
-            const SizedBox(width: 4),
-            Icon(Icons.chevron_right_rounded,
-                size: 18, color: AppColors.textSecondaryOf(context)),
           ],
         ),
       ),
@@ -364,18 +389,18 @@ class DailyTransactionGroupCard extends StatelessWidget {
 
   Widget _buildTransferRow(BuildContext context, TransferDetail tr) {
     return InkWell(
-      onTap: () {
-        if (onTransferTap != null) {
-          onTransferTap!(tr);
-        }
-      },
+      onTap: () => onTransferTap?.call(tr),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: AppColors.secondary.withValues(alpha: 0.15),
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(11),
+              ),
               child: const Icon(
                 Icons.swap_horiz_rounded,
                 color: Color(0xFF0284C7),
@@ -389,6 +414,8 @@ class DailyTransactionGroupCard extends StatelessWidget {
                 children: [
                   Text(
                     tr.note?.isNotEmpty == true ? tr.note! : 'Transfer Saldo',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTypography.titleMedium.copyWith(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -405,12 +432,16 @@ class DailyTransactionGroupCard extends StatelessWidget {
                           style: AppTypography.labelSmall.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppColors.danger,
+                            fontSize: 10.5,
                           ),
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(Icons.arrow_forward_rounded,
-                          size: 12, color: AppColors.textSecondaryOf(context)),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 11,
+                        color: AppColors.textSecondaryOf(context),
+                      ),
                       const SizedBox(width: 4),
                       Flexible(
                         child: Text(
@@ -420,6 +451,7 @@ class DailyTransactionGroupCard extends StatelessWidget {
                           style: AppTypography.labelSmall.copyWith(
                             fontWeight: FontWeight.bold,
                             color: const Color(0xFF059669),
+                            fontSize: 10.5,
                           ),
                         ),
                       ),
@@ -428,6 +460,7 @@ class DailyTransactionGroupCard extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             Text(
               CurrencyFormatter.format(tr.amount),
               style: AppTypography.titleMedium.copyWith(
@@ -436,9 +469,6 @@ class DailyTransactionGroupCard extends StatelessWidget {
                 color: const Color(0xFF0284C7),
               ),
             ),
-            const SizedBox(width: 4),
-            Icon(Icons.chevron_right_rounded,
-                size: 18, color: AppColors.textSecondaryOf(context)),
           ],
         ),
       ),

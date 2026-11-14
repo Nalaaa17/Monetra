@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/accounts/screens/manage_accounts_screen.dart';
 import '../../features/accounts/screens/manage_categories_screen.dart';
+import '../../features/budget/screens/budget_screen.dart';
+import '../../features/debts/screens/debt_screen.dart';
 import '../../features/goals/screens/goals_screen.dart';
 import '../../features/history/screens/history_screen.dart';
+import '../../features/home/screens/all_features_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/investasi/screens/investasi_screen.dart';
 import '../../features/recurring/screens/recurring_transactions_screen.dart';
 import '../../features/reports/screens/reports_screen.dart';
 import '../../features/settings/screens/backup_screen.dart';
@@ -51,6 +55,10 @@ class AppRouter {
   static const String recurring = '/recurring';
   static const String manageAccounts = '/settings/accounts';
   static const String manageCategories = '/settings/categories';
+  static const String allFeatures = '/all-features';
+  static const String budget = '/budget';
+  static const String investasi = '/investasi';
+  static const String utang = '/utang';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -117,6 +125,26 @@ class AppRouter {
         path: goals,
         pageBuilder: (context, state) =>
             _buildTransitionPage(const GoalsScreen(), state),
+      ),
+      GoRoute(
+        path: allFeatures,
+        pageBuilder: (context, state) =>
+            _buildTransitionPage(const AllFeaturesScreen(), state),
+      ),
+      GoRoute(
+        path: budget,
+        pageBuilder: (context, state) =>
+            _buildTransitionPage(const BudgetScreen(), state),
+      ),
+      GoRoute(
+        path: investasi,
+        pageBuilder: (context, state) =>
+            _buildTransitionPage(const InvestasiScreen(), state),
+      ),
+      GoRoute(
+        path: utang,
+        pageBuilder: (context, state) =>
+            _buildTransitionPage(const DebtScreen(), state),
       ),
     ],
   );

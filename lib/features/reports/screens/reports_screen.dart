@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/repositories/report_repository.dart';
@@ -13,6 +11,9 @@ import '../widgets/category_ranking_list.dart';
 import '../widgets/monthly_account_bar_chart.dart';
 import '../widgets/monthly_donut_chart.dart';
 import '../widgets/six_month_trend_chart.dart';
+import '../../home/widgets/spending_progress_card.dart';
+import '../../home/widgets/monthly_activity_calendar.dart';
+import '../../home/widgets/floating_bottom_bar.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -142,6 +143,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
                             // 2 Kartu Metrik: Rata-rata Harian & Hari Terboros
                             _buildDailyMetricsRow(context, report),
+                            const SizedBox(height: 18),
+
+                            // Progres Pengeluaran 50/30/20
+                            const SpendingProgressCard(),
+                            const SizedBox(height: 18),
+
+                            // Aktivitas Bulan Ini (Kalender Keuangan)
+                            const MonthlyActivityCalendar(),
                             const SizedBox(height: 20),
 
                             // Donut Chart Kategori
@@ -185,46 +194,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 3,
-        backgroundColor: Theme.of(context).cardColor,
-        elevation: 4,
-        onDestinationSelected: (index) {
-          if (index == 0) {
-            context.go(AppRouter.home);
-          } else if (index == 1) {
-            context.push(AppRouter.history);
-          } else if (index == 2) {
-            context.push(AppRouter.goals);
-          }
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon:
-                Icon(Icons.home_rounded, color: AppColors.primaryDark),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon:
-                Icon(Icons.receipt_long_rounded, color: AppColors.primaryDark),
-            label: 'Riwayat',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.track_changes_outlined),
-            selectedIcon:
-                Icon(Icons.track_changes_rounded, color: AppColors.primaryDark),
-            label: 'Goal',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon:
-                Icon(Icons.bar_chart_rounded, color: AppColors.primaryDark),
-            label: 'Laporan',
-          ),
-        ],
-      ),
+      bottomNavigationBar: const FloatingBottomBar(selectedIndex: 2),
     );
   }
 
@@ -237,7 +207,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
+        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.6))),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -247,26 +217,26 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             tooltip: 'Bulan Sebelumnya',
             onPressed: () => _changeMonth(selectedDate, -1),
           ),
-          Expanded(
-            child: Column(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                const Icon(
+                  Icons.calendar_month_rounded,
+                  size: 15,
+                  color: AppColors.primaryDark,
+                ),
+                const SizedBox(width: 8),
                 Text(
                   monthName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.titleMedium.copyWith(
                     fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  'Geser kiri / kanan untuk ganti bulan',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.labelSmall.copyWith(
-                    fontSize: 10,
-                    color: AppColors.textSecondaryOf(context),
+                    fontSize: 14.5,
                   ),
                 ),
               ],
@@ -283,145 +253,160 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   }
 
   Widget _buildCashflowCard(BuildContext context, MonthlyReportSummary report) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSurplus = report.netSavings >= 0;
+    final savingsRatio = report.totalIncome > 0
+        ? ((report.netSavings / report.totalIncome) * 100).clamp(0, 100).toInt()
+        : 0;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        color: isDark ? const Color(0xFF161A23) : const Color(0xFF1E2430),
+        borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          )
+            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Kolom Total Masuk
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: const [
-                        Icon(Icons.arrow_downward_rounded,
-                            size: 16, color: Color(0xFF059669)),
-                        SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            'Pemasukan',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF059669),
-                            ),
-                          ),
-                        ),
-                      ],
+              Text(
+                'ARUS KAS BULANAN',
+                style: AppTypography.labelSmall.copyWith(
+                  color: Colors.white60,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              if (isSurplus && report.totalIncome > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF34D399).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Rasio Tabungan $savingsRatio%',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: const Color(0xFF34D399),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
                     ),
-                    const SizedBox(height: 6),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        CurrencyFormatter.format(report.totalIncome),
-                        style: AppTypography.titleMedium.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: const Color(0xFF059669),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                '${isSurplus ? '+' : ''}${CurrencyFormatter.format(report.netSavings)}',
+                style: AppTypography.headlineMedium.copyWith(
+                  color: isSurplus ? const Color(0xFF34D399) : AppColors.danger,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
                 ),
               ),
               const SizedBox(width: 8),
-              Container(width: 1, height: 40, color: Theme.of(context).dividerColor),
-              const SizedBox(width: 12),
-
-              // Kolom Total Keluar
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: const [
-                        Icon(Icons.arrow_upward_rounded,
-                            size: 16, color: AppColors.danger),
-                        SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            'Pengeluaran',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.danger,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        CurrencyFormatter.format(report.totalExpense),
-                        style: AppTypography.titleMedium.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: AppColors.danger,
-                        ),
-                      ),
-                    ),
-                  ],
+              Text(
+                isSurplus ? 'Surplus' : 'Defisit',
+                style: AppTypography.bodySmall.copyWith(
+                  color: Colors.white54,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
           ),
-          Divider(height: 24, color: Theme.of(context).dividerColor),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: Text(
-                  isSurplus ? 'Sisa Kas (Surplus)' : 'Defisit Bulan Ini',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF34D399),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Pemasukan',
+                            style: AppTypography.labelSmall.copyWith(color: Colors.white54),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        CurrencyFormatter.format(report.totalIncome),
+                        style: AppTypography.titleSmall.copyWith(
+                          color: const Color(0xFF34D399),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    '${isSurplus ? '+' : ''}${CurrencyFormatter.format(report.netSavings)}',
-                    style: AppTypography.titleMedium.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: isSurplus
-                          ? const Color(0xFF059669)
-                          : AppColors.danger,
-                    ),
+                Container(
+                  width: 1,
+                  height: 28,
+                  color: Colors.white.withValues(alpha: 0.15),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: AppColors.danger,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Pengeluaran',
+                            style: AppTypography.labelSmall.copyWith(color: Colors.white54),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        CurrencyFormatter.format(report.totalExpense),
+                        style: AppTypography.titleSmall.copyWith(
+                          color: AppColors.danger,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -440,35 +425,47 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           // Rata-rata Pengeluaran Harian
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Theme.of(context).dividerColor),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.6)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.speed_rounded,
-                          size: 16, color: AppColors.primaryDark),
-                      const SizedBox(width: 6),
-                      Flexible(
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.speed_rounded,
+                          size: 14,
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
                         child: Text(
-                          'Rata-rata / Hari',
+                          'RATA-RATA / HARI',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
                             color: AppColors.textSecondaryOf(context),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
@@ -476,7 +473,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                       CurrencyFormatter.format(report.dailyAverageExpense),
                       style: AppTypography.titleMedium.copyWith(
                         fontWeight: FontWeight.bold,
-                        fontSize: 15,
+                        fontSize: 16,
                       ),
                     ),
                   ),
@@ -489,61 +486,85 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           // Hari Pengeluaran Terbesar
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Theme.of(context).dividerColor),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.6)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.local_fire_department_rounded,
-                          size: 16, color: AppColors.danger),
-                      const SizedBox(width: 6),
-                      Flexible(
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.danger.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.local_fire_department_rounded,
+                          size: 14,
+                          color: AppColors.danger,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
                         child: Text(
-                          'Hari Terboros',
+                          'HARI TERBOROS',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
                             color: AppColors.textSecondaryOf(context),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      report.highestExpenseAmount > 0
-                          ? CurrencyFormatter.format(report.highestExpenseAmount)
-                          : 'Rp 0',
-                      style: AppTypography.titleMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: AppColors.danger,
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            report.highestExpenseAmount > 0
+                                ? CurrencyFormatter.format(report.highestExpenseAmount)
+                                : 'Rp 0',
+                            style: AppTypography.titleMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: AppColors.danger,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      if (parsedTopDay != null && report.highestExpenseAmount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            DateFormatter.formatShort(parsedTopDay).split(' ').take(2).join(' '),
+                            style: const TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.danger,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  if (parsedTopDay != null && report.highestExpenseAmount > 0) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      DateFormatter.formatShort(parsedTopDay),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.labelSmall.copyWith(
-                        fontSize: 10.5,
-                        color: AppColors.textSecondaryOf(context),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -555,23 +576,23 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
   Widget _buildEmptyMonthBanner(BuildContext context, String monthName) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.6)),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.analytics_outlined,
-              size: 28,
+              size: 24,
               color: AppColors.primaryDark,
             ),
           ),
@@ -581,14 +602,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Belum Ada Catatan di $monthName',
+                  'Belum Ada Catatan Bulan Ini',
                   style: AppTypography.titleMedium.copyWith(
                     fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
-                  'Anda tetap dapat memantau perbandingan tren 6 bulan terakhir di bawah ini.',
+                  'Grafik tren 6 bulan tetap dapat dipantau di bawah.',
                   style: AppTypography.labelSmall.copyWith(
                     color: AppColors.textSecondaryOf(context),
                   ),
@@ -609,27 +631,28 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.analytics_outlined,
-                size: 64,
+                size: 52,
                 color: AppColors.primaryDark,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             Text(
-              'Belum Ada Catatan di $monthName',
-              style: AppTypography.headlineMedium.copyWith(fontSize: 18),
+              'Belum Ada Transaksi',
+              style: AppTypography.headlineMedium.copyWith(fontSize: 17),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
-              'Catat pengeluaran dan pemasukan harian Anda untuk melihat grafik analisa pos pengeluaran dan perbandingan dompet di sini.',
+              'Catat transaksi untuk melihat grafik analisa finansial bulan ini.',
               textAlign: TextAlign.center,
               style: AppTypography.bodyMedium.copyWith(
+                fontSize: 13,
                 color: AppColors.textSecondaryOf(context),
               ),
             ),

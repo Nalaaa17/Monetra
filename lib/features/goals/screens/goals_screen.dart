@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../data/repositories/goal_repository.dart';
 import '../../home/providers/home_providers.dart';
 import '../providers/goal_providers.dart';
 import '../widgets/goal_card.dart';
 import '../widgets/goal_form_modal.dart';
+import '../../home/widgets/floating_bottom_bar.dart';
 
 class GoalsScreen extends ConsumerWidget {
   const GoalsScreen({super.key});
@@ -14,46 +16,44 @@ class GoalsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final goalsAsync = ref.watch(goalsListProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: AppColors.surfaceOf(context),
         appBar: AppBar(
           title: Text(
-            'Target & Tabungan',
-            style: AppTypography.headlineMedium.copyWith(fontSize: 18),
+            'Target Tabungan',
+            style: AppTypography.titleLarge.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimaryOf(context),
+            ),
           ),
-          bottom: TabBar(
-            labelColor: AppColors.primaryDark,
-            unselectedLabelColor: AppColors.textSecondaryOf(context),
-            indicatorColor: AppColors.primaryDark,
-            indicatorWeight: 3,
-            tabs: const [
-              Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('🎯 Berjalan'),
-                  ],
-                ),
-              ),
-              Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('🎉 Tercapai'),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
           actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded),
-              tooltip: 'Segarkan',
-              onPressed: () {
-                ref.read(homeRefreshTriggerProvider.notifier).state++;
-              },
+            Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: TextButton.icon(
+                style: TextButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () => showGoalFormModal(context, ref),
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(
+                  'Target',
+                  style: AppTypography.labelMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -62,30 +62,90 @@ class GoalsScreen extends ConsumerWidget {
             final activeGoals = goals.where((g) => !g.isDone).toList();
             final completedGoals = goals.where((g) => g.isDone).toList();
 
-            return TabBarView(
-              children: [
-                _buildGoalListTab(
-                  context,
-                  ref,
-                  goals: activeGoals,
-                  emptyTitle: 'Belum Ada Target Aktif',
-                  emptySubtitle:
-                      'Buat target tabungan atau tagihan rutin seperti "Bayar Ressa" atau "Liquid + Coil".',
-                  isActiveTab: true,
-                ),
-                _buildGoalListTab(
-                  context,
-                  ref,
-                  goals: completedGoals,
-                  emptyTitle: 'Belum Ada Target Tercapai',
-                  emptySubtitle:
-                      'Target yang progresnya telah mencapai 100% akan otomatis dipindahkan ke sini.',
-                  isActiveTab: false,
+            int totalTarget = 0;
+            int totalCollected = 0;
+            for (final g in goals) {
+              totalTarget += g.targetAmount;
+              totalCollected += g.collectedAmount;
+            }
+            final overallProgress = totalTarget > 0
+                ? (totalCollected / totalTarget).clamp(0.0, 1.0)
+                : 0.0;
+            final overallPct = (overallProgress * 100).toInt();
+
+            return NestedScrollView(
+              headerSliverBuilder: (context, _) => [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // HERO SUMMARY CARD
+                        _buildHeroGoalsCard(
+                          context,
+                          isDark,
+                          totalTarget: totalTarget,
+                          totalCollected: totalCollected,
+                          progress: overallProgress,
+                          pct: overallPct,
+                          activeCount: activeGoals.length,
+                        ),
+                        const SizedBox(height: 14),
+
+                        // TAB SELECTOR
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: AppColors.cardOf(context),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.dividerOf(context)),
+                          ),
+                          child: TabBar(
+                            dividerColor: Colors.transparent,
+                            indicator: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            labelColor: AppColors.primaryDark,
+                            unselectedLabelColor: AppColors.textSecondaryOf(context),
+                            labelStyle: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.bold),
+                            tabs: [
+                              Tab(text: 'Berjalan (${activeGoals.length})'),
+                              Tab(text: 'Tercapai (${completedGoals.length})'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
+              body: TabBarView(
+                children: [
+                  _buildGoalListTab(
+                    context,
+                    ref,
+                    goals: activeGoals,
+                    emptyTitle: 'Belum Ada Target Aktif',
+                    emptySubtitle: 'Mulai buat target impian atau dana darurat kamu.',
+                    isActiveTab: true,
+                  ),
+                  _buildGoalListTab(
+                    context,
+                    ref,
+                    goals: completedGoals,
+                    emptyTitle: 'Belum Ada Target Tercapai',
+                    emptySubtitle: 'Target yang sudah 100% terkumpul akan tampil di sini.',
+                    isActiveTab: false,
+                  ),
+                ],
+              ),
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
           error: (err, _) => Center(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -97,40 +157,93 @@ class GoalsScreen extends ConsumerWidget {
             ),
           ),
         ),
-        floatingActionButton: Container(
-          height: 48,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.45),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+        bottomNavigationBar: const FloatingBottomBar(selectedIndex: 3),
+      ),
+    );
+  }
+
+  Widget _buildHeroGoalsCard(
+    BuildContext context,
+    bool isDark, {
+    required int totalTarget,
+    required int totalCollected,
+    required double progress,
+    required int pct,
+    required int activeCount,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF161A23) : const Color(0xFF1E2430),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'TOTAL TABUNGAN TARGET',
+                style: AppTypography.labelSmall.copyWith(
+                  color: Colors.white60,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  '$pct% Tercapai',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
-          child: ElevatedButton.icon(
-            onPressed: () => showGoalFormModal(context, ref),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.black,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                CurrencyFormatter.format(totalCollected),
+                style: AppTypography.headlineMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            icon: const Icon(Icons.add_rounded, color: Colors.black, size: 22),
-            label: const Text(
-              'Target Baru',
-              style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+              const SizedBox(width: 8),
+              Text(
+                '/ ${CurrencyFormatter.format(totalTarget)}',
+                style: AppTypography.bodySmall.copyWith(color: Colors.white54),
               ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.white.withValues(alpha: 0.15),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+              minHeight: 6,
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -151,51 +264,44 @@ class GoalsScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  isActiveTab
-                      ? Icons.track_changes_rounded
-                      : Icons.celebration_rounded,
-                  size: 60,
+                  isActiveTab ? Icons.track_changes_rounded : Icons.celebration_rounded,
+                  size: 48,
                   color: AppColors.primaryDark,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Text(
                 emptyTitle,
-                style: AppTypography.headlineMedium.copyWith(fontSize: 18),
+                style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
                 emptySubtitle,
                 textAlign: TextAlign.center,
-                style: AppTypography.bodyMedium,
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textSecondaryOf(context),
+                ),
               ),
               if (isActiveTab) ...[
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 ElevatedButton.icon(
                   onPressed: () => showGoalFormModal(context, ref),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 12),
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  icon: const Icon(Icons.add_rounded, color: Colors.black),
-                  label: const Text(
-                    'Tambah Target Sekarang',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Buat Target Sekarang'),
                 ),
               ],
             ],
@@ -205,12 +311,14 @@ class GoalsScreen extends ConsumerWidget {
     }
 
     return RefreshIndicator(
+      color: AppColors.primary,
       onRefresh: () async {
         ref.read(homeRefreshTriggerProvider.notifier).state++;
       },
-      child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 90),
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
         itemCount: goals.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
           return GoalCard(detail: goals[index]);
         },

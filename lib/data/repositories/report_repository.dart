@@ -1,6 +1,49 @@
 import '../../core/utils/date_formatter.dart';
 import '../database/app_database.dart';
 
+class DailyActivityPoint {
+  final int day;
+  final int income;
+  final int expense;
+
+  const DailyActivityPoint({
+    required this.day,
+    required this.income,
+    required this.expense,
+  });
+}
+
+class SpendingAllocation {
+  final int needsAmount;
+  final double needsPercentage;
+  final String needsStatus;
+
+  final int wantsAmount;
+  final double wantsPercentage;
+  final String wantsStatus;
+
+  final int savingsAmount;
+  final double savingsPercentage;
+  final String savingsStatus;
+
+  final int currentDay;
+  final int totalDaysInMonth;
+
+  const SpendingAllocation({
+    required this.needsAmount,
+    required this.needsPercentage,
+    required this.needsStatus,
+    required this.wantsAmount,
+    required this.wantsPercentage,
+    required this.wantsStatus,
+    required this.savingsAmount,
+    required this.savingsPercentage,
+    required this.savingsStatus,
+    required this.currentDay,
+    required this.totalDaysInMonth,
+  });
+}
+
 class MonthlyCashflowPoint {
   final int year;
   final int month;
@@ -255,6 +298,157 @@ class ReportRepository {
       );
     }
     return points;
+  }
+
+  /// Mengambil aktivitas pemasukan dan pengeluaran harian untuk kalender bulan [year]-[month]
+  Future<Map<int, DailyActivityPoint>> getDailyActivityForMonth(
+    int year,
+    int month,
+  ) async {
+    final db = await AppDatabase.instance;
+    final startDate = DateTime(year, month, 1).toIso8601String();
+    final endDate = DateTime(year, month + 1, 1).toIso8601String();
+
+    final rows = await db.rawQuery('''
+      SELECT 
+        CAST(substr(date, 9, 2) AS INTEGER) as dayNum,
+        COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as totalIncome,
+        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as totalExpense
+      FROM transactions
+      WHERE date >= ? AND date < ?
+      GROUP BY dayNum
+    ''', [startDate, endDate]);
+
+    final Map<int, DailyActivityPoint> map = {};
+    for (final row in rows) {
+      final day = (row['dayNum'] as num?)?.toInt();
+      if (day != null) {
+        map[day] = DailyActivityPoint(
+          day: day,
+          income: (row['totalIncome'] as num?)?.toInt() ?? 0,
+          expense: (row['totalExpense'] as num?)?.toInt() ?? 0,
+        );
+      }
+    }
+    return map;
+  }
+
+  /// Menghitung alokasi pengeluaran berdasarkan aturan 50/30/20 (Kebutuhan, Keinginan, Tabungan)
+  Future<SpendingAllocation> getSpendingAllocation(int year, int month) async {
+    final db = await AppDatabase.instance;
+    final startDate = DateTime(year, month, 1).toIso8601String();
+    final endDate = DateTime(year, month + 1, 1).toIso8601String();
+
+    // 1. Total Income
+    final incRows = await db.rawQuery('''
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM transactions
+      WHERE type = 'income' AND date >= ? AND date < ?
+    ''', [startDate, endDate]);
+    final totalIncome = (incRows.first['total'] as num?)?.toInt() ?? 0;
+
+    // 2. Kategori pengeluaran
+    final expRows = await db.rawQuery('''
+      SELECT 
+        LOWER(COALESCE(c.name, '')) as catName,
+        COALESCE(SUM(t.amount), 0) as totalAmount
+      FROM transactions t
+      LEFT JOIN categories c ON t.categoryId = c.id
+      WHERE t.type = 'expense' AND t.date >= ? AND t.date < ?
+      GROUP BY c.id
+    ''', [startDate, endDate]);
+
+    int needsTotal = 0;
+    int wantsTotal = 0;
+
+    final wantsKeywords = [
+      'jajan',
+      'hiburan',
+      'game',
+      'nongkrong',
+      'kafe',
+      'cafe',
+      'liburan',
+      'keinginan',
+      'hobi',
+      'bioskop'
+    ];
+
+    for (final row in expRows) {
+      final name = (row['catName'] as String?) ?? '';
+      final amt = (row['totalAmount'] as num?)?.toInt() ?? 0;
+      final isWants = wantsKeywords.any((kw) => name.contains(kw));
+      if (isWants) {
+        wantsTotal += amt;
+      } else {
+        needsTotal += amt;
+      }
+    }
+
+    // 3. Tabungan (Goal contribution atau surplus simpanan)
+    final goalRows = await db.rawQuery('''
+      SELECT COALESCE(SUM(amount), 0) as total
+      FROM goal_contributions
+      WHERE date >= ? AND date < ?
+    ''', [startDate, endDate]);
+    final goalSaved = (goalRows.first['total'] as num?)?.toInt() ?? 0;
+    final netSavings = totalIncome > (needsTotal + wantsTotal)
+        ? (totalIncome - (needsTotal + wantsTotal))
+        : 0;
+    final savingsTotal = goalSaved > 0 ? goalSaved : netSavings;
+
+    // Persentase & Status
+    final totalSpend = needsTotal + wantsTotal;
+    final double needsPct;
+    final double wantsPct;
+    final double savingsPct;
+
+    if (totalIncome > 0) {
+      needsPct = (needsTotal / (totalIncome * 0.50) * 100).clamp(0, 100);
+      wantsPct = (wantsTotal / (totalIncome * 0.30) * 100).clamp(0, 100);
+      savingsPct = (savingsTotal / (totalIncome * 0.20) * 100).clamp(0, 100);
+    } else if (totalSpend > 0) {
+      needsPct = (needsTotal / totalSpend * 100).clamp(0, 100);
+      wantsPct = (wantsTotal / totalSpend * 100).clamp(0, 100);
+      savingsPct = (savingsTotal > 0 ? 100.0 : 0.0);
+    } else {
+      needsPct = 0;
+      wantsPct = 0;
+      savingsPct = 0;
+    }
+
+    String getStatus(double pct, {bool isSavings = false}) {
+      if (isSavings) {
+        if (pct >= 90) return 'Cepat sekali';
+        if (pct >= 50) return 'Berjalan baik';
+        if (pct > 0) return 'Mulai menabung';
+        return 'Belum ada';
+      }
+      if (pct <= 60) return 'Masih aman';
+      if (pct <= 85) return 'Mendekati limit';
+      if (pct < 100) return 'Waspada limit';
+      return 'Batas terlewati';
+    }
+
+    final now = DateTime.now();
+    final totalDays = DateTime(year, month + 1, 0).day;
+    final currentDay = (now.year == year && now.month == month)
+        ? now.day
+        : totalDays;
+
+    return SpendingAllocation(
+      needsAmount: needsTotal,
+      needsPercentage: needsPct,
+      needsStatus: getStatus(needsPct),
+      wantsAmount: wantsTotal,
+      wantsPercentage: wantsPct,
+      wantsStatus: getStatus(wantsPct),
+      savingsAmount: savingsTotal,
+      savingsPercentage: savingsPct,
+      savingsStatus: getStatus(savingsPct, isSavings: true),
+      currentDay: currentDay,
+      totalDaysInMonth: totalDays,
+    );
   }
 }
 

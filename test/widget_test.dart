@@ -26,7 +26,9 @@ void main() {
     await AppDatabase.close();
   });
 
-  testWidgets('Monetra app smoke test (Splash to Home)', (WidgetTester tester) async {
+  testWidgets('Monetra app smoke test (Splash to Home)', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -66,99 +68,97 @@ void main() {
   });
 
   testWidgets(
-      'HomeScreen menampilkan rincian saldo tanpa overflow pada layar 320px',
-      (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(320, 780));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    'HomeScreen menampilkan rincian saldo tanpa overflow pada layar 320px',
+    (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 780));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    final dummyAccounts = [
-      AccountWithBalance(
-        account: Account(
-          id: 1,
-          name: 'Bank Central Asia (BCA)',
-          type: 'bank',
-          category: 'harian',
-          colorHex: '0xFF10B981',
-          iconCodePoint: Icons.account_balance.codePoint,
-          initialBalance: 1500000,
-          logoKey: 'bca',
-          createdAt: DateTime(2026, 1, 1),
+      final dummyAccounts = [
+        AccountWithBalance(
+          account: Account(
+            id: 1,
+            name: 'Bank Central Asia (BCA)',
+            type: 'bank',
+            category: 'harian',
+            colorHex: '0xFF10B981',
+            iconCodePoint: Icons.account_balance.codePoint,
+            initialBalance: 1500000,
+            logoKey: 'bca',
+            createdAt: DateTime(2026, 1, 1),
+          ),
+          balance: 1500000,
+          allocatedInGoals: 500000,
         ),
-        balance: 1500000,
-        allocatedInGoals: 500000,
-      ),
-      AccountWithBalance(
-        account: Account(
-          id: 2,
-          name: 'SeaBank Tabungan',
-          type: 'bank',
-          category: 'tabungan',
-          colorHex: '0xFFF97316',
-          iconCodePoint: Icons.savings.codePoint,
-          initialBalance: 8500000,
-          logoKey: 'seabank',
-          createdAt: DateTime(2026, 1, 1),
+        AccountWithBalance(
+          account: Account(
+            id: 2,
+            name: 'SeaBank Tabungan',
+            type: 'bank',
+            category: 'tabungan',
+            colorHex: '0xFFF97316',
+            iconCodePoint: Icons.savings.codePoint,
+            initialBalance: 8500000,
+            logoKey: 'seabank',
+            createdAt: DateTime(2026, 1, 1),
+          ),
+          balance: 8500000,
+          allocatedInGoals: 2000000,
         ),
-        balance: 8500000,
-        allocatedInGoals: 2000000,
-      ),
-      AccountWithBalance(
-        account: Account(
-          id: 3,
-          name: 'Dompet Tunai Harian',
-          type: 'cash',
-          category: 'harian',
-          colorHex: '0xFF0EA5E9',
-          iconCodePoint: Icons.wallet.codePoint,
-          initialBalance: 500000,
-          createdAt: DateTime(2026, 1, 1),
+        AccountWithBalance(
+          account: Account(
+            id: 3,
+            name: 'Dompet Tunai Harian',
+            type: 'cash',
+            category: 'harian',
+            colorHex: '0xFF0EA5E9',
+            iconCodePoint: Icons.wallet.codePoint,
+            initialBalance: 500000,
+            createdAt: DateTime(2026, 1, 1),
+          ),
+          balance: 500000,
         ),
-        balance: 500000,
-      ),
-    ];
+      ];
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          balanceSummaryProvider.overrideWith(
-            (ref) async => const BalanceSummary(
-              dailySpendingBalance: 2000000,
-              savingsBalance: 8500000,
-              totalNetWorth: 10500000,
-              allocatedInGoals: 2500000,
-              dailyAccountNames: ['BCA', 'GoPay', 'Dana'],
-              savingsAccountNames: ['SeaBank'],
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            balanceSummaryProvider.overrideWith(
+              (ref) async => const BalanceSummary(
+                dailySpendingBalance: 2000000,
+                savingsBalance: 8500000,
+                totalNetWorth: 10500000,
+                allocatedInGoals: 2500000,
+                dailyAccountNames: ['BCA', 'GoPay', 'Dana'],
+                savingsAccountNames: ['SeaBank'],
+              ),
             ),
+            accountsWithBalanceProvider.overrideWith(
+              (ref) async => dummyAccounts,
+            ),
+            recentTransactionsProvider.overrideWith(
+              (ref) async => const <TransactionDetail>[],
+            ),
+            upcomingUrgentGoalsProvider.overrideWith(
+              (ref) async => const <GoalDetail>[],
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: const HomeScreen(),
           ),
-          accountsWithBalanceProvider.overrideWith(
-            (ref) async => dummyAccounts,
-          ),
-          recentTransactionsProvider.overrideWith(
-            (ref) async => const <TransactionDetail>[],
-          ),
-          upcomingUrgentGoalsProvider.overrideWith(
-            (ref) async => const <GoalDetail>[],
-          ),
-        ],
-        child: MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: const HomeScreen(),
         ),
-      ),
-    );
+      );
 
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-    final layoutException = tester.takeException();
-    expect(layoutException, isNull, reason: layoutException?.toString());
-    expect(find.text('Saldo Siap Pakai'), findsOneWidget);
-    expect(find.text('Dana Target'), findsOneWidget);
-    expect(find.text('Total Aset'), findsOneWidget);
-    expect(find.text('Uang Harian'), findsOneWidget);
-    expect(find.text('Tabungan'), findsOneWidget);
-    expect(find.text('BCA · GoPay +1'), findsOneWidget);
-    expect(find.text('Siap pakai'), findsWidgets);
-    expect(find.textContaining('Target:'), findsWidgets);
-  });
+      final layoutException = tester.takeException();
+      expect(layoutException, isNull, reason: layoutException?.toString());
+      expect(find.text('Dashboard'), findsOneWidget);
+      expect(find.text('Menu Utama'), findsOneWidget);
+      expect(find.text('Progres Pengeluaran'), findsOneWidget);
+      expect(find.text('Aktivitas Bulan Ini'), findsOneWidget);
+      expect(find.text('Dompet & Rekening'), findsOneWidget);
+    },
+  );
 }

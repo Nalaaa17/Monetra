@@ -29,5 +29,12 @@ class ColorHelper {
     if (parsed == null) return fallback;
     return Color(parsed);
   }
+
+  /// Alias praktis untuk `parseHex`
+  static Color fromHex(
+    String? hex, {
+    Color fallback = const Color(0xFF00D09E),
+  }) =>
+      parseHex(hex, fallback: fallback);
 }
 

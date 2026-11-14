@@ -23,6 +23,8 @@ class Account {
     required this.createdAt,
   });
 
+  bool get isSavings => category == 'tabungan';
+
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,

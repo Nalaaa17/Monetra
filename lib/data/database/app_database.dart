@@ -124,7 +124,56 @@ class AppDatabase {
     // Pastikan tabel recurring_transactions ada pada database lama maupun baru
     await _ensureRecurringTable(db);
 
+    // Pastikan tabel category_budgets ada
+    await _ensureBudgetTable(db);
+
+    // Pastikan tabel debts & investments ada
+    await _ensureDebtsAndInvestmentsTables(db);
+
     return db;
+  }
+
+  static Future<void> _ensureDebtsAndInvestmentsTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS debts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        personName TEXT NOT NULL,
+        type TEXT NOT NULL,
+        totalAmount INTEGER NOT NULL,
+        paidAmount INTEGER NOT NULL DEFAULT 0,
+        dueDate TEXT,
+        note TEXT,
+        isSettled INTEGER NOT NULL DEFAULT 0,
+        createdAt TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS investments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        category TEXT NOT NULL,
+        initialAmount INTEGER NOT NULL,
+        currentAmount INTEGER NOT NULL,
+        logoKey TEXT,
+        note TEXT,
+        updatedAt TEXT NOT NULL
+      )
+    ''');
+  }
+
+  static Future<void> _ensureBudgetTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS category_budgets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        categoryId INTEGER NOT NULL UNIQUE,
+        monthlyLimit INTEGER NOT NULL,
+        createdAt TEXT NOT NULL,
+        FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   static Future<void> _ensureRecurringTable(Database db) async {
@@ -280,6 +329,12 @@ class AppDatabase {
 
     // 8. Table: recurring_transactions
     await _ensureRecurringTable(db);
+
+    // 9. Table: category_budgets
+    await _ensureBudgetTable(db);
+
+    // 10. Table: debts & investments
+    await _ensureDebtsAndInvestmentsTables(db);
 
     // Seed Data Awal
     await _seedInitialData(db);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_router.dart';
@@ -13,6 +14,7 @@ import '../../../data/repositories/transaction_repository.dart';
 import '../../../data/repositories/transfer_repository.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../home/providers/home_providers.dart';
+import '../../home/widgets/floating_bottom_bar.dart';
 import '../../transaction/screens/edit_transaction_screen.dart';
 import '../../transaction/screens/edit_transfer_screen.dart';
 import '../providers/history_providers.dart';
@@ -55,16 +57,16 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   void _stopSearch() {
     _searchController.clear();
-    ref.read(historyFilterProvider.notifier).update(
-          (state) => state.copyWith(clearSearch: true),
-        );
+    ref
+        .read(historyFilterProvider.notifier)
+        .update((state) => state.copyWith(clearSearch: true));
     setState(() => _isSearching = false);
   }
 
   void _onSearchChanged(String value) {
-    ref.read(historyFilterProvider.notifier).update(
-          (state) => state.copyWith(searchQuery: value),
-        );
+    ref
+        .read(historyFilterProvider.notifier)
+        .update((state) => state.copyWith(searchQuery: value));
     setState(() {});
   }
 
@@ -203,12 +205,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       body: Column(
         children: [
           // 1. Filter Horizontal Bar
-          _buildFilterBar(
-            context,
-            accountsAsync,
-            categoriesAsync,
-            filter,
-          ),
+          _buildFilterBar(context, accountsAsync, categoriesAsync, filter),
 
           // 2. Konten Riwayat Harian
           Expanded(
@@ -225,8 +222,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     return _buildEmptyHistoryState(context);
                   }
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
                     itemCount: groups.length,
                     itemBuilder: (context, index) {
                       final group = groups[index];
@@ -236,8 +232,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  EditTransactionScreen(detail: tx),
+                              builder: (_) => EditTransactionScreen(detail: tx),
                             ),
                           );
                         },
@@ -249,19 +244,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     },
                   );
                 },
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Center(child: Text('Error riwayat: $e')),
               ),
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push(AppRouter.addTransaction),
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add_rounded, color: Colors.black, size: 28),
-      ),
+      bottomNavigationBar: const FloatingBottomBar(selectedIndex: 1),
     );
   }
 
@@ -280,11 +270,18 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         ? '${DateFormatter.formatShort(filter.startDate!).split(' ').take(2).join(' ')} - ${DateFormatter.formatShort(filter.endDate!).split(' ').take(2).join(' ')}'
         : 'Tanggal';
 
+    final chipShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20),
+      side: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.6)),
+    );
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
+        border: Border(
+          bottom: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.6)),
+        ),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -294,16 +291,31 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             // Filter Jenis Transaksi
             FilterChip(
               label: const Text('Semua'),
+              labelStyle: TextStyle(
+                fontSize: 12.5,
+                fontWeight: !filter.hasAnyFilter ? FontWeight.bold : FontWeight.w500,
+              ),
+              shape: chipShape,
+              showCheckmark: false,
               selected: !filter.hasAnyFilter,
+              selectedColor: AppColors.primary.withValues(alpha: 0.18),
               onSelected: (_) => _resetAllFilters(),
             ),
             const SizedBox(width: 8),
             FilterChip(
-              label: const Text('💸 Pengeluaran'),
+              label: const Text('Pengeluaran'),
+              labelStyle: TextStyle(
+                fontSize: 12.5,
+                fontWeight: filter.type == 'expense' ? FontWeight.bold : FontWeight.w500,
+                color: filter.type == 'expense' ? AppColors.danger : null,
+              ),
+              shape: chipShape,
+              showCheckmark: false,
               selected: filter.type == 'expense',
               selectedColor: AppColors.danger.withValues(alpha: 0.15),
               onSelected: (val) {
-                final clearCat = val &&
+                final clearCat =
+                    val &&
                     selectedCategory != null &&
                     selectedCategory.type != 'expense';
                 filterNotifier.state = filter.copyWith(
@@ -315,11 +327,19 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             ),
             const SizedBox(width: 8),
             FilterChip(
-              label: const Text('💰 Pemasukan'),
+              label: const Text('Pemasukan'),
+              labelStyle: TextStyle(
+                fontSize: 12.5,
+                fontWeight: filter.type == 'income' ? FontWeight.bold : FontWeight.w500,
+                color: filter.type == 'income' ? const Color(0xFF059669) : null,
+              ),
+              shape: chipShape,
+              showCheckmark: false,
               selected: filter.type == 'income',
-              selectedColor: AppColors.tertiary.withValues(alpha: 0.15),
+              selectedColor: const Color(0xFF059669).withValues(alpha: 0.15),
               onSelected: (val) {
-                final clearCat = val &&
+                final clearCat =
+                    val &&
                     selectedCategory != null &&
                     selectedCategory.type != 'income';
                 filterNotifier.state = filter.copyWith(
@@ -331,9 +351,16 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             ),
             const SizedBox(width: 8),
             FilterChip(
-              label: const Text('↔️ Transfer'),
+              label: const Text('Transfer'),
+              labelStyle: TextStyle(
+                fontSize: 12.5,
+                fontWeight: filter.type == 'transfer' ? FontWeight.bold : FontWeight.w500,
+                color: filter.type == 'transfer' ? const Color(0xFF0284C7) : null,
+              ),
+              shape: chipShape,
+              showCheckmark: false,
               selected: filter.type == 'transfer',
-              selectedColor: AppColors.secondary.withValues(alpha: 0.15),
+              selectedColor: const Color(0xFF0284C7).withValues(alpha: 0.15),
               onSelected: (val) {
                 filterNotifier.state = filter.copyWith(
                   type: val ? 'transfer' : null,
@@ -346,10 +373,16 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
             // Filter Rentang Tanggal (PRD §4.2)
             FilterChip(
-              avatar: const Icon(Icons.date_range_rounded, size: 16),
+              avatar: const Icon(Icons.date_range_rounded, size: 15),
               label: Text(dateRangeLabel),
+              labelStyle: TextStyle(
+                fontSize: 12.5,
+                fontWeight: filter.hasDateRange ? FontWeight.bold : FontWeight.w500,
+              ),
+              shape: chipShape,
+              showCheckmark: false,
               selected: filter.hasDateRange,
-              selectedColor: AppColors.primary.withValues(alpha: 0.2),
+              selectedColor: AppColors.primary.withValues(alpha: 0.18),
               onSelected: (_) => _showDateRangeFilterSheet(context, filter),
             ),
             const SizedBox(width: 8),
@@ -359,15 +392,21 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               avatar: selectedCategory != null
                   ? Icon(
                       IconHelper.getIcon(selectedCategory.iconCodePoint),
-                      size: 16,
+                      size: 15,
                       color: ColorHelper.parseHex(selectedCategory.colorHex),
                     )
-                  : const Icon(Icons.category_outlined, size: 16),
+                  : const Icon(Icons.category_outlined, size: 15),
               label: Text(selectedCategory?.name ?? 'Kategori'),
+              labelStyle: TextStyle(
+                fontSize: 12.5,
+                fontWeight: selectedCategory != null ? FontWeight.bold : FontWeight.w500,
+              ),
+              shape: chipShape,
+              showCheckmark: false,
               selected: selectedCategory != null,
               selectedColor: selectedCategory != null
                   ? ColorHelper.parseHex(selectedCategory.colorHex)
-                      .withValues(alpha: 0.18)
+                        .withValues(alpha: 0.18)
                   : null,
               onSelected: (_) =>
                   _showCategoryFilterSheet(context, allCategories, filter),
@@ -381,22 +420,29 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       ? 'Tabungan'
                       : 'Uang Harian',
                 ),
+                shape: chipShape,
                 selected: true,
-                selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                selectedColor: AppColors.primary.withValues(alpha: 0.18),
                 onDeleted: () {
-                  filterNotifier.state =
-                      filter.copyWith(clearAccountGroup: true);
+                  filterNotifier.state = filter.copyWith(
+                    clearAccountGroup: true,
+                  );
                 },
                 onPressed: () {
-                  filterNotifier.state =
-                      filter.copyWith(clearAccountGroup: true);
+                  filterNotifier.state = filter.copyWith(
+                    clearAccountGroup: true,
+                  );
                 },
               ),
             ],
 
-            const SizedBox(width: 12),
-            Container(width: 1, height: 24, color: Theme.of(context).dividerColor),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
+            Container(
+              width: 1,
+              height: 20,
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.6),
+            ),
+            const SizedBox(width: 10),
 
             // Filter Akun/Dompet
             accountsAsync.maybeWhen(
@@ -408,6 +454,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     padding: const EdgeInsets.only(right: 8),
                     child: FilterChip(
                       label: Text(acc.name),
+                      labelStyle: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      ),
+                      shape: chipShape,
+                      showCheckmark: false,
                       selected: isSelected,
                       selectedColor: color.withValues(alpha: 0.15),
                       onSelected: (val) {
@@ -429,10 +481,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     );
   }
 
-  void _showDateRangeFilterSheet(
-    BuildContext context,
-    HistoryFilter filter,
-  ) {
+  void _showDateRangeFilterSheet(BuildContext context, HistoryFilter filter) {
     final notifier = ref.read(historyFilterProvider.notifier);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -453,7 +502,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Filter Rentang Tanggal', style: AppTypography.titleLarge),
+                  Text(
+                    'Filter Rentang Tanggal',
+                    style: AppTypography.titleLarge,
+                  ),
                   if (filter.hasDateRange)
                     TextButton(
                       onPressed: () {
@@ -466,8 +518,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               ),
               const SizedBox(height: 10),
               ListTile(
-                leading: const Icon(Icons.today_rounded,
-                    color: AppColors.primaryDark),
+                leading: const Icon(
+                  Icons.today_rounded,
+                  color: AppColors.primaryDark,
+                ),
                 title: const Text('Hari Ini'),
                 onTap: () {
                   notifier.state = filter.copyWith(
@@ -478,8 +532,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.view_week_rounded,
-                    color: AppColors.primaryDark),
+                leading: const Icon(
+                  Icons.view_week_rounded,
+                  color: AppColors.primaryDark,
+                ),
                 title: const Text('7 Hari Terakhir'),
                 onTap: () {
                   notifier.state = filter.copyWith(
@@ -490,8 +546,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.calendar_month_rounded,
-                    color: AppColors.primaryDark),
+                leading: const Icon(
+                  Icons.calendar_month_rounded,
+                  color: AppColors.primaryDark,
+                ),
                 title: const Text('Bulan Ini'),
                 onTap: () {
                   notifier.state = filter.copyWith(
@@ -502,8 +560,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.date_range_rounded,
-                    color: Color(0xFF0284C7)),
+                leading: const Icon(
+                  Icons.date_range_rounded,
+                  color: Color(0xFF0284C7),
+                ),
                 title: const Text('Pilih Tanggal Custom...'),
                 onTap: () async {
                   Navigator.pop(ctx);
@@ -605,8 +665,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                             notifier.state = filter.copyWith(
                               categoryId: selected ? cat.id : null,
                               clearCategory: !selected,
-                              clearType:
-                                  selected && filter.type == 'transfer',
+                              clearType: selected && filter.type == 'transfer',
                             );
                             Navigator.pop(ctx);
                           },
@@ -651,11 +710,16 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Text('Dari: ${tr.fromAccountName}', style: AppTypography.titleMedium),
+            Text(
+              'Dari: ${tr.fromAccountName}',
+              style: AppTypography.titleMedium,
+            ),
             Text('Ke: ${tr.toAccountName}', style: AppTypography.titleMedium),
             const SizedBox(height: 8),
-            Text('Tanggal: ${DateFormatter.formatFull(tr.date)}',
-                style: AppTypography.bodyMedium),
+            Text(
+              'Tanggal: ${DateFormatter.formatFull(tr.date)}',
+              style: AppTypography.bodyMedium,
+            ),
             if (tr.note?.isNotEmpty == true) ...[
               const SizedBox(height: 4),
               Text('Catatan: ${tr.note}', style: AppTypography.bodyMedium),
@@ -708,7 +772,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 if (ctx.mounted) Navigator.pop(ctx);
               }
             },
-            child: const Text('Hapus', style: TextStyle(color: AppColors.danger)),
+            child: const Text(
+              'Hapus',
+              style: TextStyle(color: AppColors.danger),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx),
@@ -740,23 +807,24 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             ),
             const SizedBox(height: 18),
             Text(
-              'Tidak Ada Hasil Ditemukan',
-              style: AppTypography.headlineMedium.copyWith(fontSize: 18),
+              'Tidak Ada Transaksi Ditemukan',
+              style: AppTypography.headlineMedium.copyWith(fontSize: 17),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
-              'Coba kata kunci lain atau reset filter yang aktif.',
+              'Coba sesuaikan filter atau kata kunci pencarian Anda.',
               textAlign: TextAlign.center,
               style: AppTypography.bodyMedium.copyWith(
+                fontSize: 13,
                 color: AppColors.textSecondaryOf(context),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             OutlinedButton.icon(
               onPressed: _resetAllFilters,
-              icon: const Icon(Icons.filter_alt_off_rounded),
-              label: const Text('Reset Pencarian & Filter'),
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Reset Filter'),
             ),
           ],
         ),
@@ -772,32 +840,33 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.edit_note_rounded,
-                size: 64,
+                size: 52,
                 color: AppColors.primaryDark,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             Text(
               'Belum Ada Catatan Transaksi',
               textAlign: TextAlign.center,
-              style: AppTypography.headlineMedium.copyWith(fontSize: 18),
+              style: AppTypography.headlineMedium.copyWith(fontSize: 17),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
-              'Catatan kamu di sini akan otomatis rapi per tanggal, lengkap dengan total pengeluaran dan pemasukan seperti di Notes HP.',
+              'Mulai catat transaksi pengeluaran dan pemasukan harian Anda.',
               textAlign: TextAlign.center,
               style: AppTypography.bodyMedium.copyWith(
+                fontSize: 13,
                 color: AppColors.textSecondaryOf(context),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: () => context.push(AppRouter.addTransaction),
               style: ElevatedButton.styleFrom(
@@ -806,12 +875,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 22,
+                  vertical: 12,
+                ),
               ),
-              icon: const Icon(Icons.add_rounded),
+              icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text(
-                'Catat Transaksi Pertama',
+                'Catat Transaksi',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),

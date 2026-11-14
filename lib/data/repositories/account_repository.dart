@@ -29,6 +29,8 @@ class AccountWithBalance {
   int get id => account.id!;
   String get name => account.name;
   String get type => account.type;
+  String get category => account.category;
+  bool get isSavings => account.isSavings;
   String get colorHex => account.colorHex;
   int get iconCodePoint => account.iconCodePoint;
   String? get logoKey => account.logoKey;

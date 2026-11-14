@@ -16,6 +16,12 @@ import '../../goals/widgets/home_goal_preview_section.dart';
 import '../../history/providers/history_providers.dart';
 import '../../transaction/screens/edit_transaction_screen.dart';
 import '../providers/home_providers.dart';
+import '../widgets/hero_sekilas_card.dart';
+import '../widgets/main_menu_grid.dart';
+import '../widgets/spending_progress_card.dart';
+import '../widgets/monthly_activity_calendar.dart';
+import '../widgets/floating_bottom_bar.dart';
+import '../widgets/quick_feature_modals.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -31,7 +37,7 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        titleSpacing: 12,
+        titleSpacing: 16,
         title: Row(
           children: [
             Image.asset(
@@ -40,56 +46,38 @@ class HomeScreen extends ConsumerWidget {
               height: 34,
               fit: BoxFit.contain,
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Monetra',
-                          style: AppTypography.headlineMedium.copyWith(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '• Halo!',
-                          style: AppTypography.bodyMedium.copyWith(
-                            color: AppColors.textSecondaryOf(context),
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    DateFormatter.formatFull(DateTime.now()),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.textSecondaryOf(context),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
+            const SizedBox(width: 10),
+            Text(
+              'Monetra',
+              style: AppTypography.headlineMedium.copyWith(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
               ),
             ),
           ],
         ),
         actions: [
+          // Panduan / Info
+          IconButton(
+            icon: const Icon(Icons.menu_book_rounded, size: 21),
+            tooltip: 'Panduan & Info',
+            onPressed: () => _showAboutMonetraDialog(context),
+          ),
+
+          // Megaphone / AI Advisor Tips
+          IconButton(
+            icon: const Icon(Icons.campaign_outlined, size: 22),
+            tooltip: 'Tips Finansial',
+            onPressed: () => QuickFeatureModals.showAIAdvisorModal(context),
+          ),
+
           // Dark Mode Toggle
           IconButton(
             icon: Icon(
-              isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+              isDark ? Icons.light_mode_rounded : Icons.dark_mode_outlined,
               color: isDark ? AppColors.primary : AppColors.textPrimary,
+              size: 21,
             ),
             tooltip: isDark ? 'Mode Cerah' : 'Mode Gelap',
             onPressed: () {
@@ -98,124 +86,63 @@ class HomeScreen extends ConsumerWidget {
             },
           ),
 
-          // Menu Pengaturan & Kelola
+          // Menu Lengkap Semua Fitur Monetra (Titik 3)
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded),
-            tooltip: 'Pengaturan',
+            tooltip: 'Semua Fitur Monetra',
             onSelected: (val) {
-              if (val == 'calculator') {
-                context.push(AppRouter.calculator);
-              } else if (val == 'recurring') {
-                context.push(AppRouter.recurring);
+              if (val == 'transfer') {
+                context.push(AppRouter.transfer);
               } else if (val == 'backup') {
                 context.push(AppRouter.backup);
+              } else if (val == 'recurring') {
+                context.push(AppRouter.recurring);
+              } else if (val == 'calculator') {
+                context.push(AppRouter.calculator);
+              } else if (val == 'goals') {
+                context.push(AppRouter.goals);
+              } else if (val == 'reports') {
+                context.push(AppRouter.reports);
+              } else if (val == 'history') {
+                ref.read(historyFilterProvider.notifier).state =
+                    const HistoryFilter();
+                context.push(AppRouter.history);
               } else if (val == 'accounts') {
                 context.push(AppRouter.manageAccounts);
               } else if (val == 'categories') {
                 context.push(AppRouter.manageCategories);
+              } else if (val == 'advisor') {
+                QuickFeatureModals.showAIAdvisorModal(context);
               } else if (val == 'about') {
                 _showAboutMonetraDialog(context);
               }
             },
-            itemBuilder: (ctx) => const [
-              PopupMenuItem(
-                value: 'recurring',
-                child: Row(
-                  children: [
-                    Icon(Icons.repeat_rounded, size: 18),
-                    SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        'Transaksi Berulang',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'calculator',
-                child: Row(
-                  children: [
-                    Icon(Icons.calculate_outlined, size: 18),
-                    SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        'Kalkulator Uang',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'accounts',
-                child: Row(
-                  children: [
-                    Icon(Icons.account_balance_wallet_outlined, size: 18),
-                    SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        'Kelola Dompet / Rekening',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'categories',
-                child: Row(
-                  children: [
-                    Icon(Icons.category_outlined, size: 18),
-                    SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        'Kelola Kategori',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'backup',
-                child: Row(
-                  children: [
-                    Icon(Icons.cloud_sync_outlined, size: 18),
-                    SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        'Cadangan & Pemulihan Data',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'about',
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline_rounded, size: 18),
-                    SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        'Tentang Monetra',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            itemBuilder: (ctx) => [
+              _buildPopupMenuItem('transfer', Icons.swap_horiz_rounded,
+                  'Transfer Saldo Antar Akun'),
+              _buildPopupMenuItem('backup', Icons.cloud_sync_outlined,
+                  'Cadangkan & Pulihkan Data'),
+              const PopupMenuDivider(),
+              _buildPopupMenuItem(
+                  'recurring', Icons.repeat_rounded, 'Transaksi Berulang'),
+              _buildPopupMenuItem(
+                  'calculator', Icons.calculate_outlined, 'Kalkulator Uang'),
+              _buildPopupMenuItem('goals', Icons.track_changes_outlined,
+                  'Target Keuangan (Goals)'),
+              _buildPopupMenuItem(
+                  'reports', Icons.bar_chart_rounded, 'Laporan Finansial'),
+              _buildPopupMenuItem('history', Icons.receipt_long_outlined,
+                  'Riwayat Transaksi'),
+              const PopupMenuDivider(),
+              _buildPopupMenuItem('accounts',
+                  Icons.account_balance_wallet_outlined, 'Kelola Dompet / Rekening'),
+              _buildPopupMenuItem(
+                  'categories', Icons.category_outlined, 'Kelola Kategori'),
+              const PopupMenuDivider(),
+              _buildPopupMenuItem('advisor', Icons.smart_toy_outlined,
+                  'AI Advisor (Coming Soon)'),
+              _buildPopupMenuItem(
+                  'about', Icons.info_outline_rounded, 'Tentang Monetra'),
             ],
           ),
 
@@ -235,35 +162,64 @@ class HomeScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           children: [
-            // 1. Total Kekayaan Header Card dengan Animasi Count-Up
+            // Greeting & Dashboard Title (sesuai gambar referensi)
+            Text(
+              'Dashboard',
+              style: AppTypography.headlineLarge.copyWith(
+                fontWeight: FontWeight.w800,
+                fontSize: 26,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Text(
+                  '• Halo!',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondaryOf(context),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Sahabat Monetra',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondaryOf(context),
+                    fontSize: 13,
+                  ),
+                ),
+                const Text(' ☀️', style: TextStyle(fontSize: 14)),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // 1. Hero Card: Sekilas Hari Ini (Sesuai Referensi Gambar 1)
             balanceSummaryAsync.when(
-              data: (summary) => _buildTotalWealthCard(context, summary),
+              data: (summary) => HeroSekilasCard(summary: summary),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Text('Gagal memuat saldo: $err'),
             ),
+            const SizedBox(height: 18),
 
-            const SizedBox(height: 16),
+            // 2. Menu Utama Pintasan 8 Aksi Cepat (Sesuai Referensi Gambar 1)
+            const MainMenuGrid(),
+            const SizedBox(height: 18),
 
-            // 2. Dual Big Cards: Uang Harian vs Tabungan (PRD §3 & §6.4)
-            balanceSummaryAsync.maybeWhen(
-              data: (summary) =>
-                  _buildDualCategoryCards(context, ref, summary),
-              orElse: () => const SizedBox.shrink(),
-            ),
+            // 3. Progres Pengeluaran (Aturan 50/30/20 - Sesuai Referensi Gambar 2)
+            const SpendingProgressCard(),
+            const SizedBox(height: 18),
 
-            const SizedBox(height: 14),
-
-            // 3. Tombol Aksi Cepat Transfer Saldo
-            _buildQuickActionButtons(context),
-
-            const SizedBox(height: 16),
+            // 4. Aktivitas Bulan Ini (Kalender Keuangan - Sesuai Referensi Gambar 2)
+            const MonthlyActivityCalendar(),
+            const SizedBox(height: 20),
 
             // Preview Goal Mendekati Jatuh Tempo (PRD §6.4)
             const HomeGoalPreviewSection(),
+            const SizedBox(height: 12),
 
-            const SizedBox(height: 6),
-
-            // 4. Horizontal Accounts List
+            // 8. Horizontal Accounts List
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -300,7 +256,7 @@ class HomeScreen extends ConsumerWidget {
 
             const SizedBox(height: 24),
 
-            // 5. Section Transaksi Terakhir
+            // 9. Section Transaksi Terakhir
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -344,468 +300,33 @@ class HomeScreen extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Text('Error transaksi: $err'),
             ),
-            const SizedBox(height: 80),
+            const SizedBox(height: 100),
           ],
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
-        backgroundColor: Theme.of(context).cardColor,
-        elevation: 4,
-        onDestinationSelected: (index) {
-          if (index == 1) {
-            ref.read(historyFilterProvider.notifier).state =
-                const HistoryFilter();
-            context.push(AppRouter.history);
-          } else if (index == 2) {
-            context.push(AppRouter.goals);
-          } else if (index == 3) {
-            context.push(AppRouter.reports);
-          }
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded, color: AppColors.primaryDark),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon:
-                Icon(Icons.receipt_long_rounded, color: AppColors.primaryDark),
-            label: 'Riwayat',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.track_changes_outlined),
-            selectedIcon:
-                Icon(Icons.track_changes_rounded, color: AppColors.primaryDark),
-            label: 'Goal',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon:
-                Icon(Icons.bar_chart_rounded, color: AppColors.primaryDark),
-            label: 'Laporan',
-          ),
-        ],
-      ),
-      floatingActionButton: Container(
-        height: 48,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.45),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ElevatedButton.icon(
-          onPressed: () => _showAddActionSheet(context),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.black,
-            elevation: 0,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
-          ),
-          icon: const Icon(Icons.add_rounded, color: Colors.black, size: 22),
-          label: const Text(
-            'Catat Uang',
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ),
+      bottomNavigationBar: const FloatingBottomBar(selectedIndex: 0),
     );
   }
 
-  Widget _buildQuickActionButtons(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => context.push(AppRouter.transfer),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              backgroundColor: Theme.of(context).cardColor,
-              side: BorderSide(color: Theme.of(context).dividerColor),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            icon: const Icon(Icons.swap_horiz_rounded,
-                color: Color(0xFF0284C7), size: 20),
-            label: const Text(
-              'Transfer Saldo',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: Color(0xFF0284C7),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => context.push(AppRouter.backup),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              backgroundColor: Theme.of(context).cardColor,
-              side: BorderSide(color: Theme.of(context).dividerColor),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-            ),
-            icon: const Icon(Icons.cloud_upload_outlined,
-                color: Color(0xFF059669), size: 18),
-            label: const Text(
-              'Cadangkan Data',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: Color(0xFF059669),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTotalWealthCard(BuildContext context, BalanceSummary summary) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hasGoals = summary.allocatedInGoals > 0;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark
-              ? [const Color(0xFF2A2415), const Color(0xFF1E293B)]
-              : [const Color(0xFFFFF9E6), const Color(0xFFFFF3CC)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.35),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    const Icon(Icons.account_balance_wallet_rounded,
-                        color: AppColors.primaryDark, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        hasGoals ? 'Saldo Siap Pakai' : 'Total Saldo',
-                        style: AppTypography.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? AppColors.darkTextPrimary
-                              : AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Image.asset(
-                'assets/images/logo.png',
-                width: 28,
-                height: 28,
-                fit: BoxFit.contain,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: AnimatedCurrency(
-              amount: summary.totalNetWorth,
-              style: AppTypography.headlineLarge.copyWith(
-                fontSize: 30,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-              ),
-            ),
-          ),
-          if (hasGoals) ...[
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.black.withValues(alpha: 0.28)
-                    : Colors.white.withValues(alpha: 0.78),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.25),
-                ),
-              ),
-              child: IntrinsicHeight(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => context.push(AppRouter.goals),
-                        borderRadius: BorderRadius.circular(8),
-                        child: _buildWealthSubMetric(
-                          context: context,
-                          icon: Icons.track_changes_rounded,
-                          iconColor: const Color(0xFFD97706),
-                          label: 'Dana Target',
-                          amount: summary.allocatedInGoals,
-                          valueColor: isDark
-                              ? const Color(0xFFFBBF24)
-                              : const Color(0xFFB45309),
-                        ),
-                      ),
-                    ),
-                    VerticalDivider(
-                      width: 16,
-                      thickness: 1,
-                      color: Theme.of(context).dividerColor,
-                    ),
-                    Expanded(
-                      child: _buildWealthSubMetric(
-                        context: context,
-                        icon: Icons.account_balance_rounded,
-                        iconColor: AppColors.primaryDark,
-                        label: 'Total Aset',
-                        amount: summary.totalPhysicalNetWorth,
-                        valueColor: isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWealthSubMetric({
-    required BuildContext context,
-    required IconData icon,
-    required Color iconColor,
-    required String label,
-    required int amount,
-    required Color valueColor,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 13, color: iconColor),
-            const SizedBox(width: 4),
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  style: AppTypography.labelSmall.copyWith(
-                    fontSize: 11.5,
-                    color: AppColors.textSecondaryOf(context),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 3),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(
-            CurrencyFormatter.format(amount),
-            style: TextStyle(
-              fontSize: 13.5,
-              fontWeight: FontWeight.bold,
-              color: valueColor,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _formatAccountGroupSubtitle(List<String> names) {
-    if (names.isEmpty) return 'Belum ada akun';
-    if (names.length <= 2) return names.join(' · ');
-    return '${names.take(2).join(' · ')} +${names.length - 2}';
-  }
-
-  Widget _buildDualCategoryCards(
-    BuildContext context,
-    WidgetRef ref,
-    BalanceSummary summary,
+  PopupMenuItem<String> _buildPopupMenuItem(
+    String value,
+    IconData icon,
+    String title,
   ) {
-    final dailySubtitle = _formatAccountGroupSubtitle(summary.dailyAccountNames);
-    final savingsSubtitle =
-        _formatAccountGroupSubtitle(summary.savingsAccountNames);
-
-    return IntrinsicHeight(
+    return PopupMenuItem<String>(
+      value: value,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: _buildCategoryGroupCard(
-              context: context,
-              title: 'Uang Harian',
-              icon: Icons.bolt_rounded,
-              iconColor: AppColors.primaryDark,
-              iconBgColor: AppColors.primary.withValues(alpha: 0.15),
-              amount: summary.dailySpendingBalance,
-              subtitle: dailySubtitle,
-              onTap: () {
-                ref.read(historyFilterProvider.notifier).state =
-                    const HistoryFilter(accountGroup: 'harian');
-                context.push(AppRouter.history);
-              },
-            ),
-          ),
+          Icon(icon, size: 20),
           const SizedBox(width: 12),
-          Expanded(
-            child: _buildCategoryGroupCard(
-              context: context,
-              title: 'Tabungan',
-              icon: Icons.lock_clock_rounded,
-              iconColor: const Color(0xFF059669),
-              iconBgColor: const Color(0xFF059669).withValues(alpha: 0.15),
-              amount: summary.savingsBalance,
-              subtitle: savingsSubtitle,
-              onTap: () {
-                ref.read(historyFilterProvider.notifier).state =
-                    const HistoryFilter(accountGroup: 'tabungan');
-                context.push(AppRouter.history);
-              },
+          Flexible(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryGroupCard({
-    required BuildContext context,
-    required String title,
-    required IconData icon,
-    required Color iconColor,
-    required Color iconBgColor,
-    required int amount,
-    required String subtitle,
-    VoidCallback? onTap,
-  }) {
-    return Material(
-      color: Theme.of(context).cardColor,
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Theme.of(context).dividerColor),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              )
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: iconBgColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(icon, size: 15, color: iconColor),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.labelSmall.copyWith(
-                            fontSize: 12.5,
-                            color: AppColors.textSecondaryOf(context),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: 16,
-                        color: AppColors.textSecondaryOf(context),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: AnimatedCurrency(
-                      amount: amount,
-                      style: AppTypography.titleMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 17,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                subtitle,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.textSecondaryOf(context),
-                  fontSize: 12,
-                  height: 1.25,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -1028,249 +549,6 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showAddActionSheet(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFFAFAFA);
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).cardColor,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 44,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).dividerColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Catat Aktivitas Finansial',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.headlineMedium.copyWith(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Pilih jenis pencatatan yang ingin Anda buat',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: AppColors.textSecondaryOf(context),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 20),
-                      tooltip: 'Tutup',
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-
-                // 1. Opsi Catat Pengeluaran
-                _buildModernActionTile(
-                  context: context,
-                  backgroundColor: cardBg,
-                  iconBg: AppColors.danger.withValues(alpha: 0.15),
-                  iconColor: AppColors.danger,
-                  icon: Icons.arrow_upward_rounded,
-                  title: 'Catat Pengeluaran',
-                  badgeText: '💸 Keluar',
-                  badgeColor: AppColors.danger,
-                  subtitle: 'Belanja, jajan, bensin, tagihan & kebutuhan harian',
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    context.push('${AppRouter.addTransaction}?type=expense');
-                  },
-                ),
-                const SizedBox(height: 12),
-
-                // 2. Opsi Catat Pemasukan
-                _buildModernActionTile(
-                  context: context,
-                  backgroundColor: cardBg,
-                  iconBg: const Color(0xFF059669).withValues(alpha: 0.15),
-                  iconColor: const Color(0xFF059669),
-                  icon: Icons.arrow_downward_rounded,
-                  title: 'Catat Pemasukan',
-                  badgeText: '💰 Masuk',
-                  badgeColor: const Color(0xFF059669),
-                  subtitle: 'Gaji, transferan masuk, bonus, piutang & profit usaha',
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    context.push('${AppRouter.addTransaction}?type=income');
-                  },
-                ),
-                const SizedBox(height: 12),
-
-                // 3. Opsi Transfer Antar Akun
-                _buildModernActionTile(
-                  context: context,
-                  backgroundColor: cardBg,
-                  iconBg: const Color(0xFF0284C7).withValues(alpha: 0.15),
-                  iconColor: const Color(0xFF0284C7),
-                  icon: Icons.swap_horiz_rounded,
-                  title: 'Transfer Antar Akun',
-                  badgeText: '↔️ Pindah',
-                  badgeColor: const Color(0xFF0284C7),
-                  subtitle: 'Pindah uang, tarik tunai, tabungan (Mandiri / Seabank / Cash)',
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    context.push(AppRouter.transfer);
-                  },
-                ),
-                const SizedBox(height: 12),
-
-                // 4. Opsi Transaksi Berulang Otomatis
-                _buildModernActionTile(
-                  context: context,
-                  backgroundColor: cardBg,
-                  iconBg: AppColors.primary.withValues(alpha: 0.18),
-                  iconColor: isDark ? AppColors.primary : AppColors.primaryDark,
-                  icon: Icons.repeat_rounded,
-                  title: 'Transaksi Berulang',
-                  badgeText: '🔄 Rutin',
-                  badgeColor: isDark ? AppColors.primary : AppColors.primaryDark,
-                  subtitle: 'Atur tagihan Wi-Fi, cicilan, sewa, atau gaji otomatis',
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    context.push(AppRouter.recurring);
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModernActionTile({
-    required BuildContext context,
-    required Color backgroundColor,
-    required Color iconBg,
-    required Color iconColor,
-    required IconData icon,
-    required String title,
-    required String badgeText,
-    required Color badgeColor,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: backgroundColor,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        splashColor: badgeColor.withValues(alpha: 0.1),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: badgeColor.withValues(alpha: 0.25),
-              width: 1.2,
-            ),
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: iconBg,
-                child: Icon(icon, color: iconColor, size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.titleMedium.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: badgeColor.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            badgeText,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: badgeColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.textSecondaryOf(context),
-                        fontSize: 11,
-                        fontWeight: FontWeight.normal,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 6),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textSecondaryOf(context),
-                size: 20,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

@@ -364,4 +364,34 @@ class TransactionRepository {
 
     return false;
   }
+
+  /// Ringkasan pemasukan dan pengeluaran hari ini
+  Future<({int income, int expense})> getTodaySummary() async {
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day).toIso8601String();
+    final nextDay = DateTime(now.year, now.month, now.day + 1).toIso8601String();
+    final db = await AppDatabase.instance;
+    final results = await db.rawQuery('''
+      SELECT
+        COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
+        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense
+      FROM transactions
+      WHERE date >= ? AND date < ?
+    ''', [startOfDay, nextDay]);
+    if (results.isEmpty) return (income: 0, expense: 0);
+    return (
+      income: (results.first['income'] as num?)?.toInt() ?? 0,
+      expense: (results.first['expense'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  /// Mengambil daftar transaksi pada tanggal spesifik
+  Future<List<TransactionDetail>> getTransactionsForDate(DateTime date) async {
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final nextDay = DateTime(date.year, date.month, date.day + 1);
+    return getAllTransactionDetails(
+      startDate: startOfDay,
+      endDate: nextDay,
+    );
+  }
 }

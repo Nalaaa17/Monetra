@@ -111,24 +111,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // Tap Uang Harian card
-      await tester.tap(find.text('Uang Harian'));
-      await tester.pumpAndSettle();
-      expect(visitedRoutes.last, '/history');
-      expect(container.read(historyFilterProvider).accountGroup, 'harian');
-
-      // Kembali ke Home, tap Tabungan card
-      router.pop();
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Tabungan'));
-      await tester.pumpAndSettle();
-      expect(container.read(historyFilterProvider).accountGroup, 'tabungan');
-
-      // Kembali ke Home, tap kartu akun BCA
-      router.pop();
-      await tester.pumpAndSettle();
+      // Tap kartu akun BCA pada daftar rekening Home
       await tester.tap(find.text('BCA').last);
       await tester.pumpAndSettle();
+      expect(visitedRoutes.last, '/history');
       expect(container.read(historyFilterProvider).accountId, 42);
     });
 

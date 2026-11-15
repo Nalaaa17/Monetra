@@ -37,13 +37,18 @@ class MainMenuGrid extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Menu Utama',
-                style: AppTypography.titleLarge.copyWith(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 18,
+              Expanded(
+                child: Text(
+                  'Menu Utama',
+                  style: AppTypography.titleLarge.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 18,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               InkWell(
                 onTap: () => context.push(AppRouter.allFeatures),
                 borderRadius: BorderRadius.circular(12),
@@ -151,11 +156,10 @@ class MainMenuGrid extends StatelessWidget {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: SizedBox(
-        width: 72,
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -163,8 +167,8 @@ class MainMenuGrid extends StatelessWidget {
               clipBehavior: Clip.none,
               children: [
                 Container(
-                  width: 52,
-                  height: 52,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
                     color: isDark
                         ? const Color(0xFF272F3E)

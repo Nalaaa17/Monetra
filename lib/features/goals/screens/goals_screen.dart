@@ -10,17 +10,38 @@ import '../widgets/goal_card.dart';
 import '../widgets/goal_form_modal.dart';
 import '../../home/widgets/floating_bottom_bar.dart';
 
-class GoalsScreen extends ConsumerWidget {
+class GoalsScreen extends ConsumerStatefulWidget {
   const GoalsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GoalsScreen> createState() => _GoalsScreenState();
+}
+
+class _GoalsScreenState extends ConsumerState<GoalsScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final goalsAsync = ref.watch(goalsListProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
+    return Scaffold(
         backgroundColor: AppColors.surfaceOf(context),
         appBar: AppBar(
           title: Text(
@@ -93,7 +114,7 @@ class GoalsScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 14),
 
-                        // TAB SELECTOR
+                        // TAB SELECTOR (Sama persis dengan segmented tab Utang)
                         Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
@@ -101,18 +122,90 @@ class GoalsScreen extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(color: AppColors.dividerOf(context)),
                           ),
-                          child: TabBar(
-                            dividerColor: Colors.transparent,
-                            indicator: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            labelColor: AppColors.primaryDark,
-                            unselectedLabelColor: AppColors.textSecondaryOf(context),
-                            labelStyle: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.bold),
-                            tabs: [
-                              Tab(text: 'Berjalan (${activeGoals.length})'),
-                              Tab(text: 'Tercapai (${completedGoals.length})'),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => _tabController.animateTo(0),
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: _tabController.index == 0
+                                          ? AppColors.primary.withValues(alpha: 0.15)
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Center(
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.hourglass_top_rounded,
+                                            size: 16,
+                                            color: _tabController.index == 0
+                                                ? AppColors.primaryDark
+                                                : AppColors.textSecondaryOf(context),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'Berjalan (${activeGoals.length})',
+                                            style: AppTypography.labelMedium.copyWith(
+                                              fontWeight: _tabController.index == 0
+                                                  ? FontWeight.bold
+                                                  : FontWeight.w500,
+                                              color: _tabController.index == 0
+                                                  ? AppColors.primaryDark
+                                                  : AppColors.textSecondaryOf(context),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () => _tabController.animateTo(1),
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    decoration: BoxDecoration(
+                                      color: _tabController.index == 1
+                                          ? AppColors.primary.withValues(alpha: 0.15)
+                                          : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Center(
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.task_alt_rounded,
+                                            size: 16,
+                                            color: _tabController.index == 1
+                                                ? AppColors.primaryDark
+                                                : AppColors.textSecondaryOf(context),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'Tercapai (${completedGoals.length})',
+                                            style: AppTypography.labelMedium.copyWith(
+                                              fontWeight: _tabController.index == 1
+                                                  ? FontWeight.bold
+                                                  : FontWeight.w500,
+                                              color: _tabController.index == 1
+                                                  ? AppColors.primaryDark
+                                                  : AppColors.textSecondaryOf(context),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -122,6 +215,7 @@ class GoalsScreen extends ConsumerWidget {
                 ),
               ],
               body: TabBarView(
+                controller: _tabController,
                 children: [
                   _buildGoalListTab(
                     context,
@@ -158,8 +252,7 @@ class GoalsScreen extends ConsumerWidget {
           ),
         ),
         bottomNavigationBar: const FloatingBottomBar(selectedIndex: 3),
-      ),
-    );
+      );
   }
 
   Widget _buildHeroGoalsCard(

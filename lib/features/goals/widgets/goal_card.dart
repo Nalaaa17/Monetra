@@ -134,19 +134,32 @@ class GoalCard extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(
-                CurrencyFormatter.format(detail.collectedAmount),
-                style: AppTypography.titleLarge.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: isDone
-                      ? AppColors.tertiary
-                      : AppColors.textPrimaryOf(context),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    CurrencyFormatter.format(detail.collectedAmount),
+                    style: AppTypography.titleLarge.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isDone
+                          ? AppColors.tertiary
+                          : AppColors.textPrimaryOf(context),
+                    ),
+                  ),
                 ),
               ),
-              Text(
-                'Target ${CurrencyFormatter.format(detail.targetAmount)}',
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textSecondaryOf(context),
+              const SizedBox(width: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'Target ${CurrencyFormatter.format(detail.targetAmount)}',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textSecondaryOf(context),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -177,50 +190,68 @@ class GoalCard extends ConsumerWidget {
             children: [
               // Sumber Akun & Deadline Chip
               Expanded(
-                child: Row(
+                child: Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  runSpacing: 2,
                   children: [
-                    BankLogoHelper.buildAccountBadge(
-                      context: context,
-                      accountName: detail.sourceAccountName,
-                      accountColor: sourceColor,
-                      logoKey: detail.sourceAccountLogoKey,
-                      iconCodePoint: detail.sourceAccountIconCodePoint,
-                      size: 20,
-                      iconSize: 11,
-                      borderRadius: 6,
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        detail.sourceAccountName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.labelSmall.copyWith(
-                          fontSize: 11,
-                          color: AppColors.textSecondaryOf(context),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        BankLogoHelper.buildAccountBadge(
+                          context: context,
+                          accountName: detail.sourceAccountName,
+                          accountColor: sourceColor,
+                          logoKey: detail.sourceAccountLogoKey,
+                          iconCodePoint: detail.sourceAccountIconCodePoint,
+                          size: 14,
+                          iconSize: 9,
+                          borderRadius: 3,
                         ),
-                      ),
+                        const SizedBox(width: 4),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 65),
+                          child: Text(
+                            detail.sourceAccountName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.labelSmall.copyWith(
+                              fontSize: 10,
+                              color: AppColors.textSecondaryOf(context),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.calendar_today_rounded,
-                      size: 11,
-                      color: isUrgent
-                          ? AppColors.danger
-                          : AppColors.textSecondaryOf(context),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      DateFormatter.formatShort(detail.deadline),
-                      style: AppTypography.labelSmall.copyWith(
-                        fontSize: 11,
-                        color: isUrgent
-                            ? AppColors.danger
-                            : AppColors.textSecondaryOf(context),
-                        fontWeight: isUrgent
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          size: 10,
+                          color: isUrgent
+                              ? AppColors.danger
+                              : AppColors.textSecondaryOf(context),
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          DateFormatter.formatShort(detail.deadline)
+                              .split(' ')
+                              .take(2)
+                              .join(' '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.labelSmall.copyWith(
+                            fontSize: 10.5,
+                            color: isUrgent
+                                ? AppColors.danger
+                                : AppColors.textSecondaryOf(context),
+                            fontWeight: isUrgent
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

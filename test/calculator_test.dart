@@ -5,11 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:monetra/core/theme/app_theme.dart';
 import 'package:monetra/data/models/account.dart';
 import 'package:monetra/data/repositories/account_repository.dart';
-import 'package:monetra/data/repositories/goal_repository.dart';
-import 'package:monetra/data/repositories/transaction_repository.dart';
-import 'package:monetra/features/goals/providers/goal_providers.dart';
 import 'package:monetra/features/home/providers/home_providers.dart';
-import 'package:monetra/features/home/screens/home_screen.dart';
+import 'package:monetra/features/home/screens/all_features_screen.dart';
 import 'package:monetra/features/tools/screens/money_calculator_screen.dart';
 import 'package:monetra/features/tools/utils/money_calculator_engine.dart';
 
@@ -129,37 +126,16 @@ void main() {
       );
     });
 
-    testWidgets('HomeScreen 3-dot menu exposes Kalkulator Uang entry',
+    testWidgets('AllFeaturesScreen exposes Kalkulator Uang entry',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            balanceSummaryProvider.overrideWith(
-              (ref) async => const BalanceSummary(
-                dailySpendingBalance: 1000000,
-                savingsBalance: 0,
-                totalNetWorth: 1000000,
-              ),
-            ),
-            accountsWithBalanceProvider.overrideWith((ref) async => const []),
-            recentTransactionsProvider.overrideWith(
-              (ref) async => const <TransactionDetail>[],
-            ),
-            upcomingUrgentGoalsProvider.overrideWith(
-              (ref) async => const <GoalDetail>[],
-            ),
-          ],
+        const ProviderScope(
           child: MaterialApp(
-            theme: AppTheme.lightTheme,
-            home: const HomeScreen(),
+            home: AllFeaturesScreen(),
           ),
         ),
       );
 
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      await tester.tap(find.byIcon(Icons.more_vert_rounded));
       await tester.pumpAndSettle();
 
       expect(find.text('Kalkulator Uang'), findsOneWidget);

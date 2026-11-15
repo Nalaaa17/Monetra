@@ -321,35 +321,41 @@ class DailyTransactionGroupCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: accColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            BankLogoHelper.buildAccountBadge(
-                              context: context,
-                              accountName: tx.accountName,
-                              accountColor: accColor,
-                              logoKey: tx.accountLogoKey,
-                              size: 12,
-                              iconSize: 8,
-                              borderRadius: 3,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              tx.accountName,
-                              style: AppTypography.labelSmall.copyWith(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: accColor,
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: accColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              BankLogoHelper.buildAccountBadge(
+                                context: context,
+                                accountName: tx.accountName,
+                                accountColor: accColor,
+                                logoKey: tx.accountLogoKey,
+                                size: 12,
+                                iconSize: 8,
+                                borderRadius: 3,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  tx.accountName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: accColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       if (tx.note?.isNotEmpty == true &&

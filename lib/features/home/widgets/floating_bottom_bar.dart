@@ -44,22 +44,15 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF161A23) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 20,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        return Material(
+          color: isDark ? const Color(0xFF161A23) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               Center(
                 child: Container(
                   width: 44,
@@ -100,7 +93,10 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
-                  context.push(AppRouter.addTransaction, extra: {'type': 'expense'});
+                  context.push(
+                    '${AppRouter.addTransaction}?type=expense',
+                    extra: {'type': 'expense'},
+                  );
                 },
               ),
               const SizedBox(height: 4),
@@ -135,7 +131,10 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
-                  context.push(AppRouter.addTransaction, extra: {'type': 'income'});
+                  context.push(
+                    '${AppRouter.addTransaction}?type=income',
+                    extra: {'type': 'income'},
+                  );
                 },
               ),
               const SizedBox(height: 4),
@@ -175,8 +174,9 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
               ),
             ],
           ),
-        );
-      },
+        ),
+      );
+    },
     );
   }
 

@@ -69,11 +69,11 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
           int totalSavings = 0;
 
           for (final acc in accounts) {
-            totalBalance += acc.balance + acc.allocatedInGoals;
+            totalBalance += acc.physicalBalance;
             if (acc.isSavings) {
-              totalSavings += acc.balance + acc.allocatedInGoals;
+              totalSavings += acc.physicalBalance;
             } else {
-              totalDaily += acc.balance + acc.allocatedInGoals;
+              totalDaily += acc.physicalBalance;
             }
           }
 
@@ -110,10 +110,32 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
                 // 3. DAFTAR REKENING
                 if (filteredAccounts.isEmpty)
                   _buildEmptyState(context)
-                else
+                else ...[
                   ...filteredAccounts.map(
                     (acc) => _buildModernAccountCard(context, ref, acc, isDark),
                   ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () => showAccountFormModal(context, ref),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.add_rounded, size: 20),
+                      label: const Text(
+                        'Tambah Dompet / Rekening Baru',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           );
@@ -233,14 +255,17 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
     final dailyCount = accounts.where((a) => !a.isSavings).length;
     final savingsCount = accounts.where((a) => a.isSavings).length;
 
-    return Row(
-      children: [
-        _buildChoiceChip('Semua (${accounts.length})', 'all'),
-        const SizedBox(width: 8),
-        _buildChoiceChip('Harian ($dailyCount)', 'harian'),
-        const SizedBox(width: 8),
-        _buildChoiceChip('Tabungan ($savingsCount)', 'tabungan'),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildChoiceChip('Semua (${accounts.length})', 'all'),
+          const SizedBox(width: 8),
+          _buildChoiceChip('Harian ($dailyCount)', 'harian'),
+          const SizedBox(width: 8),
+          _buildChoiceChip('Tabungan ($savingsCount)', 'tabungan'),
+        ],
+      ),
     );
   }
 
@@ -282,130 +307,185 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.dividerOf(context)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Logo Akun Resmi
-          BankLogoHelper.buildAccountBadge(
-            context: context,
-            accountName: item.name,
-            accountColor: color,
-            logoKey: item.logoKey,
-            iconCodePoint: item.iconCodePoint,
-            size: 42,
-            iconSize: 22,
-            borderRadius: 12,
-          ),
-          const SizedBox(width: 14),
+          Row(
+            children: [
+              // Logo Akun Resmi
+              BankLogoHelper.buildAccountBadge(
+                context: context,
+                accountName: item.name,
+                accountColor: color,
+                logoKey: item.logoKey,
+                iconCodePoint: item.iconCodePoint,
+                size: 38,
+                iconSize: 20,
+                borderRadius: 10,
+              ),
+              const SizedBox(width: 12),
 
-          // Nama Akun & Group Tag
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  style: AppTypography.titleSmall.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimaryOf(context),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-                Row(
+              // Nama Akun & Group Tag
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: (isSavings ? const Color(0xFF34D399) : const Color(0xFF38BDF8))
-                            .withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        isSavings ? 'Tabungan' : 'Uang Harian',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: isSavings ? const Color(0xFF059669) : const Color(0xFF0284C7),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
                     Text(
-                      item.type.toUpperCase(),
-                      style: AppTypography.labelSmall.copyWith(
-                        fontSize: 10,
-                        color: AppColors.textSecondaryOf(context),
+                      item.name,
+                      style: AppTypography.titleSmall.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimaryOf(context),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 3),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: (isSavings ? const Color(0xFF34D399) : const Color(0xFF38BDF8))
+                                .withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            isSavings ? 'Tabungan' : 'Uang Harian',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: isSavings ? const Color(0xFF059669) : const Color(0xFF0284C7),
+                            ),
+                          ),
+                        ),
+                        Text(
+                          item.type.toUpperCase(),
+                          style: AppTypography.labelSmall.copyWith(
+                            fontSize: 10,
+                            color: AppColors.textSecondaryOf(context),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+
+              // Menu Aksi 3 Titik
+              PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: Icon(
+                  Icons.more_vert_rounded,
+                  size: 20,
+                  color: AppColors.textSecondaryOf(context),
+                ),
+                onSelected: (val) async {
+                  if (val == 'edit') {
+                    showAccountFormModal(context, ref, existing: item);
+                  } else if (val == 'toggle_category') {
+                    final newCat = isSavings ? 'harian' : 'tabungan';
+                    await ref.read(accountRepositoryProvider).updateAccount(
+                          item.account.copyWith(category: newCat),
+                        );
+                    ref.read(homeRefreshTriggerProvider.notifier).state++;
+                  } else if (val == 'delete') {
+                    _confirmDeleteAccount(context, ref, item);
+                  }
+                },
+                itemBuilder: (ctx) => [
+                  PopupMenuItem(
+                    value: 'toggle_category',
+                    child: Text(isSavings ? 'Ubah ke Uang Harian' : 'Ubah ke Tabungan'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Text('Edit Akun'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Hapus Akun', style: TextStyle(color: AppColors.danger)),
+                  ),
+                ],
+              ),
+            ],
           ),
 
-          const SizedBox(width: 8),
+          const SizedBox(height: 12),
 
-          // Saldo Akun
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                CurrencyFormatter.format(item.balance),
-                style: AppTypography.titleSmall.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimaryOf(context),
-                ),
-              ),
-              if (item.allocatedInGoals > 0) ...[
-                const SizedBox(height: 2),
-                Text(
-                  'Goal: ${CurrencyFormatter.format(item.allocatedInGoals)}',
-                  style: AppTypography.labelSmall.copyWith(
-                    fontSize: 10,
-                    color: AppColors.primaryDark,
-                    fontWeight: FontWeight.w600,
+          // Baris Saldo: Total Saldo Fisik & Saldo Siap Pakai
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF161A23) : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Total Saldo Fisik',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondaryOf(context),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          CurrencyFormatter.format(item.physicalBalance),
+                          style: AppTypography.titleSmall.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimaryOf(context),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                if (item.totalAllocated > 0) ...[
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Siap Pakai',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            CurrencyFormatter.format(item.balance),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
-            ],
-          ),
-
-          // Menu Aksi 3 Titik
-          PopupMenuButton<String>(
-            padding: EdgeInsets.zero,
-            icon: Icon(
-              Icons.more_vert_rounded,
-              size: 20,
-              color: AppColors.textSecondaryOf(context),
             ),
-            onSelected: (val) async {
-              if (val == 'edit') {
-                showAccountFormModal(context, ref, existing: item);
-              } else if (val == 'toggle_category') {
-                final newCat = isSavings ? 'harian' : 'tabungan';
-                await ref.read(accountRepositoryProvider).updateAccount(
-                      item.account.copyWith(category: newCat),
-                    );
-                ref.read(homeRefreshTriggerProvider.notifier).state++;
-              } else if (val == 'delete') {
-                _confirmDeleteAccount(context, ref, item);
-              }
-            },
-            itemBuilder: (ctx) => [
-              PopupMenuItem(
-                value: 'toggle_category',
-                child: Text(isSavings ? 'Ubah ke Uang Harian' : 'Ubah ke Tabungan'),
-              ),
-              const PopupMenuItem(
-                value: 'edit',
-                child: Text('Edit Akun'),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Text('Hapus Akun', style: TextStyle(color: AppColors.danger)),
-              ),
-            ],
           ),
         ],
       ),

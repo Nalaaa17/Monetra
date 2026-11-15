@@ -58,12 +58,18 @@ void main() {
     expect(find.text('Monetra'), findsOneWidget);
     expect(find.text('Pencatatan Keuangan Pribadi'), findsOneWidget);
 
-    // 2. Animasi splash selesai (1.6 detik) dan otomatis berpindah ke Home Screen
+    // 2. Animasi splash selesai (1.5 detik + transisi halaman) dan otomatis berpindah ke Home Screen
     await tester.pump(const Duration(milliseconds: 1600));
+    await tester.pump(const Duration(milliseconds: 400));
     await tester.pump();
 
     // 3. Verifikasi Home Screen
     expect(find.text('• Halo!'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Dompet & Rekening'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Dompet & Rekening'), findsOneWidget);
   });
 
@@ -153,11 +159,19 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       final layoutException = tester.takeException();
+      if (layoutException != null) {
+        if (layoutException is FlutterError) {
+          debugPrint('DEEP:\n${layoutException.toStringDeep()}');
+        }
+      }
       expect(layoutException, isNull, reason: layoutException?.toString());
       expect(find.text('Dashboard'), findsOneWidget);
       expect(find.text('Menu Utama'), findsOneWidget);
-      expect(find.text('Progres Pengeluaran'), findsOneWidget);
-      expect(find.text('Aktivitas Bulan Ini'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Dompet & Rekening'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Dompet & Rekening'), findsOneWidget);
     },
   );

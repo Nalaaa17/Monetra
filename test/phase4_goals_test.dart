@@ -257,16 +257,16 @@ void main() {
       await tester.pumpAndSettle();
 
       // Pastikan AppBar dan Tabs ada
-      expect(find.text('Target & Tabungan'), findsOneWidget);
-      expect(find.text('🎯 Berjalan'), findsOneWidget);
-      expect(find.text('🎉 Tercapai'), findsOneWidget);
+      expect(find.text('Target Tabungan'), findsOneWidget);
+      expect(find.text('Berjalan (0)'), findsOneWidget);
+      expect(find.text('Tercapai (0)'), findsOneWidget);
 
-      // Pastikan tombol "Target Baru" ada
-      final fabFinder = find.widgetWithText(ElevatedButton, 'Target Baru');
-      expect(fabFinder, findsWidgets);
+      // Pastikan tombol Target ada
+      final targetBtn = find.text('Target');
+      expect(targetBtn, findsWidgets);
 
       // Tap untuk membuka modal
-      await tester.tap(fabFinder.first);
+      await tester.tap(targetBtn.first);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
@@ -345,11 +345,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 800));
 
-      expect(find.text('Isi Tabungan'), findsOneWidget);
-      expect(find.text('Pakai / Bayar'), findsOneWidget);
-      expect(find.text('Riwayat'), findsNWidgets(2));
-      expect(find.byIcon(Icons.edit_outlined), findsNWidgets(2));
-      expect(find.byIcon(Icons.delete_outline_rounded), findsNWidgets(2));
+      expect(find.text('Setor'), findsOneWidget);
+      expect(find.text('Pakai Dana'), findsOneWidget);
+      expect(find.byIcon(Icons.more_vert_rounded), findsNWidgets(2));
     });
   });
 }

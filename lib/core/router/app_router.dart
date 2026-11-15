@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/accounts/screens/manage_accounts_screen.dart';
 import '../../features/accounts/screens/manage_categories_screen.dart';
@@ -14,6 +15,7 @@ import '../../features/reports/screens/reports_screen.dart';
 import '../../features/settings/screens/backup_screen.dart';
 import '../../features/splash/screens/splash_screen.dart';
 import '../../features/tools/screens/money_calculator_screen.dart';
+import '../../features/transaction/providers/transaction_form_provider.dart';
 import '../../features/transaction/screens/add_transaction_screen.dart';
 import '../../features/transaction/screens/transfer_screen.dart';
 
@@ -76,9 +78,25 @@ class AppRouter {
       GoRoute(
         path: addTransaction,
         pageBuilder: (context, state) {
-          final type = state.uri.queryParameters['type'];
+          String? type = state.uri.queryParameters['type'];
+          if (type == null && state.extra != null) {
+            if (state.extra is Map) {
+              type = (state.extra as Map)['type']?.toString();
+            } else if (state.extra is String) {
+              type = state.extra as String;
+            }
+          }
+          final resolvedType = (type == 'income') ? 'income' : 'expense';
           return _buildTransitionPage(
-              AddTransactionScreen(initialType: type), state);
+            ProviderScope(
+              overrides: [
+                initialTransactionTypeProvider
+                    .overrideWith((ref) => resolvedType),
+              ],
+              child: AddTransactionScreen(initialType: resolvedType),
+            ),
+            state,
+          );
         },
       ),
       GoRoute(

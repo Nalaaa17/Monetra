@@ -16,16 +16,19 @@ class BalanceProjectionWarning {
 
 class AccountWithBalance {
   final Account account;
-  final int balance; // Saldo bebas / siap pakai (sudah dikurangi alokasi Goal)
+  final int balance; // Saldo bebas / siap pakai (sudah dikurangi alokasi Goal & Utang)
   final int allocatedInGoals; // Dana yang disisihkan di Target/Goal
+  final int allocatedInDebts; // Dana yang disisihkan di Utang
 
   const AccountWithBalance({
     required this.account,
     required this.balance,
     this.allocatedInGoals = 0,
+    this.allocatedInDebts = 0,
   });
 
-  int get physicalBalance => balance + allocatedInGoals;
+  int get totalAllocated => allocatedInGoals + allocatedInDebts;
+  int get physicalBalance => balance + totalAllocated;
   int get id => account.id!;
   String get name => account.name;
   String get type => account.type;
@@ -39,8 +42,9 @@ class AccountWithBalance {
 class BalanceSummary {
   final int dailySpendingBalance; // Saldo bebas Uang Harian
   final int savingsBalance; // Saldo bebas Tabungan
-  final int totalNetWorth; // Total saldo bebas siap pakai (tidak rancu dengan dana Target)
+  final int totalNetWorth; // Total saldo bebas siap pakai (tidak termasuk dana Target/Utang)
   final int allocatedInGoals; // Total dana yang disisihkan di Target
+  final int allocatedInDebts; // Total dana yang disisihkan di Utang
   final List<String> dailyAccountNames;
   final List<String> savingsAccountNames;
 
@@ -49,11 +53,13 @@ class BalanceSummary {
     required this.savingsBalance,
     required this.totalNetWorth,
     this.allocatedInGoals = 0,
+    this.allocatedInDebts = 0,
     this.dailyAccountNames = const [],
     this.savingsAccountNames = const [],
   });
 
-  int get totalPhysicalNetWorth => totalNetWorth + allocatedInGoals;
+  int get totalAllocated => allocatedInGoals + allocatedInDebts;
+  int get totalPhysicalNetWorth => totalNetWorth + totalAllocated;
 }
 
 class AccountRepository {
@@ -129,12 +135,16 @@ class AccountRepository {
     // 6. Sum dana yang disisihkan di Target/Goal (belum direalisasikan)
     final allocatedInGoals = await calculateGoalAllocatedForAccount(accountId);
 
+    // 7. Sum dana yang disisihkan di Utang (belum keluar fisik)
+    final allocatedInDebts = await calculateDebtAllocatedForAccount(accountId);
+
     return initialBalance +
         totalIncome -
         totalExpense +
         totalTransferIn -
         totalTransferOut -
-        allocatedInGoals;
+        allocatedInGoals -
+        allocatedInDebts;
   }
 
   /// Menghitung total dana yang sedang disisihkan di Target dari rekening ini
@@ -161,6 +171,30 @@ class AccountRepository {
     return (result.first['total'] as num?)?.toInt() ?? 0;
   }
 
+  /// Menghitung total dana yang sedang disisihkan di Utang dari rekening ini
+  Future<int> calculateDebtAllocatedForAccount(int accountId) async {
+    final db = await AppDatabase.instance;
+    final result = await db.rawQuery('''
+      SELECT COALESCE(SUM(dc.amount), 0) as total
+      FROM debt_contributions dc
+      JOIN debts d ON dc.debtId = d.id
+      WHERE dc.sourceAccountId = ? AND dc.isRealized = 0
+    ''', [accountId]);
+    return (result.first['total'] as num?)?.toInt() ?? 0;
+  }
+
+  /// Menghitung seluruh dana aktif yang terkunci di semua Utang
+  Future<int> calculateTotalAllocatedInDebts() async {
+    final db = await AppDatabase.instance;
+    final result = await db.rawQuery('''
+      SELECT COALESCE(SUM(dc.amount), 0) as total
+      FROM debt_contributions dc
+      JOIN debts d ON dc.debtId = d.id
+      WHERE dc.isRealized = 0
+    ''');
+    return (result.first['total'] as num?)?.toInt() ?? 0;
+  }
+
   Future<List<AccountWithBalance>> getAllAccountsWithBalances({
     bool includeArchived = false,
   }) async {
@@ -169,11 +203,13 @@ class AccountRepository {
 
     for (final acc in accounts) {
       final balance = await calculateAccountBalance(acc.id!);
-      final allocated = await calculateGoalAllocatedForAccount(acc.id!);
+      final allocatedGoals = await calculateGoalAllocatedForAccount(acc.id!);
+      final allocatedDebts = await calculateDebtAllocatedForAccount(acc.id!);
       result.add(AccountWithBalance(
         account: acc,
         balance: balance,
-        allocatedInGoals: allocated,
+        allocatedInGoals: allocatedGoals,
+        allocatedInDebts: allocatedDebts,
       ));
     }
 
@@ -183,6 +219,7 @@ class AccountRepository {
   Future<BalanceSummary> getBalanceSummary() async {
     final accountsWithBalance = await getAllAccountsWithBalances();
     final totalAllocatedInGoals = await calculateTotalAllocatedInGoals();
+    final totalAllocatedInDebts = await calculateTotalAllocatedInDebts();
 
     int dailySpending = 0;
     int savings = 0;
@@ -208,6 +245,7 @@ class AccountRepository {
       savingsBalance: savings,
       totalNetWorth: total,
       allocatedInGoals: totalAllocatedInGoals,
+      allocatedInDebts: totalAllocatedInDebts,
       dailyAccountNames: dailyNames,
       savingsAccountNames: savingsNames,
     );

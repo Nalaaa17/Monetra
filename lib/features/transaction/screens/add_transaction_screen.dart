@@ -39,12 +39,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
     if (widget.initialType != null &&
         (widget.initialType == 'expense' || widget.initialType == 'income')) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        ref
-            .read(transactionFormNotifierProvider.notifier)
-            .setType(widget.initialType!);
-      });
+      final currentType = ref.read(transactionFormNotifierProvider).type;
+      if (currentType != widget.initialType) {
+        Future.microtask(() {
+          if (!mounted) return;
+          ref
+              .read(transactionFormNotifierProvider.notifier)
+              .setType(widget.initialType!);
+        });
+      }
     }
   }
 

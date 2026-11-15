@@ -62,18 +62,25 @@ final categoriesByTypeProvider =
   return await repo.getAllCategories(type: type);
 });
 
+final initialTransactionTypeProvider =
+    StateProvider.autoDispose<String>((ref) => 'expense');
+
 final transactionFormNotifierProvider =
     StateNotifierProvider.autoDispose<TransactionFormNotifier, TransactionFormState>(
         (ref) {
-  return TransactionFormNotifier(ref);
-});
+  final initType = ref.watch(initialTransactionTypeProvider);
+  return TransactionFormNotifier(ref, initialType: initType);
+}, dependencies: [initialTransactionTypeProvider]);
 
 class TransactionFormNotifier extends StateNotifier<TransactionFormState> {
   final Ref ref;
   int _categoryRequestToken = 0;
 
-  TransactionFormNotifier(this.ref)
-      : super(TransactionFormState(date: DateTime.now())) {
+  TransactionFormNotifier(this.ref, {String initialType = 'expense'})
+      : super(TransactionFormState(
+          type: (initialType == 'income') ? 'income' : 'expense',
+          date: DateTime.now(),
+        )) {
     _initDefaults();
   }
 

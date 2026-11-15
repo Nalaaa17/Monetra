@@ -90,15 +90,20 @@ class MonthlyActivityCalendar extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                monthTitle,
-                style: AppTypography.labelLarge.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textSecondaryOf(context),
-                  letterSpacing: 0.6,
-                  fontSize: 12.5,
+              Expanded(
+                child: Text(
+                  monthTitle,
+                  style: AppTypography.labelLarge.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textSecondaryOf(context),
+                    letterSpacing: 0.6,
+                    fontSize: 12.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               Row(
                 children: [
                   IconButton(
@@ -139,15 +144,14 @@ class MonthlyActivityCalendar extends ConsumerWidget {
 
           // Header Hari: SN, SL, RB, KM, JM, SB, MG
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: const [
-              _WeekdayHeader('SN'),
-              _WeekdayHeader('SL'),
-              _WeekdayHeader('RB'),
-              _WeekdayHeader('KM'),
-              _WeekdayHeader('JM'),
-              _WeekdayHeader('SB'),
-              _WeekdayHeader('MG'),
+              Expanded(child: _WeekdayHeader('SN')),
+              Expanded(child: _WeekdayHeader('SL')),
+              Expanded(child: _WeekdayHeader('RB')),
+              Expanded(child: _WeekdayHeader('KM')),
+              Expanded(child: _WeekdayHeader('JM')),
+              Expanded(child: _WeekdayHeader('SB')),
+              Expanded(child: _WeekdayHeader('MG')),
             ],
           ),
 
@@ -197,14 +201,13 @@ class MonthlyActivityCalendar extends ConsumerWidget {
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 2.5),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(7, (colIndex) {
               final cellIndex = rowIndex * 7 + colIndex;
               final dayNum = cellIndex - offset + 1;
 
               if (dayNum < 1 || dayNum > totalDays) {
                 // Sel kosong di luar bulan
-                return const SizedBox(width: 40, height: 48);
+                return const Expanded(child: SizedBox(height: 52));
               }
 
               final activity = dailyMap[dayNum];
@@ -212,22 +215,24 @@ class MonthlyActivityCalendar extends ConsumerWidget {
               final hasIncome = (activity?.income ?? 0) > 0;
               final isToday = dayNum == todayDay;
 
-              return _CalendarDayCell(
-                dayNum: dayNum,
-                isToday: isToday,
-                hasExpense: hasExpense,
-                hasIncome: hasIncome,
-                expenseText: hasExpense
-                    ? '-${_formatCompactAmount(activity!.expense)}'
-                    : null,
-                incomeText: hasIncome
-                    ? '+${_formatCompactAmount(activity!.income)}'
-                    : null,
-                onTap: () => _showDayDetailModal(
-                  context,
-                  ref,
-                  DateTime(selectedMonth.year, selectedMonth.month, dayNum),
-                  activity,
+              return Expanded(
+                child: _CalendarDayCell(
+                  dayNum: dayNum,
+                  isToday: isToday,
+                  hasExpense: hasExpense,
+                  hasIncome: hasIncome,
+                  expenseText: hasExpense
+                      ? '-${_formatCompactAmount(activity!.expense)}'
+                      : null,
+                  incomeText: hasIncome
+                      ? '+${_formatCompactAmount(activity!.income)}'
+                      : null,
+                  onTap: () => _showDayDetailModal(
+                    context,
+                    ref,
+                    DateTime(selectedMonth.year, selectedMonth.month, dayNum),
+                    activity,
+                  ),
                 ),
               );
             }),
@@ -453,8 +458,7 @@ class _WeekdayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 40,
+    return Center(
       child: Text(
         label,
         textAlign: TextAlign.center,
@@ -495,7 +499,6 @@ class _CalendarDayCell extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        width: 42,
         height: 52,
         decoration: BoxDecoration(
           color: isToday

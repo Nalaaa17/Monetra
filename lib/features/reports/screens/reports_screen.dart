@@ -217,29 +217,35 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             tooltip: 'Bulan Sebelumnya',
             onPressed: () => _changeMonth(selectedDate, -1),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.calendar_month_rounded,
-                  size: 15,
-                  color: AppColors.primaryDark,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  monthName,
-                  style: AppTypography.titleMedium.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14.5,
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.calendar_month_rounded,
+                    size: 15,
+                    color: AppColors.primaryDark,
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      monthName,
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           IconButton(
@@ -278,11 +284,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'ARUS KAS BULANAN',
-                style: AppTypography.labelSmall.copyWith(
-                  color: Colors.white60,
-                  letterSpacing: 0.8,
+              Flexible(
+                child: Text(
+                  'ARUS KAS BULANAN',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: Colors.white60,
+                    letterSpacing: 0.8,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (isSurplus && report.totalIncome > 0)
@@ -308,12 +318,18 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              Text(
-                '${isSurplus ? '+' : ''}${CurrencyFormatter.format(report.netSavings)}',
-                style: AppTypography.headlineMedium.copyWith(
-                  color: isSurplus ? const Color(0xFF34D399) : AppColors.danger,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${isSurplus ? '+' : ''}${CurrencyFormatter.format(report.netSavings)}',
+                    style: AppTypography.headlineMedium.copyWith(
+                      color: isSurplus ? const Color(0xFF34D399) : AppColors.danger,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -350,18 +366,26 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          Text(
-                            'Pemasukan',
-                            style: AppTypography.labelSmall.copyWith(color: Colors.white54),
+                          Flexible(
+                            child: Text(
+                              'Pemasukan',
+                              style: AppTypography.labelSmall.copyWith(color: Colors.white54),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 3),
-                      Text(
-                        CurrencyFormatter.format(report.totalIncome),
-                        style: AppTypography.titleSmall.copyWith(
-                          color: const Color(0xFF34D399),
-                          fontWeight: FontWeight.bold,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          CurrencyFormatter.format(report.totalIncome),
+                          style: AppTypography.titleSmall.copyWith(
+                            color: const Color(0xFF34D399),
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -388,18 +412,26 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          Text(
-                            'Pengeluaran',
-                            style: AppTypography.labelSmall.copyWith(color: Colors.white54),
+                          Flexible(
+                            child: Text(
+                              'Pengeluaran',
+                              style: AppTypography.labelSmall.copyWith(color: Colors.white54),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 3),
-                      Text(
-                        CurrencyFormatter.format(report.totalExpense),
-                        style: AppTypography.titleSmall.copyWith(
-                          color: AppColors.danger,
-                          fontWeight: FontWeight.bold,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          CurrencyFormatter.format(report.totalExpense),
+                          style: AppTypography.titleSmall.copyWith(
+                            color: AppColors.danger,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -526,28 +558,26 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  const SizedBox(height: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            report.highestExpenseAmount > 0
-                                ? CurrencyFormatter.format(report.highestExpenseAmount)
-                                : 'Rp 0',
-                            style: AppTypography.titleMedium.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: AppColors.danger,
-                            ),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          report.highestExpenseAmount > 0
+                              ? CurrencyFormatter.format(report.highestExpenseAmount)
+                              : 'Rp 0',
+                          style: AppTypography.titleMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: AppColors.danger,
                           ),
                         ),
                       ),
-                      if (parsedTopDay != null && report.highestExpenseAmount > 0)
+                      if (parsedTopDay != null && report.highestExpenseAmount > 0) ...[
+                        const SizedBox(height: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
@@ -555,7 +585,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            DateFormatter.formatShort(parsedTopDay).split(' ').take(2).join(' '),
+                            DateFormatter.formatShort(parsedTopDay),
                             style: const TextStyle(
                               fontSize: 9.5,
                               fontWeight: FontWeight.bold,
@@ -563,6 +593,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                             ),
                           ),
                         ),
+                      ],
                     ],
                   ),
                 ],

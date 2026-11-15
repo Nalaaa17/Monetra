@@ -9,6 +9,7 @@ import 'package:monetra/data/repositories/account_repository.dart';
 import 'package:monetra/data/repositories/category_repository.dart';
 import 'package:monetra/data/repositories/report_repository.dart';
 import 'package:monetra/data/repositories/transaction_repository.dart';
+import 'package:monetra/features/home/providers/home_providers.dart';
 import 'package:monetra/features/reports/providers/report_providers.dart';
 import 'package:monetra/features/reports/screens/reports_screen.dart';
 import 'package:monetra/features/reports/widgets/six_month_trend_chart.dart';
@@ -317,6 +318,23 @@ void main() {
             monthlyReportProvider.overrideWith((ref) async => reportSummary),
             sixMonthTrendProvider.overrideWith((ref) async => trendPoints),
             touchedCategoryIndexProvider.overrideWith((ref) => 0),
+            monthlyDailyActivityProvider.overrideWith(
+                (ref) async => const <int, DailyActivityPoint>{}),
+            spendingAllocationProvider.overrideWith(
+              (ref) async => const SpendingAllocation(
+                needsAmount: 0,
+                needsPercentage: 0,
+                needsStatus: 'aman',
+                wantsAmount: 0,
+                wantsPercentage: 0,
+                wantsStatus: 'aman',
+                savingsAmount: 0,
+                savingsPercentage: 0,
+                savingsStatus: 'aman',
+                currentDay: 1,
+                totalDaysInMonth: 30,
+              ),
+            ),
           ],
           child: Consumer(
             builder: (context, ref, _) {
@@ -352,6 +370,7 @@ void main() {
       );
 
       // Pindah bulan -> touchedCategoryIndexProvider harus otomatis reset ke null
+      container.read(touchedCategoryIndexProvider.notifier).state = 0;
       expect(container.read(touchedCategoryIndexProvider), 0);
       await tester.tap(find.byIcon(Icons.chevron_left_rounded));
       await tester.pumpAndSettle();

@@ -111,7 +111,13 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // Tap kartu akun BCA pada daftar rekening Home
+      // Scroll sampai section Dompet & Rekening terlihat lalu tap kartu akun BCA
+      await tester.scrollUntilVisible(
+        find.text('Dompet & Rekening'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('BCA').last);
       await tester.pumpAndSettle();
       expect(visitedRoutes.last, '/history');
@@ -442,7 +448,7 @@ void main() {
 
       // Fling ke kiri (velocity negatif) -> Desember 2026
       await tester.fling(
-        find.textContaining('Belum Ada Catatan'),
+        find.byType(ReportsScreen),
         const Offset(-300, 0),
         1000,
       );
@@ -452,7 +458,7 @@ void main() {
 
       // Fling ke kanan (velocity positif) -> kembali ke November 2026
       await tester.fling(
-        find.textContaining('Belum Ada Catatan'),
+        find.byType(ReportsScreen),
         const Offset(300, 0),
         1000,
       );

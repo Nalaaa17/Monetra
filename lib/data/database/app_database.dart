@@ -150,6 +150,55 @@ class AppDatabase {
     ''');
 
     await db.execute('''
+      CREATE TABLE IF NOT EXISTS debt_contributions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        debtId INTEGER NOT NULL,
+        sourceAccountId INTEGER,
+        amount INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        note TEXT,
+        isRealized INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (debtId) REFERENCES debts(id) ON DELETE CASCADE,
+        FOREIGN KEY (sourceAccountId) REFERENCES accounts(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // Migrasi pembayaran utang lama yang sempat dicatat sebagai transaksi expense langsung
+    try {
+      final legacyTx = await db.rawQuery(
+        "SELECT * FROM transactions WHERE type = 'expense' AND note LIKE 'Bayar Utang:%'",
+      );
+      for (final row in legacyTx) {
+        final note = row['note'] as String? ?? '';
+        final amount = (row['amount'] as num?)?.toInt() ?? 0;
+        final accountId = row['accountId'] as int?;
+        final date = row['date'] as String? ?? DateTime.now().toIso8601String();
+        final txId = row['id'] as int;
+
+        final debts = await db.query('debts', where: "type = 'debt'");
+        int? matchedDebtId;
+        for (final d in debts) {
+          final t = d['title'] as String? ?? '';
+          if (t.isNotEmpty && note.contains(t)) {
+            matchedDebtId = d['id'] as int;
+            break;
+          }
+        }
+        if (matchedDebtId != null && accountId != null) {
+          await db.insert('debt_contributions', {
+            'debtId': matchedDebtId,
+            'sourceAccountId': accountId,
+            'amount': amount,
+            'date': date,
+            'note': note,
+            'isRealized': 0,
+          });
+        }
+        await db.delete('transactions', where: 'id = ?', whereArgs: [txId]);
+      }
+    } catch (_) {}
+
+    await db.execute('''
       CREATE TABLE IF NOT EXISTS investments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,

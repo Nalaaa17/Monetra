@@ -266,216 +266,608 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final selectedCategory = filter.categoryId != null
         ? allCategories.where((c) => c.id == filter.categoryId).firstOrNull
         : null;
-    final dateRangeLabel = filter.hasDateRange
-        ? '${DateFormatter.formatShort(filter.startDate!).split(' ').take(2).join(' ')} - ${DateFormatter.formatShort(filter.endDate!).split(' ').take(2).join(' ')}'
-        : 'Tanggal';
 
-    final chipShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20),
-      side: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.6)),
-    );
+    final accountsList = accountsAsync.valueOrNull ?? const [];
+    final dynamic selectedAccount = filter.accountId != null
+        ? accountsList.where((a) => a.id == filter.accountId).firstOrNull
+        : null;
+
+    // Hitung label tanggal
+    String dateRangeLabel = 'Tanggal';
+    if (filter.hasDateRange) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final s = filter.startDate!;
+      final e = filter.endDate!;
+      if (s == today && e == today) {
+        dateRangeLabel = 'Hari Ini';
+      } else if (s == today.subtract(const Duration(days: 6)) && e == today) {
+        dateRangeLabel = '7 Hari Terakhir';
+      } else if (s == DateTime(now.year, now.month, 1) &&
+          e == DateTime(now.year, now.month + 1, 0)) {
+        dateRangeLabel = 'Bulan Ini';
+      } else {
+        dateRangeLabel =
+            '${DateFormatter.formatShort(s).split(' ').take(2).join(' ')} - ${DateFormatter.formatShort(e).split(' ').take(2).join(' ')}';
+      }
+    }
+
+    // Hitung label akun
+    String accountLabel = 'Semua Akun';
+    if (selectedAccount != null) {
+      accountLabel = selectedAccount.name as String;
+    } else if (filter.accountGroup != null) {
+      accountLabel =
+          filter.accountGroup == 'tabungan' ? 'Tabungan' : 'Uang Harian';
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         border: Border(
-          bottom: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.6)),
+          bottom: BorderSide(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.6),
+          ),
         ),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            // Filter Jenis Transaksi
-            FilterChip(
-              label: const Text('Semua'),
-              labelStyle: TextStyle(
-                fontSize: 12.5,
-                fontWeight: !filter.hasAnyFilter ? FontWeight.bold : FontWeight.w500,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 1. Segmented Control Jenis Transaksi (Rapi, Seimbang & Bebas Scroll)
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E222A) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.05),
               ),
-              shape: chipShape,
-              showCheckmark: false,
-              selected: !filter.hasAnyFilter,
-              selectedColor: AppColors.primary.withValues(alpha: 0.18),
-              onSelected: (_) => _resetAllFilters(),
             ),
-            const SizedBox(width: 8),
-            FilterChip(
-              label: const Text('Pengeluaran'),
-              labelStyle: TextStyle(
-                fontSize: 12.5,
-                fontWeight: filter.type == 'expense' ? FontWeight.bold : FontWeight.w500,
-                color: filter.type == 'expense' ? AppColors.danger : null,
-              ),
-              shape: chipShape,
-              showCheckmark: false,
-              selected: filter.type == 'expense',
-              selectedColor: AppColors.danger.withValues(alpha: 0.15),
-              onSelected: (val) {
-                final clearCat =
-                    val &&
-                    selectedCategory != null &&
-                    selectedCategory.type != 'expense';
-                filterNotifier.state = filter.copyWith(
-                  type: val ? 'expense' : null,
-                  clearType: !val,
-                  clearCategory: clearCat,
-                );
-              },
-            ),
-            const SizedBox(width: 8),
-            FilterChip(
-              label: const Text('Pemasukan'),
-              labelStyle: TextStyle(
-                fontSize: 12.5,
-                fontWeight: filter.type == 'income' ? FontWeight.bold : FontWeight.w500,
-                color: filter.type == 'income' ? const Color(0xFF059669) : null,
-              ),
-              shape: chipShape,
-              showCheckmark: false,
-              selected: filter.type == 'income',
-              selectedColor: const Color(0xFF059669).withValues(alpha: 0.15),
-              onSelected: (val) {
-                final clearCat =
-                    val &&
-                    selectedCategory != null &&
-                    selectedCategory.type != 'income';
-                filterNotifier.state = filter.copyWith(
-                  type: val ? 'income' : null,
-                  clearType: !val,
-                  clearCategory: clearCat,
-                );
-              },
-            ),
-            const SizedBox(width: 8),
-            FilterChip(
-              label: const Text('Transfer'),
-              labelStyle: TextStyle(
-                fontSize: 12.5,
-                fontWeight: filter.type == 'transfer' ? FontWeight.bold : FontWeight.w500,
-                color: filter.type == 'transfer' ? const Color(0xFF0284C7) : null,
-              ),
-              shape: chipShape,
-              showCheckmark: false,
-              selected: filter.type == 'transfer',
-              selectedColor: const Color(0xFF0284C7).withValues(alpha: 0.15),
-              onSelected: (val) {
-                filterNotifier.state = filter.copyWith(
-                  type: val ? 'transfer' : null,
-                  clearType: !val,
-                  clearCategory: val,
-                );
-              },
-            ),
-            const SizedBox(width: 8),
-
-            // Filter Rentang Tanggal (PRD §4.2)
-            FilterChip(
-              avatar: const Icon(Icons.date_range_rounded, size: 15),
-              label: Text(dateRangeLabel),
-              labelStyle: TextStyle(
-                fontSize: 12.5,
-                fontWeight: filter.hasDateRange ? FontWeight.bold : FontWeight.w500,
-              ),
-              shape: chipShape,
-              showCheckmark: false,
-              selected: filter.hasDateRange,
-              selectedColor: AppColors.primary.withValues(alpha: 0.18),
-              onSelected: (_) => _showDateRangeFilterSheet(context, filter),
-            ),
-            const SizedBox(width: 8),
-
-            // Filter Kategori (PRD §4.2)
-            FilterChip(
-              avatar: selectedCategory != null
-                  ? Icon(
-                      IconHelper.getIcon(selectedCategory.iconCodePoint),
-                      size: 15,
-                      color: ColorHelper.parseHex(selectedCategory.colorHex),
-                    )
-                  : const Icon(Icons.category_outlined, size: 15),
-              label: Text(selectedCategory?.name ?? 'Kategori'),
-              labelStyle: TextStyle(
-                fontSize: 12.5,
-                fontWeight: selectedCategory != null ? FontWeight.bold : FontWeight.w500,
-              ),
-              shape: chipShape,
-              showCheckmark: false,
-              selected: selectedCategory != null,
-              selectedColor: selectedCategory != null
-                  ? ColorHelper.parseHex(selectedCategory.colorHex)
-                        .withValues(alpha: 0.18)
-                  : null,
-              onSelected: (_) =>
-                  _showCategoryFilterSheet(context, allCategories, filter),
-            ),
-
-            if (filter.accountGroup != null) ...[
-              const SizedBox(width: 8),
-              InputChip(
-                label: Text(
-                  filter.accountGroup == 'tabungan'
-                      ? 'Tabungan'
-                      : 'Uang Harian',
+            child: Row(
+              children: [
+                _buildTypeSegment(
+                  context,
+                  label: 'Semua',
+                  isSelected: filter.type == null,
+                  activeColor: AppColors.primary,
+                  onTap: () {
+                    filterNotifier.state = filter.copyWith(
+                      type: null,
+                      clearType: true,
+                    );
+                  },
                 ),
-                shape: chipShape,
-                selected: true,
-                selectedColor: AppColors.primary.withValues(alpha: 0.18),
-                onDeleted: () {
-                  filterNotifier.state = filter.copyWith(
-                    clearAccountGroup: true,
-                  );
-                },
-                onPressed: () {
-                  filterNotifier.state = filter.copyWith(
-                    clearAccountGroup: true,
-                  );
-                },
-              ),
-            ],
-
-            const SizedBox(width: 10),
-            Container(
-              width: 1,
-              height: 20,
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.6),
+                _buildTypeSegment(
+                  context,
+                  label: 'Pengeluaran',
+                  isSelected: filter.type == 'expense',
+                  activeColor: AppColors.danger,
+                  onTap: () {
+                    final clearCat = selectedCategory != null &&
+                        selectedCategory.type != 'expense';
+                    filterNotifier.state = filter.copyWith(
+                      type: 'expense',
+                      clearCategory: clearCat,
+                    );
+                  },
+                ),
+                _buildTypeSegment(
+                  context,
+                  label: 'Pemasukan',
+                  isSelected: filter.type == 'income',
+                  activeColor: const Color(0xFF059669),
+                  onTap: () {
+                    final clearCat = selectedCategory != null &&
+                        selectedCategory.type != 'income';
+                    filterNotifier.state = filter.copyWith(
+                      type: 'income',
+                      clearCategory: clearCat,
+                    );
+                  },
+                ),
+                _buildTypeSegment(
+                  context,
+                  label: 'Transfer',
+                  isSelected: filter.type == 'transfer',
+                  activeColor: const Color(0xFF0284C7),
+                  onTap: () {
+                    filterNotifier.state = filter.copyWith(
+                      type: 'transfer',
+                      clearCategory: true,
+                    );
+                  },
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
+          ),
+          const SizedBox(height: 10),
 
-            // Filter Akun/Dompet
-            accountsAsync.maybeWhen(
-              data: (accounts) => Row(
-                children: accounts.map<Widget>((acc) {
-                  final isSelected = filter.accountId == acc.id;
-                  final color = ColorHelper.parseHex(acc.colorHex);
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      label: Text(acc.name),
-                      labelStyle: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          // 2. Baris Dropdown Filter (Tanggal, Akun, Kategori, + Reset)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                // Dropdown Tanggal
+                _buildFilterDropdownPill(
+                  context,
+                  icon: const Icon(Icons.calendar_month_rounded, size: 15),
+                  label: dateRangeLabel,
+                  isActive: filter.hasDateRange,
+                  activeColor: AppColors.primary,
+                  onTap: () => _showDateRangeFilterSheet(context, filter),
+                  onClear: filter.hasDateRange
+                      ? () => filterNotifier.state =
+                            filter.copyWith(clearDateRange: true)
+                      : null,
+                ),
+                const SizedBox(width: 8),
+
+                // Dropdown Akun / Rekening
+                _buildFilterDropdownPill(
+                  context,
+                  icon: const Icon(
+                    Icons.account_balance_wallet_rounded,
+                    size: 15,
+                  ),
+                  label: accountLabel,
+                  isActive:
+                      filter.accountId != null || filter.accountGroup != null,
+                  activeColor: selectedAccount != null
+                      ? ColorHelper.parseHex(selectedAccount.colorHex as String)
+                      : AppColors.primary,
+                  onTap: () =>
+                      _showAccountFilterSheet(context, accountsAsync, filter),
+                  onClear:
+                      (filter.accountId != null || filter.accountGroup != null)
+                          ? () => filterNotifier.state = filter.copyWith(
+                                clearAccount: true,
+                                clearAccountGroup: true,
+                              )
+                          : null,
+                ),
+                const SizedBox(width: 8),
+
+                // Dropdown Kategori
+                _buildFilterDropdownPill(
+                  context,
+                  icon: selectedCategory != null
+                      ? Icon(
+                          IconHelper.getIcon(selectedCategory.iconCodePoint),
+                          size: 15,
+                          color: ColorHelper.parseHex(
+                            selectedCategory.colorHex,
+                          ),
+                        )
+                      : const Icon(Icons.category_outlined, size: 15),
+                  label: selectedCategory?.name ?? 'Kategori',
+                  isActive: selectedCategory != null,
+                  activeColor: selectedCategory != null
+                      ? ColorHelper.parseHex(selectedCategory.colorHex)
+                      : AppColors.primary,
+                  onTap: () =>
+                      _showCategoryFilterSheet(context, allCategories, filter),
+                  onClear: selectedCategory != null
+                      ? () => filterNotifier.state =
+                            filter.copyWith(clearCategory: true)
+                      : null,
+                ),
+
+                // Tombol Reset Cepat jika filter aktif
+                if (filter.hasAnyFilter) ...[
+                  const SizedBox(width: 8),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: _resetAllFilters,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
                       ),
-                      shape: chipShape,
-                      showCheckmark: false,
-                      selected: isSelected,
-                      selectedColor: color.withValues(alpha: 0.15),
-                      onSelected: (val) {
-                        filterNotifier.state = filter.copyWith(
-                          accountId: val ? acc.id : null,
-                          clearAccount: !val,
-                          clearAccountGroup: val,
+                      decoration: BoxDecoration(
+                        color: AppColors.danger.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: AppColors.danger.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.refresh_rounded,
+                            size: 14,
+                            color: AppColors.danger,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Reset',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.danger,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypeSegment(
+    BuildContext context, {
+    required String label,
+    required bool isSelected,
+    required Color activeColor,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? (isDark
+                    ? activeColor.withValues(alpha: 0.2)
+                    : activeColor.withValues(alpha: 0.12))
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(
+              color: isSelected
+                  ? activeColor.withValues(alpha: 0.45)
+                  : Colors.transparent,
+            ),
+          ),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                style: AppTypography.bodySmall.copyWith(
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 12,
+                  color: isSelected
+                      ? (isDark ? Colors.white : activeColor)
+                      : AppColors.textSecondaryOf(context),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterDropdownPill(
+    BuildContext context, {
+    required Widget icon,
+    required String label,
+    required bool isActive,
+    required Color activeColor,
+    required VoidCallback onTap,
+    VoidCallback? onClear,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
+        decoration: BoxDecoration(
+          color: isActive
+              ? (isDark
+                  ? activeColor.withValues(alpha: 0.18)
+                  : activeColor.withValues(alpha: 0.1))
+              : (isDark ? const Color(0xFF1E222A) : const Color(0xFFF8FAFC)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isActive
+                ? activeColor.withValues(alpha: 0.5)
+                : (isDark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.08)),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            icon,
+            const SizedBox(width: 6),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 115),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  color: isActive
+                      ? (isDark ? Colors.white : activeColor)
+                      : AppColors.textPrimaryOf(context),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            if (isActive && onClear != null)
+              GestureDetector(
+                onTap: onClear,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 2),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 14,
+                    color: isActive
+                        ? (isDark ? Colors.white70 : activeColor)
+                        : Colors.grey,
+                  ),
+                ),
+              )
+            else
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 16,
+                color: AppColors.textSecondaryOf(context),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAccountFilterSheet(
+    BuildContext context,
+    AsyncValue accountsAsync,
+    HistoryFilter filter,
+  ) {
+    final notifier = ref.read(historyFilterProvider.notifier);
+    final accounts = accountsAsync.valueOrNull ?? const [];
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 38,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Filter Akun & Dompet', style: AppTypography.titleLarge),
+                  if (filter.accountId != null || filter.accountGroup != null)
+                    TextButton(
+                      onPressed: () {
+                        notifier.state = filter.copyWith(
+                          clearAccount: true,
+                          clearAccountGroup: true,
                         );
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text('Reset'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Filter Grup Cepat (Uang Harian & Tabungan)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.wallet_rounded, size: 16),
+                      label: const Text('Uang Harian'),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: filter.accountGroup == 'harian'
+                            ? AppColors.primary.withValues(alpha: 0.15)
+                            : null,
+                        side: BorderSide(
+                          color: filter.accountGroup == 'harian'
+                              ? AppColors.primary
+                              : Theme.of(ctx).dividerColor,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        notifier.state = filter.copyWith(
+                          accountGroup: filter.accountGroup == 'harian'
+                              ? null
+                              : 'harian',
+                          clearAccountGroup: filter.accountGroup == 'harian',
+                          clearAccount: true,
+                        );
+                        Navigator.pop(ctx);
                       },
                     ),
-                  );
-                }).toList(),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.savings_rounded, size: 16),
+                      label: const Text('Tabungan'),
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: filter.accountGroup == 'tabungan'
+                            ? AppColors.primary.withValues(alpha: 0.15)
+                            : null,
+                        side: BorderSide(
+                          color: filter.accountGroup == 'tabungan'
+                              ? AppColors.primary
+                              : Theme.of(ctx).dividerColor,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        notifier.state = filter.copyWith(
+                          accountGroup: filter.accountGroup == 'tabungan'
+                              ? null
+                              : 'tabungan',
+                          clearAccountGroup: filter.accountGroup == 'tabungan',
+                          clearAccount: true,
+                        );
+                        Navigator.pop(ctx);
+                      },
+                    ),
+                  ),
+                ],
               ),
-              orElse: () => const SizedBox.shrink(),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                'Daftar Akun / Rekening',
+                style: AppTypography.titleSmall.copyWith(
+                  color: AppColors.textSecondaryOf(ctx),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (accounts.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Text('Belum ada akun terdaftar.'),
+                )
+              else
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.45,
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: accounts.length + 1,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        final isAllSelected = filter.accountId == null &&
+                            filter.accountGroup == null;
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          leading: CircleAvatar(
+                            backgroundColor: isAllSelected
+                                ? AppColors.primary.withValues(alpha: 0.2)
+                                : Colors.grey.withValues(alpha: 0.1),
+                            child: Icon(
+                              Icons.all_inclusive_rounded,
+                              color: isAllSelected
+                                  ? AppColors.primary
+                                  : Colors.grey,
+                              size: 20,
+                            ),
+                          ),
+                          title: const Text('Semua Akun'),
+                          trailing: isAllSelected
+                              ? const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: AppColors.primary,
+                                )
+                              : null,
+                          onTap: () {
+                            notifier.state = filter.copyWith(
+                              clearAccount: true,
+                              clearAccountGroup: true,
+                            );
+                            Navigator.pop(ctx);
+                          },
+                        );
+                      }
+
+                      final dynamic acc = accounts[index - 1];
+                      final isSelected = filter.accountId == acc.id;
+                      final color =
+                          ColorHelper.parseHex(acc.colorHex as String);
+
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: color.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Icon(
+                            IconHelper.getIcon(acc.iconCodePoint as int),
+                            color: color,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text(
+                          acc.name as String,
+                          style: TextStyle(
+                            fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.w500,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${acc.category == 'tabungan' ? 'Tabungan' : 'Uang Harian'} • ${CurrencyFormatter.format(acc.balance as int)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondaryOf(context),
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? const Icon(
+                                Icons.check_circle_rounded,
+                                color: AppColors.primary,
+                              )
+                            : null,
+                        onTap: () {
+                          notifier.state = filter.copyWith(
+                            accountId: acc.id as int,
+                            clearAccountGroup: true,
+                          );
+                          Navigator.pop(ctx);
+                        },
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -555,6 +947,20 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   notifier.state = filter.copyWith(
                     startDate: DateTime(now.year, now.month, 1),
                     endDate: DateTime(now.year, now.month + 1, 0),
+                  );
+                  Navigator.pop(ctx);
+                },
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.history_toggle_off_rounded,
+                  color: AppColors.primaryDark,
+                ),
+                title: const Text('Bulan Lalu'),
+                onTap: () {
+                  notifier.state = filter.copyWith(
+                    startDate: DateTime(now.year, now.month - 1, 1),
+                    endDate: DateTime(now.year, now.month, 0),
                   );
                   Navigator.pop(ctx);
                 },
@@ -807,7 +1213,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             ),
             const SizedBox(height: 18),
             Text(
-              'Tidak Ada Transaksi Ditemukan',
+              'Tidak Ada Hasil Ditemukan',
               style: AppTypography.headlineMedium.copyWith(fontSize: 17),
               textAlign: TextAlign.center,
             ),
@@ -824,7 +1230,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             OutlinedButton.icon(
               onPressed: _resetAllFilters,
               icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Reset Filter'),
+              label: const Text('Reset Pencarian & Filter'),
             ),
           ],
         ),

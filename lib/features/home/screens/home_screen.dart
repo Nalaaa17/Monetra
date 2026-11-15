@@ -18,8 +18,6 @@ import '../../transaction/screens/edit_transaction_screen.dart';
 import '../providers/home_providers.dart';
 import '../widgets/hero_sekilas_card.dart';
 import '../widgets/main_menu_grid.dart';
-import '../widgets/spending_progress_card.dart';
-import '../widgets/monthly_activity_calendar.dart';
 import '../widgets/floating_bottom_bar.dart';
 import '../widgets/quick_feature_modals.dart';
 
@@ -58,20 +56,6 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
         actions: [
-          // Panduan / Info
-          IconButton(
-            icon: const Icon(Icons.menu_book_rounded, size: 21),
-            tooltip: 'Panduan & Info',
-            onPressed: () => _showAboutMonetraDialog(context),
-          ),
-
-          // Megaphone / AI Advisor Tips
-          IconButton(
-            icon: const Icon(Icons.campaign_outlined, size: 22),
-            tooltip: 'Tips Finansial',
-            onPressed: () => QuickFeatureModals.showAIAdvisorModal(context),
-          ),
-
           // Dark Mode Toggle
           IconButton(
             icon: Icon(
@@ -145,14 +129,6 @@ class HomeScreen extends ConsumerWidget {
                   'about', Icons.info_outline_rounded, 'Tentang Monetra'),
             ],
           ),
-
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            tooltip: 'Segarkan Saldo',
-            onPressed: () {
-              ref.read(homeRefreshTriggerProvider.notifier).state++;
-            },
-          ),
         ],
       ),
       body: RefreshIndicator(
@@ -183,14 +159,17 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  'Sahabat Monetra',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondaryOf(context),
-                    fontSize: 13,
+                Expanded(
+                  child: Text(
+                    'Sahabat Monetra ☀️',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondaryOf(context),
+                      fontSize: 13,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Text(' ☀️', style: TextStyle(fontSize: 14)),
               ],
             ),
             const SizedBox(height: 16),
@@ -206,14 +185,6 @@ class HomeScreen extends ConsumerWidget {
             // 2. Menu Utama Pintasan 8 Aksi Cepat (Sesuai Referensi Gambar 1)
             const MainMenuGrid(),
             const SizedBox(height: 18),
-
-            // 3. Progres Pengeluaran (Aturan 50/30/20 - Sesuai Referensi Gambar 2)
-            const SpendingProgressCard(),
-            const SizedBox(height: 18),
-
-            // 4. Aktivitas Bulan Ini (Kalender Keuangan - Sesuai Referensi Gambar 2)
-            const MonthlyActivityCalendar(),
-            const SizedBox(height: 20),
 
             // Preview Goal Mendekati Jatuh Tempo (PRD §6.4)
             const HomeGoalPreviewSection(),
@@ -346,7 +317,7 @@ class HomeScreen extends ConsumerWidget {
         itemBuilder: (context, index) {
           final item = accounts[index];
           final color = ColorHelper.parseHex(item.colorHex);
-          final hasTargetLock = item.allocatedInGoals > 0;
+          final hasLock = item.totalAllocated > 0;
 
           return Material(
             color: Theme.of(context).cardColor,
@@ -404,7 +375,7 @@ class HomeScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          hasTargetLock ? 'Siap pakai' : 'Saldo',
+                          hasLock ? 'Total Fisik' : 'Saldo',
                           style: AppTypography.labelSmall.copyWith(fontSize: 11.5),
                         ),
                         const SizedBox(height: 1),
@@ -412,27 +383,27 @@ class HomeScreen extends ConsumerWidget {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.centerLeft,
                           child: AnimatedCurrency(
-                            amount: item.balance,
+                            amount: item.physicalBalance,
                             style: AppTypography.titleMedium.copyWith(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
                             ),
                           ),
                         ),
-                        if (hasTargetLock)
+                        if (hasLock)
                           Padding(
                             padding: const EdgeInsets.only(top: 3),
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                'Target: ${CurrencyFormatter.format(item.allocatedInGoals)}',
+                                'Bebas: ${CurrencyFormatter.format(item.balance)}',
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w600,
                                   color: isDark
-                                      ? const Color(0xFFFBBF24)
-                                      : const Color(0xFFD97706),
+                                      ? const Color(0xFF38BDF8)
+                                      : const Color(0xFF0284C7),
                                 ),
                               ),
                             ),

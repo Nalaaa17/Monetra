@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/bank_logo_helper.dart';
+import '../../../core/utils/color_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/debt_model.dart';
-import '../providers/debt_providers.dart';
 import '../../../shared/providers/repository_providers.dart';
+import '../../home/providers/home_providers.dart';
+import '../providers/debt_providers.dart';
 
 class DebtScreen extends ConsumerStatefulWidget {
   const DebtScreen({super.key});
@@ -406,7 +410,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
     final isSettled = item.isSettled;
     final progress = item.progress;
     final dueDateStr = item.dueDate != null
-        ? DateFormat('dd MMM yyyy', 'id_ID').format(item.dueDate!)
+        ? DateFormatter.formatShort(item.dueDate!)
         : null;
 
     final isOverdue = item.dueDate != null &&
@@ -630,10 +634,10 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    onPressed: () => _showRecordPaymentDialog(context, item),
+                    onPressed: () => _showRecordPaymentSheet(context, item),
                     icon: const Icon(Icons.payment_rounded, size: 16, color: AppColors.primaryDark),
                     label: Text(
-                      'Bayar Cicilan',
+                      item.isDebt ? 'Bayar Cicilan' : 'Terima Pembayaran',
                       style: AppTypography.labelSmall.copyWith(
                         color: AppColors.primaryDark,
                         fontWeight: FontWeight.bold,
@@ -653,6 +657,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                     if (item.id != null) {
                       await ref.read(debtRepositoryProvider).toggleSettle(item.id!, false);
                       ref.read(debtRefreshProvider.notifier).state++;
+                      ref.read(homeRefreshTriggerProvider.notifier).state++;
                     }
                   },
                 ),
@@ -745,7 +750,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final dueDateFormatted = selectedDueDate != null
-                ? DateFormat('dd MMMM yyyy', 'id_ID').format(selectedDueDate!)
+                ? DateFormatter.formatShort(selectedDueDate!)
                 : 'Pilih Tanggal';
 
             return Container(
@@ -915,12 +920,14 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                     Text('Jatuh Tempo (Opsional)', style: AppTypography.labelSmall),
                     const SizedBox(height: 6),
                     InkWell(
+                      borderRadius: BorderRadius.circular(12),
                       onTap: () async {
+                        final now = DateTime.now();
                         final picked = await showDatePicker(
                           context: context,
-                          initialDate: selectedDueDate ?? DateTime.now().add(const Duration(days: 30)),
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2040),
+                          initialDate: selectedDueDate ?? now.add(const Duration(days: 30)),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
                         );
                         if (picked != null) {
                           setModalState(() => selectedDueDate = picked);
@@ -936,15 +943,30 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              dueDateFormatted,
-                              style: AppTypography.bodyMedium.copyWith(
-                                color: selectedDueDate != null
-                                    ? AppColors.textPrimaryOf(context)
-                                    : AppColors.textSecondaryOf(context),
-                              ),
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.primaryDark),
+                                const SizedBox(width: 10),
+                                Text(
+                                  dueDateFormatted,
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    color: selectedDueDate != null
+                                        ? AppColors.textPrimaryOf(context)
+                                        : AppColors.textSecondaryOf(context),
+                                    fontWeight: selectedDueDate != null ? FontWeight.w600 : FontWeight.normal,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const Icon(Icons.calendar_today_rounded, size: 18),
+                            if (selectedDueDate != null)
+                              GestureDetector(
+                                onTap: () {
+                                  setModalState(() => selectedDueDate = null);
+                                },
+                                child: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
+                              )
+                            else
+                              const Icon(Icons.chevron_right_rounded, size: 18, color: Colors.grey),
                           ],
                         ),
                       ),
@@ -1010,6 +1032,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                           }
 
                           ref.read(debtRefreshProvider.notifier).state++;
+                          ref.read(homeRefreshTriggerProvider.notifier).state++;
                           if (context.mounted) Navigator.pop(modalCtx);
                         },
                         child: Text(
@@ -1031,71 +1054,446 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
     );
   }
 
-  void _showRecordPaymentDialog(BuildContext context, DebtModel item) {
-    final payCtrl = TextEditingController();
-
-    showDialog(
+  void _showRecordPaymentSheet(BuildContext context, DebtModel item) {
+    showModalBottomSheet(
       context: context,
-      builder: (dialogCtx) {
-        return AlertDialog(
-          backgroundColor: AppColors.cardOf(context),
-          title: Text('Bayar Cicilan / Pelunasan', style: AppTypography.titleMedium),
-          content: Column(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalCtx) => _DebtPaymentSheet(debt: item),
+    );
+  }
+}
+
+class _DebtPaymentSheet extends ConsumerStatefulWidget {
+  final DebtModel debt;
+
+  const _DebtPaymentSheet({required this.debt});
+
+  @override
+  ConsumerState<_DebtPaymentSheet> createState() => _DebtPaymentSheetState();
+}
+
+class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
+  final _amountController = TextEditingController();
+  final _noteController = TextEditingController();
+  int? _selectedAccountId;
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  int get _parsedAmount =>
+      int.tryParse(
+          _amountController.text.replaceAll('.', '').replaceAll(',', '')) ??
+      0;
+
+  @override
+  Widget build(BuildContext context) {
+    final accountsAsync = ref.watch(accountsWithBalanceProvider);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDebt = widget.debt.isDebt;
+
+    return Material(
+      color: Theme.of(context).cardColor,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 18, 20, bottomInset + 20),
+        child: SingleChildScrollView(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Top drag indicator
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Header
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isDebt
+                              ? 'Sisihkan / Bayar: ${widget.debt.title}'
+                              : 'Terima: ${widget.debt.title}',
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isDebt
+                              ? 'Pilih dompet / rekening untuk mengambil dana pembayaran'
+                              : 'Pilih dompet / rekening tujuan penerimaan dana',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondaryOf(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Sisa Tagihan & Quick Fill
+              SizedBox(
+                width: double.infinity,
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: (isDebt ? AppColors.danger : AppColors.tertiary)
+                            .withValues(alpha: isDark ? 0.2 : 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Sisa ${isDebt ? 'utang' : 'piutang'}: ${CurrencyFormatter.format(widget.debt.remainingAmount)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: isDebt ? AppColors.danger : const Color(0xFF059669),
+                        ),
+                      ),
+                    ),
+                    if (widget.debt.remainingAmount > 0)
+                      ActionChip(
+                        label: const Text(
+                          'Lunasi Semua',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          setState(() {
+                            _amountController.text =
+                                widget.debt.remainingAmount.toString();
+                          });
+                        },
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Input Nominal
               Text(
-                'Sisa tagihan: ${CurrencyFormatter.format(item.remainingAmount)}',
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.primaryDark,
+                isDebt ? 'Nominal Dibayar (Rp)' : 'Nominal Diterima (Rp)',
+                style: AppTypography.labelSmall,
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _amountController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                autofocus: true,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: 'Contoh: 500000',
+                  prefixText: 'Rp ',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Pilih Rekening / Dompet Sumber
+              Text(
+                isDebt
+                    ? 'Diambil dari Dompet / Rekening'
+                    : 'Disimpan ke Dompet / Rekening',
+                style: AppTypography.labelSmall.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
+              accountsAsync.when(
+                data: (accounts) {
+                  if (accounts.isEmpty) {
+                    return const Text('Tidak ada akun tersedia.');
+                  }
+                  if (_selectedAccountId == null ||
+                      !accounts.any((a) => a.id == _selectedAccountId)) {
+                    _selectedAccountId = accounts.first.id;
+                  }
+
+                  final selectedAcc = accounts
+                      .where((a) => a.id == _selectedAccountId)
+                      .firstOrNull;
+                  final isExceeding = isDebt &&
+                      selectedAcc != null &&
+                      _parsedAmount > 0 &&
+                      _parsedAmount > selectedAcc.balance;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: accounts.map((acc) {
+                          final isSelected = _selectedAccountId == acc.id;
+                          final accColor = ColorHelper.parseHex(acc.colorHex);
+
+                          return ChoiceChip(
+                            selected: isSelected,
+                            avatar: BankLogoHelper.buildAccountBadge(
+                              context: context,
+                              accountName: acc.name,
+                              accountColor: accColor,
+                              logoKey: acc.logoKey,
+                              iconCodePoint: acc.iconCodePoint,
+                              size: 20,
+                              iconSize: 12,
+                              borderRadius: 6,
+                            ),
+                            label: Text(
+                              '${acc.name} (${CurrencyFormatter.format(acc.balance)})',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: isSelected ? Colors.black : null,
+                              ),
+                            ),
+                            selectedColor: AppColors.primary,
+                            onSelected: (selected) {
+                              if (selected) {
+                                setState(() {
+                                  _selectedAccountId = acc.id;
+                                });
+                              }
+                            },
+                          );
+                        }).toList(),
+                      ),
+                      if (isExceeding) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.warning_amber_rounded,
+                                  size: 16, color: AppColors.danger),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Melebihi saldo bebas "${selectedAcc.name}" (${CurrencyFormatter.format(selectedAcc.balance)})',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.danger,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
+                loading: () => const SizedBox(
+                  height: 28,
+                  child: Center(
+                    child: Text('Memuat akun...', style: TextStyle(fontSize: 12)),
+                  ),
+                ),
+                error: (e, _) => Text('Gagal memuat akun: $e'),
+              ),
+              const SizedBox(height: 14),
+
+              // Catatan
+              Text('Catatan (Opsional)', style: AppTypography.labelSmall),
+              const SizedBox(height: 6),
               TextField(
-                controller: payCtrl,
-                keyboardType: TextInputType.number,
-                autofocus: true,
+                controller: _noteController,
                 decoration: InputDecoration(
-                  prefixText: 'Rp ',
-                  hintText: 'Jumlah dibayar',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  hintText: isDebt ? 'Misal: Cicilan bulan ini' : 'Misal: Pelunasan tunai',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
               ),
-              const SizedBox(height: 10),
-              // Quick action: Bayar Penuh
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    payCtrl.text = item.remainingAmount.toString();
-                  },
-                  child: const Text('Bayar Lunas Semua'),
+              const SizedBox(height: 18),
+
+              // Submit Button
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
+                        )
+                      : Text(
+                          isDebt ? 'Bayar Cicilan' : 'Simpan Pembayaran',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
                 ),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              onPressed: () async {
-                final amount = CurrencyFormatter.parse(payCtrl.text);
-                if (amount > 0 && item.id != null) {
-                  await ref.read(debtRepositoryProvider).recordPayment(item.id!, amount);
-                  ref.read(debtRefreshProvider.notifier).state++;
-                }
-                if (context.mounted) Navigator.pop(dialogCtx);
-              },
-              child: const Text('Simpan Pembayaran', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
+        ),
+      ),
     );
+  }
+
+  Future<void> _submit() async {
+    final amount = _parsedAmount;
+    if (amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Masukkan nominal pembayaran lebih dari Rp 0.'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedAccountId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pilih dompet / rekening terlebih dahulu.'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final accounts = ref.read(accountsWithBalanceProvider).valueOrNull ?? [];
+      final chosenAcc =
+          accounts.where((a) => a.id == _selectedAccountId).firstOrNull;
+
+      if (widget.debt.isDebt && chosenAcc != null && amount > chosenAcc.balance) {
+        final proceed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Saldo Bebas Kurang'),
+            content: Text(
+              'Nominal pembayaran (${CurrencyFormatter.format(amount)}) melebihi saldo bebas di "${chosenAcc.name}" (${CurrencyFormatter.format(chosenAcc.balance)}). Tetap lanjutkan?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.black,
+                ),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Lanjutkan'),
+              ),
+            ],
+          ),
+        );
+
+        if (proceed != true) {
+          setState(() => _isSubmitting = false);
+          return;
+        }
+      }
+
+      await ref.read(debtRepositoryProvider).recordPayment(
+            widget.debt.id!,
+            amount,
+            accountId: _selectedAccountId,
+            note: _noteController.text.trim().isEmpty
+                ? null
+                : _noteController.text.trim(),
+          );
+
+      ref.read(debtRefreshProvider.notifier).state++;
+      ref.read(homeRefreshTriggerProvider.notifier).state++;
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Pembayaran "${widget.debt.title}" berhasil dicatat'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mencatat pembayaran: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
   }
 }
 

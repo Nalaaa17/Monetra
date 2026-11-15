@@ -21,6 +21,7 @@ class HeroSekilasCard extends ConsumerWidget {
     final isHidden = ref.watch(isBalanceHiddenProvider);
     final totalAssets = summary.totalPhysicalNetWorth;
     final hasGoals = summary.allocatedInGoals > 0;
+    final hasDebts = summary.allocatedInDebts > 0;
 
     return Container(
       width: double.infinity,
@@ -99,7 +100,7 @@ class HeroSekilasCard extends ConsumerWidget {
 
           const SizedBox(height: 14),
 
-          // Baris 3: Dua Kolom Ramping: Uang Harian & Tabungan
+          // Baris 3: Dua Kolom Ramping: Uang Harian & Tabungan (Bebas Siap Pakai)
           Row(
             children: [
               // Kolom Uang Harian
@@ -118,25 +119,33 @@ class HeroSekilasCard extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          'Uang Harian',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.6),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                        Flexible(
+                          child: Text(
+                            'Uang Harian',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      isHidden
-                          ? '••••••'
-                          : CurrencyFormatter.format(summary.dailySpendingBalance),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        isHidden
+                            ? '••••••'
+                            : CurrencyFormatter.format(summary.dailySpendingBalance),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
                       ),
                     ),
                   ],
@@ -166,25 +175,33 @@ class HeroSekilasCard extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          'Tabungan',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.6),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                        Flexible(
+                          child: Text(
+                            'Tabungan',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      isHidden
-                          ? '••••••'
-                          : CurrencyFormatter.format(summary.savingsBalance),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        isHidden
+                            ? '••••••'
+                            : CurrencyFormatter.format(summary.savingsBalance),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
                       ),
                     ),
                   ],
@@ -193,45 +210,127 @@ class HeroSekilasCard extends ConsumerWidget {
             ],
           ),
 
-          if (hasGoals) ...[
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: () => context.push(AppRouter.goals),
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '🎯 Dana Target',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      isHidden
-                          ? '••••••'
-                          : CurrencyFormatter.format(summary.allocatedInGoals),
-                      style: const TextStyle(
-                        color: Color(0xFFFBBF24),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          if (hasGoals || hasDebts) ...[
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                if (hasGoals)
+                  _buildAllocatedCard(
+                    context: context,
+                    label: 'Target Tabungan',
+                    amount: summary.allocatedInGoals,
+                    icon: Icons.track_changes_rounded,
+                    accentColor: const Color(0xFFF59E0B),
+                    onTap: () => context.push(AppRouter.goals),
+                    isHidden: isHidden,
+                  ),
+                if (hasGoals && hasDebts) const SizedBox(width: 8),
+                if (hasDebts)
+                  _buildAllocatedCard(
+                    context: context,
+                    label: 'Cicilan Utang',
+                    amount: summary.allocatedInDebts,
+                    icon: Icons.account_balance_wallet_outlined,
+                    accentColor: const Color(0xFF38BDF8),
+                    onTap: () => context.push(AppRouter.utang),
+                    isHidden: isHidden,
+                  ),
+              ],
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildAllocatedCard({
+    required BuildContext context,
+    required String label,
+    required int amount,
+    required IconData icon,
+    required Color accentColor,
+    required VoidCallback onTap,
+    required bool isHidden,
+  }) {
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          splashColor: accentColor.withValues(alpha: 0.12),
+          highlightColor: accentColor.withValues(alpha: 0.06),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1B202B),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.08),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 15,
+                    color: accentColor,
+                  ),
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.55),
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          isHidden
+                              ? '••••••'
+                              : CurrencyFormatter.format(amount),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 10,
+                  color: Colors.white.withValues(alpha: 0.35),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

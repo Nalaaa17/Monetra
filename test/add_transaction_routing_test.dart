@@ -53,6 +53,8 @@ void main() {
       colorHex: '0xFF10B981',
     );
 
+    await AppDatabase.setSetting('onboarding_completed', 'true');
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [

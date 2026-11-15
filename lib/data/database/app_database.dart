@@ -130,7 +130,20 @@ class AppDatabase {
     // Pastikan tabel debts & investments ada
     await _ensureDebtsAndInvestmentsTables(db);
 
+    // Pastikan kolom imagePath ada pada tabel transactions
+    await _ensureTransactionColumns(db);
+
     return db;
+  }
+
+  static Future<void> _ensureTransactionColumns(Database db) async {
+    try {
+      final cols = await db.rawQuery('PRAGMA table_info(transactions)');
+      final hasImagePath = cols.any((c) => c['name'] == 'imagePath');
+      if (!hasImagePath) {
+        await db.execute('ALTER TABLE transactions ADD COLUMN imagePath TEXT');
+      }
+    } catch (_) {}
   }
 
   static Future<void> _ensureDebtsAndInvestmentsTables(Database db) async {
@@ -316,6 +329,7 @@ class AppDatabase {
         note TEXT,
         date TEXT NOT NULL,
         createdAt TEXT NOT NULL,
+        imagePath TEXT,
         FOREIGN KEY (accountId) REFERENCES accounts(id) ON DELETE CASCADE,
         FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE SET NULL
       )

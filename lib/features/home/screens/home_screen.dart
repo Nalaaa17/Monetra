@@ -14,6 +14,7 @@ import '../../../data/repositories/transaction_repository.dart';
 import '../../../shared/widgets/animated_currency.dart';
 import '../../goals/widgets/home_goal_preview_section.dart';
 import '../../history/providers/history_providers.dart';
+import '../../onboarding/providers/onboarding_providers.dart';
 import '../../transaction/screens/edit_transaction_screen.dart';
 import '../providers/home_providers.dart';
 import '../widgets/hero_sekilas_card.dart';
@@ -31,6 +32,7 @@ class HomeScreen extends ConsumerWidget {
     final recentTransactionsAsync = ref.watch(recentTransactionsProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode == ThemeMode.dark;
+    final userName = ref.watch(userNameProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -160,14 +162,36 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(
-                    'Sahabat Monetra ☀️',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondaryOf(context),
-                      fontSize: 13,
+                  child: InkWell(
+                    onTap: () => _showEditNameDialog(context, ref, userName),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              '$userName ☀️',
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: AppColors.textPrimaryOf(context),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.edit_rounded,
+                            size: 13,
+                            color: AppColors.textSecondaryOf(context)
+                                .withValues(alpha: 0.6),
+                          ),
+                        ],
+                      ),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -603,6 +627,79 @@ class HomeScreen extends ConsumerWidget {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditNameDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String currentName,
+  ) {
+    final controller = TextEditingController(
+      text: currentName == 'Sahabat Monetra' ? '' : currentName,
+    );
+
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.badge_rounded, color: AppColors.primary),
+            SizedBox(width: 8),
+            Text('Ubah Nama Panggilan'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Nama ini akan ditampilkan pada ucapan sapaan di Dashboard:',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondaryOf(context),
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              textCapitalization: TextCapitalization.words,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Misal: Nala, Budi, Alex...',
+                prefixIcon: const Icon(Icons.person_rounded),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newName = controller.text.trim();
+              await ref.read(userNameProvider.notifier).setUserName(
+                    newName.isNotEmpty ? newName : 'Sahabat Monetra',
+                  );
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Simpan'),
           ),
         ],
       ),

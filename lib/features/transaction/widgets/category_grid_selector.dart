@@ -9,12 +9,14 @@ class CategoryGridSelector extends StatelessWidget {
   final List<Category> categories;
   final int? selectedCategoryId;
   final ValueChanged<int> onSelectCategory;
+  final Widget? trailing;
 
   const CategoryGridSelector({
     super.key,
     required this.categories,
     required this.selectedCategoryId,
     required this.onSelectCategory,
+    this.trailing,
   });
 
   @override
@@ -26,9 +28,15 @@ class CategoryGridSelector extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Pilih Kategori',
-          style: AppTypography.titleMedium.copyWith(fontSize: 14),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Pilih Kategori',
+              style: AppTypography.titleMedium.copyWith(fontSize: 14),
+            ),
+            ?trailing,
+          ],
         ),
         const SizedBox(height: 10),
         SizedBox(

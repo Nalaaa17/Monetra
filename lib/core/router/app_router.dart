@@ -10,6 +10,7 @@ import '../../features/history/screens/history_screen.dart';
 import '../../features/home/screens/all_features_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/investasi/screens/investasi_screen.dart';
+import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/recurring/screens/recurring_transactions_screen.dart';
 import '../../features/reports/screens/reports_screen.dart';
 import '../../features/settings/screens/backup_screen.dart';
@@ -61,6 +62,7 @@ class AppRouter {
   static const String budget = '/budget';
   static const String investasi = '/investasi';
   static const String utang = '/utang';
+  static const String onboarding = '/onboarding';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -69,6 +71,11 @@ class AppRouter {
         path: splash,
         pageBuilder: (context, state) =>
             _buildTransitionPage(const SplashScreen(), state),
+      ),
+      GoRoute(
+        path: onboarding,
+        pageBuilder: (context, state) =>
+            _buildTransitionPage(const OnboardingScreen(), state),
       ),
       GoRoute(
         path: home,

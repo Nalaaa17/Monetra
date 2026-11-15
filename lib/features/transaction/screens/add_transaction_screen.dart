@@ -14,6 +14,8 @@ import '../widgets/balance_warning_dialog.dart';
 import '../widgets/category_grid_selector.dart';
 import '../widgets/custom_numeric_keypad.dart';
 import '../widgets/discard_changes_dialog.dart';
+import '../widgets/receipt_attachment_card.dart';
+import '../widgets/split_transaction_editor.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   final String? initialType;
@@ -70,8 +72,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     final themeColor = isExpense ? AppColors.danger : AppColors.tertiary;
     final isBusy = _isSaving || formState.isSubmitting;
     final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
-    final hasUnsavedChanges =
-        formState.amount > 0 || formState.note.trim().isNotEmpty;
+    final hasUnsavedChanges = formState.amount > 0 ||
+        formState.note.trim().isNotEmpty ||
+        formState.imagePath != null ||
+        formState.isSplit;
 
     return PopScope(
       canPop: _allowPop || !hasUnsavedChanges || isBusy,
@@ -154,16 +158,78 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     ),
                     const SizedBox(height: 18),
 
-                    // 5. Pilih Kategori (Grid)
-                    categoriesAsync.when(
-                      data: (categories) => CategoryGridSelector(
-                        categories: categories,
-                        selectedCategoryId: formState.selectedCategoryId,
-                        onSelectCategory: formNotifier.setCategory,
-                      ),
-                      loading: () => const SizedBox.shrink(),
-                      error: (e, _) => const SizedBox.shrink(),
+                    // 5. Lampiran Foto / Struk Nota Belanja
+                    ReceiptAttachmentCard(
+                      imagePath: formState.imagePath,
+                      onImageSelected: formNotifier.setImagePath,
                     ),
+                    const SizedBox(height: 18),
+
+                    // 6. Pilih Kategori atau Split Transaksi
+                    if (isExpense && formState.isSplit)
+                      categoriesAsync.when(
+                        data: (categories) => SplitTransactionEditor(
+                          totalAmount: formState.amount,
+                          splitItems: formState.splitItems,
+                          categories: categories,
+                          onAddItem: formNotifier.addSplitItem,
+                          onUpdateItem: formNotifier.updateSplitItem,
+                          onRemoveItem: formNotifier.removeSplitItem,
+                          onDisableSplit: () => formNotifier.toggleSplit(false),
+                        ),
+                        loading: () => const SizedBox.shrink(),
+                        error: (_, _) => const SizedBox.shrink(),
+                      )
+                    else
+                      categoriesAsync.when(
+                        data: (categories) => CategoryGridSelector(
+                          categories: categories,
+                          selectedCategoryId: formState.selectedCategoryId,
+                          onSelectCategory: formNotifier.setCategory,
+                          trailing: isExpense
+                              ? InkWell(
+                                  onTap: () => formNotifier.toggleSplit(true),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF59E0B)
+                                          .withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0xFFF59E0B)
+                                            .withValues(alpha: 0.3),
+                                      ),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.call_split_rounded,
+                                          size: 13,
+                                          color: Color(0xFFF59E0B),
+                                        ),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'Split Transaksi',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFFF59E0B),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              : null,
+                        ),
+                        loading: () => const SizedBox.shrink(),
+                        error: (e, _) => const SizedBox.shrink(),
+                      ),
 
                     if (formState.errorMessage != null) ...[
                       const SizedBox(height: 12),

@@ -29,6 +29,7 @@ void main() {
   testWidgets('Monetra app smoke test (Splash to Home)', (
     WidgetTester tester,
   ) async {
+    await AppDatabase.setSetting('onboarding_completed', 'true');
     await tester.pumpWidget(
       ProviderScope(
         overrides: [

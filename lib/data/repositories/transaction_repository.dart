@@ -30,6 +30,8 @@ class TransactionDetail {
   DateTime get date => transaction.date;
   bool get isIncome => transaction.isIncome;
   bool get isExpense => transaction.isExpense;
+  String? get imagePath => transaction.imagePath;
+  bool get hasReceipt => transaction.hasReceipt;
 }
 
 class DailyTransactionsGroup {

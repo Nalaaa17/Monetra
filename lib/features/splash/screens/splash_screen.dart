@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_router.dart';
+import '../../onboarding/providers/onboarding_providers.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -36,12 +37,20 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Otomatis pindah ke Home Screen setelah 1.5 detik
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) {
+    // Otomatis pindah ke Onboarding (jika baru pertama kali) atau ke Home Screen setelah 1.5 detik
+    Future.delayed(const Duration(milliseconds: 1500), _navigateToNext);
+  }
+
+  Future<void> _navigateToNext() async {
+    if (!mounted) return;
+    final isCompleted = await OnboardingService.isCompleted();
+    if (mounted) {
+      if (isCompleted) {
         context.go(AppRouter.home);
+      } else {
+        context.go(AppRouter.onboarding);
       }
-    });
+    }
   }
 
   @override
@@ -53,9 +62,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        if (mounted) context.go(AppRouter.home);
-      },
+      onTap: _navigateToNext,
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: SafeArea(

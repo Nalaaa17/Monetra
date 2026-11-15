@@ -13,6 +13,7 @@ import '../widgets/balance_warning_dialog.dart';
 import '../widgets/category_grid_selector.dart';
 import '../widgets/custom_numeric_keypad.dart';
 import '../widgets/discard_changes_dialog.dart';
+import '../widgets/receipt_attachment_card.dart';
 
 class EditTransactionScreen extends ConsumerStatefulWidget {
   final TransactionDetail detail;
@@ -34,6 +35,7 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
   late int _selectedAccountId;
   late int? _selectedCategoryId;
   late DateTime _selectedDate;
+  String? _imagePath;
   bool _isSaving = false;
   bool _allowPop = false;
   String? _errorMessage;
@@ -47,7 +49,8 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
         _selectedAccountId != orig.accountId ||
         _selectedCategoryId != orig.categoryId ||
         _noteController.text.trim() != (orig.note ?? '').trim() ||
-        _selectedDate != orig.date;
+        _selectedDate != orig.date ||
+        _imagePath != orig.imagePath;
   }
 
   @override
@@ -60,6 +63,7 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
     _selectedAccountId = tx.accountId;
     _selectedCategoryId = tx.categoryId;
     _selectedDate = tx.date;
+    _imagePath = tx.imagePath;
   }
 
   @override
@@ -230,7 +234,14 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
                 ),
                 const SizedBox(height: 18),
 
-                // 5. Pilih Kategori
+                // 5. Lampiran Foto / Struk Nota Belanja
+                ReceiptAttachmentCard(
+                  imagePath: _imagePath,
+                  onImageSelected: (path) => setState(() => _imagePath = path),
+                ),
+                const SizedBox(height: 18),
+
+                // 6. Pilih Kategori
                 categoriesAsync.when(
                   data: (cats) => CategoryGridSelector(
                     categories: cats,
@@ -542,6 +553,8 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
             ? null
             : _noteController.text.trim(),
         date: _selectedDate,
+        imagePath: _imagePath,
+        clearImage: _imagePath == null,
       );
 
       await txRepo.updateTransaction(updatedTx);

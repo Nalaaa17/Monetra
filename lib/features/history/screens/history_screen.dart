@@ -10,6 +10,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../data/models/category.dart';
+import '../../../data/repositories/account_repository.dart';
 import '../../../data/repositories/transaction_repository.dart';
 import '../../../data/repositories/transfer_repository.dart';
 import '../../../shared/providers/repository_providers.dart';
@@ -257,7 +258,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   Widget _buildFilterBar(
     BuildContext context,
-    AsyncValue accountsAsync,
+    AsyncValue<List<AccountWithBalance>> accountsAsync,
     AsyncValue<List<Category>> categoriesAsync,
     HistoryFilter filter,
   ) {
@@ -267,10 +268,17 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         ? allCategories.where((c) => c.id == filter.categoryId).firstOrNull
         : null;
 
-    final accountsList = accountsAsync.valueOrNull ?? const [];
-    final dynamic selectedAccount = filter.accountId != null
-        ? accountsList.where((a) => a.id == filter.accountId).firstOrNull
-        : null;
+    final accountsList =
+        accountsAsync.valueOrNull ?? const <AccountWithBalance>[];
+    AccountWithBalance? selectedAccount;
+    if (filter.accountId != null) {
+      for (final a in accountsList) {
+        if (a.id == filter.accountId) {
+          selectedAccount = a;
+          break;
+        }
+      }
+    }
 
     // Hitung label tanggal
     String dateRangeLabel = 'Tanggal';
@@ -295,7 +303,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     // Hitung label akun
     String accountLabel = 'Semua Akun';
     if (selectedAccount != null) {
-      accountLabel = selectedAccount.name as String;
+      accountLabel = selectedAccount.name;
     } else if (filter.accountGroup != null) {
       accountLabel =
           filter.accountGroup == 'tabungan' ? 'Tabungan' : 'Uang Harian';
@@ -418,7 +426,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   isActive:
                       filter.accountId != null || filter.accountGroup != null,
                   activeColor: selectedAccount != null
-                      ? ColorHelper.parseHex(selectedAccount.colorHex as String)
+                      ? ColorHelper.parseHex(selectedAccount.colorHex)
                       : AppColors.primary,
                   onTap: () =>
                       _showAccountFilterSheet(context, accountsAsync, filter),
@@ -635,11 +643,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 
   void _showAccountFilterSheet(
     BuildContext context,
-    AsyncValue accountsAsync,
+    AsyncValue<List<AccountWithBalance>> accountsAsync,
     HistoryFilter filter,
   ) {
     final notifier = ref.read(historyFilterProvider.notifier);
-    final accounts = accountsAsync.valueOrNull ?? const [];
+    final accounts =
+        accountsAsync.valueOrNull ?? const <AccountWithBalance>[];
 
     showModalBottomSheet<void>(
       context: context,
@@ -809,10 +818,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         );
                       }
 
-                      final dynamic acc = accounts[index - 1];
+                      final acc = accounts[index - 1];
                       final isSelected = filter.accountId == acc.id;
-                      final color =
-                          ColorHelper.parseHex(acc.colorHex as String);
+                      final color = ColorHelper.parseHex(acc.colorHex);
 
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(
@@ -830,20 +838,20 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                             ),
                           ),
                           child: Icon(
-                            IconHelper.getIcon(acc.iconCodePoint as int),
+                            IconHelper.getIcon(acc.iconCodePoint),
                             color: color,
                             size: 20,
                           ),
                         ),
                         title: Text(
-                          acc.name as String,
+                          acc.name,
                           style: TextStyle(
                             fontWeight:
                                 isSelected ? FontWeight.bold : FontWeight.w500,
                           ),
                         ),
                         subtitle: Text(
-                          '${acc.category == 'tabungan' ? 'Tabungan' : 'Uang Harian'} • ${CurrencyFormatter.format(acc.balance as int)}',
+                          '${acc.category == 'tabungan' ? 'Tabungan' : 'Uang Harian'} • ${CurrencyFormatter.format(acc.balance)}',
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondaryOf(context),
@@ -857,7 +865,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                             : null,
                         onTap: () {
                           notifier.state = filter.copyWith(
-                            accountId: acc.id as int,
+                            accountId: acc.id,
                             clearAccountGroup: true,
                           );
                           Navigator.pop(ctx);

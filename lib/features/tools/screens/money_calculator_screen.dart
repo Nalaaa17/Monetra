@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/bank_logo_helper.dart';
@@ -9,6 +10,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../data/repositories/account_repository.dart';
 import '../../home/providers/home_providers.dart';
 import '../utils/money_calculator_engine.dart';
+import '../widgets/split_bill_view.dart';
 
 class _CalcHistoryEntry {
   final String expression;
@@ -33,6 +35,7 @@ class MoneyCalculatorScreen extends ConsumerStatefulWidget {
 class _MoneyCalculatorScreenState extends ConsumerState<MoneyCalculatorScreen> {
   MoneyCalculatorState _state = const MoneyCalculatorState();
   final List<_CalcHistoryEntry> _history = [];
+  int _activeTab = 0; // 0: Kalkulator, 1: Bagi Tagihan (Split Bill)
 
   void _updateState(MoneyCalculatorState next) {
     setState(() => _state = next);
@@ -47,11 +50,9 @@ class _MoneyCalculatorScreenState extends ConsumerState<MoneyCalculatorScreen> {
   void _onComma() =>
       _updateState(MoneyCalculatorEngine.inputDecimalComma(_state));
 
-  void _onPercent() =>
-      _updateState(MoneyCalculatorEngine.inputPercent(_state));
+  void _onPercent() => _updateState(MoneyCalculatorEngine.inputPercent(_state));
 
-  void _onBackspace() =>
-      _updateState(MoneyCalculatorEngine.backspace(_state));
+  void _onBackspace() => _updateState(MoneyCalculatorEngine.backspace(_state));
 
   void _onClear() => _updateState(MoneyCalculatorEngine.clearAll());
 
@@ -111,11 +112,11 @@ class _MoneyCalculatorScreenState extends ConsumerState<MoneyCalculatorScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          'Kalkulator Uang',
+          _activeTab == 0 ? 'Kalkulator Uang' : 'Bagi Tagihan (Split Bill)',
           style: AppTypography.headlineMedium.copyWith(fontSize: 18),
         ),
         actions: [
-          if (_history.isNotEmpty)
+          if (_activeTab == 0 && _history.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.delete_sweep_outlined),
               tooltip: 'Bersihkan Riwayat Hitung',
@@ -125,129 +126,288 @@ class _MoneyCalculatorScreenState extends ConsumerState<MoneyCalculatorScreen> {
       ),
       body: Column(
         children: [
-          // 1. Strip Info + Chip Tarik Saldo Akun (Simulasi Aman)
-          _buildWalletPresetBar(context, summaryAsync, accountsAsync, isDark),
-
-          // 2. Area Tampilan Ekspresi, Riwayat Singkat, dan Hasil
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Theme.of(context).dividerColor),
+          // Segmented Switcher: Kalkulator vs Bagi Tagihan
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF1E222A)
+                    : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.black.withValues(alpha: 0.05),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Riwayat perhitungan terakhir (bisa diketuk untuk pakai ulang)
-                    if (_history.isNotEmpty) ...[
-                      SizedBox(
-                        height: 30,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _history.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 8),
-                          itemBuilder: (context, idx) {
-                            final item = _history[idx];
-                            return InkWell(
-                              onTap: () => _onWalletTap(item.result.round()),
-                              borderRadius: BorderRadius.circular(8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? AppColors.darkSurface
-                                      : const Color(0xFFF3F4F6),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '${item.expression} = ${item.formattedResult}',
-                                    style: AppTypography.labelSmall.copyWith(
-                                      fontSize: 11,
-                                    ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _activeTab = 0),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _activeTab == 0
+                              ? (isDark
+                                    ? const Color(0xFF2D333F)
+                                    : Colors.white)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: _activeTab == 0
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
                                   ),
+                                ]
+                              : null,
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.calculate_rounded,
+                                size: 16,
+                                color: _activeTab == 0
+                                    ? AppColors.primary
+                                    : null,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Kalkulator',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: _activeTab == 0
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
                                 ),
                               ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-
-                    const Spacer(),
-
-                    // Ekspresi perhitungan
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      reverse: true,
-                      child: SelectableText(
-                        _state.formattedExpression,
-                        maxLines: 1,
-                        style: AppTypography.titleLarge.copyWith(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondaryOf(context),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-
-                    // Hasil akhir + tombol Salin
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        if (activeError == null)
-                          IconButton(
-                            onPressed: () => _copyResult(formattedResult),
-                            icon: Icon(
-                              Icons.copy_rounded,
-                              size: 18,
-                              color: AppColors.textSecondaryOf(context),
-                            ),
-                            tooltip: 'Salin Hasil',
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 32,
-                              minHeight: 32,
-                            ),
-                          ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerRight,
-                              child: Text(
-                                formattedResult,
-                                style: AppTypography.headlineLarge.copyWith(
-                                  fontSize: activeError != null ? 24 : 34,
-                                  fontWeight: FontWeight.w800,
-                                  color: activeError != null || isNegative
-                                      ? AppColors.danger
-                                      : AppColors.textPrimaryOf(context),
+                  ),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _activeTab = 1),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _activeTab == 1
+                              ? (isDark
+                                    ? const Color(0xFF2D333F)
+                                    : Colors.white)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: _activeTab == 1
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.group_rounded,
+                                size: 16,
+                                color: _activeTab == 1
+                                    ? AppColors.primary
+                                    : null,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Bagi Tagihan',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: _activeTab == 1
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
                                 ),
                               ),
-                            ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
 
-          // 3. Panel Tombol Kalkulator Rupiah
-          _buildKeypad(context, isDark),
+          if (_activeTab == 1)
+            const Expanded(child: SplitBillView())
+          else ...[
+            // 1. Strip Info + Chip Tarik Saldo Akun (Simulasi Aman)
+            _buildWalletPresetBar(context, summaryAsync, accountsAsync, isDark),
+
+            // 2. Area Tampilan Ekspresi, Riwayat Singkat, dan Hasil
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                  ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SingleChildScrollView(
+                        reverse: true,
+                        physics: const ClampingScrollPhysics(),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Riwayat perhitungan terakhir (bisa diketuk untuk pakai ulang)
+                              if (_history.isNotEmpty) ...[
+                                SizedBox(
+                                  height: 26,
+                                  child: ListView.separated(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: _history.length,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(width: 8),
+                                    itemBuilder: (context, idx) {
+                                      final item = _history[idx];
+                                      return InkWell(
+                                        onTap: () =>
+                                            _onWalletTap(item.result.round()),
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: isDark
+                                                ? AppColors.darkSurface
+                                                : const Color(0xFFF3F4F6),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              '${item.expression} = ${item.formattedResult}',
+                                              style: AppTypography.labelSmall
+                                                  .copyWith(fontSize: 11),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                              ],
+
+                              // Ekspresi perhitungan
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                reverse: true,
+                                child: SelectableText(
+                                  _state.formattedExpression,
+                                  maxLines: 1,
+                                  style: AppTypography.titleLarge.copyWith(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.textSecondaryOf(context),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+
+                              // Hasil akhir + tombol Salin
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  if (activeError == null)
+                                    IconButton(
+                                      onPressed: () =>
+                                          _copyResult(formattedResult),
+                                      icon: Icon(
+                                        Icons.copy_rounded,
+                                        size: 16,
+                                        color: AppColors.textSecondaryOf(
+                                          context,
+                                        ),
+                                      ),
+                                      tooltip: 'Salin Hasil',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(
+                                        minWidth: 28,
+                                        minHeight: 28,
+                                      ),
+                                    ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Align(
+                                      alignment: Alignment.centerRight,
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerRight,
+                                        child: Text(
+                                          formattedResult,
+                                          style: AppTypography.headlineLarge
+                                              .copyWith(
+                                                fontSize: activeError != null
+                                                    ? 24
+                                                    : 34,
+                                                fontWeight: FontWeight.w800,
+                                                color:
+                                                    activeError != null ||
+                                                        isNegative
+                                                    ? AppColors.danger
+                                                    : AppColors.textPrimaryOf(
+                                                        context,
+                                                      ),
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+
+            // 3. Panel Tombol Kalkulator Rupiah
+            _buildKeypad(context, isDark),
+          ],
         ],
       ),
     );
@@ -390,10 +550,7 @@ class _MoneyCalculatorScreenState extends ConsumerState<MoneyCalculatorScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (leading != null) ...[
-                leading,
-                const SizedBox(width: 6),
-              ],
+              if (leading != null) ...[leading, const SizedBox(width: 6)],
               Text(
                 label,
                 style: TextStyle(
@@ -464,17 +621,20 @@ class _MoneyCalculatorScreenState extends ConsumerState<MoneyCalculatorScreen> {
             const SizedBox(height: 8),
             _buildKeyRow([
               _CalcButtonConfig(
-                  label: '7',
-                  bgColor: numBg,
-                  onTap: () => _onDigit('7')),
+                label: '7',
+                bgColor: numBg,
+                onTap: () => _onDigit('7'),
+              ),
               _CalcButtonConfig(
-                  label: '8',
-                  bgColor: numBg,
-                  onTap: () => _onDigit('8')),
+                label: '8',
+                bgColor: numBg,
+                onTap: () => _onDigit('8'),
+              ),
               _CalcButtonConfig(
-                  label: '9',
-                  bgColor: numBg,
-                  onTap: () => _onDigit('9')),
+                label: '9',
+                bgColor: numBg,
+                onTap: () => _onDigit('9'),
+              ),
               _CalcButtonConfig(
                 label: '×',
                 bgColor: opBg,
@@ -486,17 +646,20 @@ class _MoneyCalculatorScreenState extends ConsumerState<MoneyCalculatorScreen> {
             const SizedBox(height: 8),
             _buildKeyRow([
               _CalcButtonConfig(
-                  label: '4',
-                  bgColor: numBg,
-                  onTap: () => _onDigit('4')),
+                label: '4',
+                bgColor: numBg,
+                onTap: () => _onDigit('4'),
+              ),
               _CalcButtonConfig(
-                  label: '5',
-                  bgColor: numBg,
-                  onTap: () => _onDigit('5')),
+                label: '5',
+                bgColor: numBg,
+                onTap: () => _onDigit('5'),
+              ),
               _CalcButtonConfig(
-                  label: '6',
-                  bgColor: numBg,
-                  onTap: () => _onDigit('6')),
+                label: '6',
+                bgColor: numBg,
+                onTap: () => _onDigit('6'),
+              ),
               _CalcButtonConfig(
                 label: '−',
                 bgColor: opBg,
@@ -508,17 +671,20 @@ class _MoneyCalculatorScreenState extends ConsumerState<MoneyCalculatorScreen> {
             const SizedBox(height: 8),
             _buildKeyRow([
               _CalcButtonConfig(
-                  label: '1',
-                  bgColor: numBg,
-                  onTap: () => _onDigit('1')),
+                label: '1',
+                bgColor: numBg,
+                onTap: () => _onDigit('1'),
+              ),
               _CalcButtonConfig(
-                  label: '2',
-                  bgColor: numBg,
-                  onTap: () => _onDigit('2')),
+                label: '2',
+                bgColor: numBg,
+                onTap: () => _onDigit('2'),
+              ),
               _CalcButtonConfig(
-                  label: '3',
-                  bgColor: numBg,
-                  onTap: () => _onDigit('3')),
+                label: '3',
+                bgColor: numBg,
+                onTap: () => _onDigit('3'),
+              ),
               _CalcButtonConfig(
                 label: '+',
                 bgColor: opBg,
@@ -537,13 +703,11 @@ class _MoneyCalculatorScreenState extends ConsumerState<MoneyCalculatorScreen> {
                 onTap: () => _onDigit('000'),
               ),
               _CalcButtonConfig(
-                  label: '0',
-                  bgColor: numBg,
-                  onTap: () => _onDigit('0')),
-              _CalcButtonConfig(
-                  label: ',',
-                  bgColor: numBg,
-                  onTap: _onComma),
+                label: '0',
+                bgColor: numBg,
+                onTap: () => _onDigit('0'),
+              ),
+              _CalcButtonConfig(label: ',', bgColor: numBg, onTap: _onComma),
               _CalcButtonConfig(
                 label: '=',
                 bgColor: AppColors.primary,
@@ -582,8 +746,7 @@ class _MoneyCalculatorScreenState extends ConsumerState<MoneyCalculatorScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: Theme.of(context)
-                          .dividerColor
+                      color: Theme.of(context).dividerColor
                           .withValues(alpha: 0.45),
                     ),
                   ),
@@ -601,7 +764,8 @@ class _MoneyCalculatorScreenState extends ConsumerState<MoneyCalculatorScreen> {
                             style: TextStyle(
                               fontSize: btn.fontSize ?? 20,
                               fontWeight: FontWeight.bold,
-                              color: btn.fgColor ??
+                              color:
+                                  btn.fgColor ??
                                   AppColors.textPrimaryOf(context),
                             ),
                           ),

@@ -251,6 +251,18 @@ class AccountRepository {
     );
   }
 
+  /// Memeriksa apakah transaksi pengeluaran baru menyebabkan saldo akun menjadi minus.
+  Future<bool> checkNewTransactionBalanceWarning({
+    required int accountId,
+    required int amount,
+    required String type,
+  }) async {
+    if (type == 'income' || amount <= 0) return false;
+    final currentBal = await calculateAccountBalance(accountId);
+    final projected = currentBal - amount;
+    return projected < 0 && (currentBal >= 0 || projected < currentBal);
+  }
+
   /// Memeriksa apakah perubahan transaksi (edit nominal/tipe/akun)
   /// menyebabkan saldo akun terkait menjadi minus atau semakin minus.
   Future<BalanceProjectionWarning?> checkEditTransactionBalanceWarning({

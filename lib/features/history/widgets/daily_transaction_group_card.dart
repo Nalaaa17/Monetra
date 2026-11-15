@@ -8,6 +8,7 @@ import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/utils/icon_helper.dart';
 import '../../../../data/repositories/transaction_repository.dart';
 import '../../../../data/repositories/transfer_repository.dart';
+import '../../transaction/widgets/receipt_preview_dialog.dart';
 
 class DailyTransactionGroupCard extends StatelessWidget {
   final DailyTransactionsGroup group;
@@ -361,7 +362,7 @@ class DailyTransactionGroupCard extends StatelessWidget {
                       if (tx.note?.isNotEmpty == true &&
                           tx.categoryName != null) ...[
                         const SizedBox(width: 6),
-                        Expanded(
+                        Flexible(
                           child: Text(
                             tx.categoryName!,
                             maxLines: 1,
@@ -369,6 +370,52 @@ class DailyTransactionGroupCard extends StatelessWidget {
                             style: AppTypography.labelSmall.copyWith(
                               fontSize: 11,
                               color: AppColors.textSecondaryOf(context),
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (tx.hasReceipt) ...[
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: () {
+                            if (tx.imagePath != null) {
+                              showReceiptPreviewDialog(
+                                context,
+                                imagePath: tx.imagePath!,
+                                title:
+                                    'Struk: ${tx.note ?? tx.categoryName ?? 'Transaksi'}',
+                              );
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.receipt_long_rounded,
+                                  size: 10,
+                                  color: AppColors.primaryDark,
+                                ),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Struk',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryDark,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),

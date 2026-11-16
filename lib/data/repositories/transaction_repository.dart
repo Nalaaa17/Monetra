@@ -10,6 +10,7 @@ class TransactionDetail {
   final String? categoryName;
   final int? categoryIconCodePoint;
   final String? categoryColorHex;
+  final String? vacationName;
 
   const TransactionDetail({
     required this.transaction,
@@ -19,6 +20,7 @@ class TransactionDetail {
     this.categoryName,
     this.categoryIconCodePoint,
     this.categoryColorHex,
+    this.vacationName,
   });
 
   int get id => transaction.id!;
@@ -26,6 +28,8 @@ class TransactionDetail {
   int get amount => transaction.amount;
   int get accountId => transaction.accountId;
   int? get categoryId => transaction.categoryId;
+  int? get vacationId => transaction.vacationId;
+  bool get isVacation => transaction.isVacation;
   String? get note => transaction.note;
   DateTime get date => transaction.date;
   bool get isIncome => transaction.isIncome;
@@ -148,8 +152,12 @@ class TransactionRepository {
       whereArgs.add(categoryId);
     }
     if (type != null) {
-      whereClauses.add('t.type = ?');
-      whereArgs.add(type);
+      if (type == 'vacation') {
+        whereClauses.add('t.vacationId IS NOT NULL');
+      } else {
+        whereClauses.add('t.type = ?');
+        whereArgs.add(type);
+      }
     }
     if (startDate != null) {
       final start = DateTime(startDate.year, startDate.month, startDate.day);
@@ -173,10 +181,12 @@ class TransactionRepository {
         a.logoKey as accountLogoKey,
         c.name as categoryName,
         c.iconCodePoint as categoryIconCodePoint,
-        c.colorHex as categoryColorHex
+        c.colorHex as categoryColorHex,
+        v.name as vacationName
       FROM transactions t
       JOIN accounts a ON t.accountId = a.id
       LEFT JOIN categories c ON t.categoryId = c.id
+      LEFT JOIN vacations v ON t.vacationId = v.id
       $whereSql
       ORDER BY t.date DESC, t.id DESC
     ''', whereArgs);
@@ -191,6 +201,7 @@ class TransactionRepository {
         categoryName: row['categoryName'] as String?,
         categoryIconCodePoint: row['categoryIconCodePoint'] as int?,
         categoryColorHex: row['categoryColorHex'] as String?,
+        vacationName: row['vacationName'] as String?,
       );
     }).toList();
   }
@@ -336,6 +347,12 @@ class TransactionRepository {
 
     final accountMatch = item.accountName.toLowerCase().contains(query);
     if (accountMatch) return true;
+
+    final vacationMatch =
+        (item.vacationName ?? '').toLowerCase().contains(query);
+    if (vacationMatch) return true;
+
+    if (item.vacationId != null && 'liburan'.contains(query)) return true;
 
     if (isNumericSearch && item.amount.toString().contains(numericQuery)) {
       return true;

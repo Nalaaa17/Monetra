@@ -6,6 +6,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/repositories/transfer_repository.dart';
 import '../../../shared/providers/repository_providers.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../home/providers/home_providers.dart';
 import '../widgets/balance_warning_dialog.dart';
 import '../widgets/custom_numeric_keypad.dart';
@@ -436,28 +437,12 @@ class _EditTransferScreenState extends ConsumerState<EditTransferScreen> {
   }
 
   Future<void> _handleDelete() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Transfer?'),
-        content: Text(
-          'Yakin ingin menghapus transfer ${widget.detail.fromAccountName} → ${widget.detail.toAccountName} sebesar ${CurrencyFormatter.format(widget.detail.amount)}?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+    final confirm = await AppDialog.delete(
+      context,
+      title: 'Hapus Transfer?',
+      message:
+          'Yakin ingin menghapus transfer ${widget.detail.fromAccountName} → ${widget.detail.toAccountName} sebesar ${CurrencyFormatter.format(widget.detail.amount)}? Saldo akan dikembalikan ke akun asal.',
+      confirmLabel: 'Hapus Transfer',
     );
 
     if (confirm == true) {

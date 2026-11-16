@@ -15,6 +15,8 @@ import '../../../shared/widgets/animated_currency.dart';
 import '../../goals/widgets/home_goal_preview_section.dart';
 import '../../history/providers/history_providers.dart';
 import '../../onboarding/providers/onboarding_providers.dart';
+import '../../profile/providers/profile_provider.dart';
+import '../../profile/widgets/profile_switcher_sheet.dart';
 import '../../transaction/screens/edit_transaction_screen.dart';
 import '../providers/home_providers.dart';
 import '../widgets/hero_sekilas_card.dart';
@@ -33,6 +35,8 @@ class HomeScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode == ThemeMode.dark;
     final userName = ref.watch(userNameProvider);
+    final activeProfile = ref.watch(activeProfileProvider).valueOrNull;
+    final profileLabels = ref.watch(profileLabelsProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -42,17 +46,57 @@ class HomeScreen extends ConsumerWidget {
           children: [
             Image.asset(
               'assets/images/logo.png',
-              width: 34,
-              height: 34,
+              width: 32,
+              height: 32,
               fit: BoxFit.contain,
             ),
-            const SizedBox(width: 10),
-            Text(
-              'Monetra',
-              style: AppTypography.headlineMedium.copyWith(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
+            const SizedBox(width: 8),
+            // Dropdown Switcher Profil di Header Home
+            InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () => ProfileSwitcherSheet.show(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.black.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isDark ? Colors.white12 : Colors.black12,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      profileLabels.iconData,
+                      size: 16,
+                      color: ColorHelper.fromHex(
+                        activeProfile?.colorHex ?? '0xFF10B981',
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 120),
+                      child: Text(
+                        activeProfile?.name ?? 'Pribadi',
+                        style: AppTypography.labelMedium.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimaryOf(context),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(
+                      Icons.arrow_drop_down_rounded,
+                      size: 18,
+                      color: AppColors.textSecondaryOf(context),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -97,6 +141,8 @@ class HomeScreen extends ConsumerWidget {
                 context.push(AppRouter.manageAccounts);
               } else if (val == 'categories') {
                 context.push(AppRouter.manageCategories);
+              } else if (val == 'profiles') {
+                context.push(AppRouter.profiles);
               } else if (val == 'advisor') {
                 QuickFeatureModals.showAIAdvisorModal(context);
               } else if (val == 'about') {
@@ -124,6 +170,8 @@ class HomeScreen extends ConsumerWidget {
                   Icons.account_balance_wallet_outlined, 'Kelola Dompet / Rekening'),
               _buildPopupMenuItem(
                   'categories', Icons.category_outlined, 'Kelola Kategori'),
+              _buildPopupMenuItem(
+                  'profiles', Icons.switch_account_rounded, 'Kelola Profil Keuangan'),
               const PopupMenuDivider(),
               _buildPopupMenuItem('advisor', Icons.smart_toy_outlined,
                   'AI Advisor (Coming Soon)'),
@@ -257,7 +305,7 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Transaksi Terakhir',
+                    profileLabels.recentTransactionTitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.titleLarge,
@@ -284,7 +332,7 @@ class HomeScreen extends ConsumerWidget {
             recentTransactionsAsync.when(
               data: (transactions) {
                 if (transactions.isEmpty) {
-                  return _buildEmptyTransactionsState(context);
+                  return _buildEmptyTransactionsState(context, profileLabels);
                 }
                 return Column(
                   children: transactions
@@ -517,7 +565,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyTransactionsState(BuildContext context) {
+  Widget _buildEmptyTransactionsState(BuildContext context, ProfileLabels profileLabels) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
       decoration: BoxDecoration(
@@ -532,12 +580,14 @@ class HomeScreen extends ConsumerWidget {
               size: 48, color: AppColors.textSecondaryOf(context)),
           const SizedBox(height: 12),
           Text(
-            'Belum ada transaksi hari ini',
+            profileLabels.emptyTransactionMsg,
             style: AppTypography.titleMedium,
           ),
           const SizedBox(height: 6),
           Text(
-            'Tekan tombol Catat Uang di bawah untuk mulai mencatat pengeluaran atau pemasukan.',
+            profileLabels.isBusiness
+                ? 'Tekan tombol Catat Uang di bawah untuk mulai mencatat omzet penjualan atau biaya operasional toko.'
+                : 'Tekan tombol Catat Uang di bawah untuk mulai mencatat pengeluaran atau pemasukan.',
             textAlign: TextAlign.center,
             style: AppTypography.bodyMedium.copyWith(
               color: AppColors.textSecondaryOf(context),
@@ -586,7 +636,7 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Versi 1.0.0 (Release)',
+              'Versi 1.0.1 (Release)',
               style: AppTypography.labelSmall.copyWith(
                 color: AppColors.textSecondaryOf(context),
               ),

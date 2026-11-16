@@ -5,6 +5,7 @@ import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/debt_repository.dart';
 import '../../data/repositories/goal_repository.dart';
 import '../../data/repositories/investment_repository.dart';
+import '../../data/repositories/menu_repository.dart';
 import '../../data/repositories/recurring_transaction_repository.dart';
 import '../../data/repositories/report_repository.dart';
 import '../../data/repositories/transaction_repository.dart';
@@ -49,5 +50,9 @@ final investmentRepositoryProvider = Provider<InvestmentRepository>((ref) {
 
 final debtRepositoryProvider = Provider<DebtRepository>((ref) {
   return DebtRepository();
+});
+
+final menuRepositoryProvider = Provider<MenuRepository>((ref) {
+  return MenuRepository();
 });
 

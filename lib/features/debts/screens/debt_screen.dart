@@ -9,7 +9,9 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/debt_model.dart';
 import '../../../shared/providers/repository_providers.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../home/providers/home_providers.dart';
+import '../../profile/providers/profile_provider.dart';
 import '../providers/debt_providers.dart';
 
 class DebtScreen extends ConsumerStatefulWidget {
@@ -26,6 +28,10 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isBusiness = ref.watch(activeProfileProvider).valueOrNull?.isBusiness ?? false;
+    if (isBusiness && _activeTab == 'receivable') {
+      _activeTab = 'debt';
+    }
     final summaryAsync = ref.watch(debtOverallSummaryProvider);
     final debtsAsync = ref.watch(debtsListProvider(_activeTab));
 
@@ -33,7 +39,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
       backgroundColor: AppColors.surfaceOf(context),
       appBar: AppBar(
         title: Text(
-          'Utang & Piutang',
+          isBusiness ? 'Utang Usaha (Supplier)' : 'Utang & Piutang',
           style: AppTypography.titleLarge.copyWith(
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimaryOf(context),
@@ -79,12 +85,12 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 1. HERO SUMMARY CARD
-              _buildHeroSummaryCard(context, summaryAsync, isDark),
+              _buildHeroSummaryCard(context, summaryAsync, isDark, isBusiness: isBusiness),
 
-              const SizedBox(height: 18),
+              if (!isBusiness) const SizedBox(height: 18),
 
-              // 2. SEGMENTED TAB (Utang Saya vs Piutang)
-              _buildSegmentedTab(context),
+              // 2. SEGMENTED TAB (Utang Saya vs Piutang - Disembunyikan pada profil Bisnis)
+              _buildSegmentedTab(context, isBusiness: isBusiness),
 
               const SizedBox(height: 14),
 
@@ -140,8 +146,9 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
   Widget _buildHeroSummaryCard(
     BuildContext context,
     AsyncValue<DebtOverallSummary> summaryAsync,
-    bool isDark,
-  ) {
+    bool isDark, {
+    bool isBusiness = false,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -162,7 +169,9 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'RINGKASAN KEWAJIBAN & TAGIHAN',
+                isBusiness
+                    ? 'TOTAL UTANG USAHA (SUPPLIER & OPERASIONAL)'
+                    : 'RINGKASAN KEWAJIBAN & TAGIHAN',
                 style: AppTypography.labelSmall.copyWith(
                   color: Colors.white60,
                   letterSpacing: 0.8,
@@ -188,7 +197,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'Utang Saya',
+                              isBusiness ? 'Kewajiban Belum Dibayar' : 'Utang Saya',
                               style: AppTypography.labelSmall.copyWith(color: Colors.white70),
                             ),
                           ],
@@ -213,54 +222,56 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                     ),
                   ),
 
-                  Container(
-                    width: 1,
-                    height: 48,
-                    color: Colors.white.withValues(alpha: 0.15),
-                  ),
-                  const SizedBox(width: 16),
-
-                  // Piutang
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: AppColors.tertiary,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Piutang (Tagihan)',
-                              style: AppTypography.labelSmall.copyWith(color: Colors.white70),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          CurrencyFormatter.format(summary.totalReceivableRemaining),
-                          style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${summary.activeReceivableCount} tagihan aktif',
-                          style: AppTypography.bodySmall.copyWith(
-                            fontSize: 11,
-                            color: Colors.white54,
-                          ),
-                        ),
-                      ],
+                  if (!isBusiness) ...[
+                    Container(
+                      width: 1,
+                      height: 48,
+                      color: Colors.white.withValues(alpha: 0.15),
                     ),
-                  ),
+                    const SizedBox(width: 16),
+
+                    // Piutang
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.tertiary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Piutang (Tagihan)',
+                                style: AppTypography.labelSmall.copyWith(color: Colors.white70),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            CurrencyFormatter.format(summary.totalReceivableRemaining),
+                            style: AppTypography.titleMedium.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${summary.activeReceivableCount} tagihan aktif',
+                            style: AppTypography.bodySmall.copyWith(
+                              fontSize: 11,
+                              color: Colors.white54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ],
@@ -278,7 +289,10 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
   }
 
   // 2. Segmented Tab
-  Widget _buildSegmentedTab(BuildContext context) {
+  Widget _buildSegmentedTab(BuildContext context, {bool isBusiness = false}) {
+    if (isBusiness) {
+      return const SizedBox.shrink();
+    }
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -729,6 +743,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
     DebtModel? existing,
     String defaultType = 'debt',
   }) {
+    final isBusiness = ref.read(activeProfileProvider).valueOrNull?.isBusiness ?? false;
     final isEdit = existing != null;
     final titleCtrl = TextEditingController(text: existing?.title ?? '');
     final personCtrl = TextEditingController(text: existing?.personName ?? '');
@@ -791,38 +806,39 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Tipe Selector (Utang vs Piutang)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ChoiceChip(
-                            selected: selectedType == 'debt',
-                            label: const Center(child: Text('Utang (Saya Berutang)')),
-                            selectedColor: AppColors.danger.withValues(alpha: 0.2),
-                            labelStyle: AppTypography.labelSmall.copyWith(
-                              color: selectedType == 'debt' ? AppColors.danger : AppColors.textSecondaryOf(context),
-                              fontWeight: selectedType == 'debt' ? FontWeight.bold : FontWeight.w500,
+                    // Tipe Selector (Utang vs Piutang - Disembunyikan pada profil bisnis)
+                    if (!isBusiness) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ChoiceChip(
+                              selected: selectedType == 'debt',
+                              label: const Center(child: Text('Utang (Saya Berutang)')),
+                              selectedColor: AppColors.danger.withValues(alpha: 0.2),
+                              labelStyle: AppTypography.labelSmall.copyWith(
+                                color: selectedType == 'debt' ? AppColors.danger : AppColors.textSecondaryOf(context),
+                                fontWeight: selectedType == 'debt' ? FontWeight.bold : FontWeight.w500,
+                              ),
+                              onSelected: (_) => setModalState(() => selectedType = 'debt'),
                             ),
-                            onSelected: (_) => setModalState(() => selectedType = 'debt'),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ChoiceChip(
-                            selected: selectedType == 'receivable',
-                            label: const Center(child: Text('Piutang (Orang Lain)')),
-                            selectedColor: AppColors.tertiary.withValues(alpha: 0.2),
-                            labelStyle: AppTypography.labelSmall.copyWith(
-                              color: selectedType == 'receivable' ? AppColors.tertiary : AppColors.textSecondaryOf(context),
-                              fontWeight: selectedType == 'receivable' ? FontWeight.bold : FontWeight.w500,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ChoiceChip(
+                              selected: selectedType == 'receivable',
+                              label: const Center(child: Text('Piutang (Orang Lain)')),
+                              selectedColor: AppColors.tertiary.withValues(alpha: 0.2),
+                              labelStyle: AppTypography.labelSmall.copyWith(
+                                color: selectedType == 'receivable' ? AppColors.tertiary : AppColors.textSecondaryOf(context),
+                                fontWeight: selectedType == 'receivable' ? FontWeight.bold : FontWeight.w500,
+                              ),
+                              onSelected: (_) => setModalState(() => selectedType = 'receivable'),
                             ),
-                            onSelected: (_) => setModalState(() => selectedType = 'receivable'),
                           ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 14),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                    ],
 
                     // Judul / Keterangan
                     Text('Judul / Keperluan', style: AppTypography.labelSmall),
@@ -1429,28 +1445,16 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
           accounts.where((a) => a.id == _selectedAccountId).firstOrNull;
 
       if (widget.debt.isDebt && chosenAcc != null && amount > chosenAcc.balance) {
-        final proceed = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Saldo Bebas Kurang'),
-            content: Text(
+        final proceed = await AppDialog.confirm(
+          context,
+          type: AppDialogType.warning,
+          icon: Icons.account_balance_wallet_outlined,
+          title: 'Saldo Bebas Kurang',
+          message:
               'Nominal pembayaran (${CurrencyFormatter.format(amount)}) melebihi saldo bebas di "${chosenAcc.name}" (${CurrencyFormatter.format(chosenAcc.balance)}). Tetap lanjutkan?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Batal'),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.black,
-                ),
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Lanjutkan'),
-              ),
-            ],
-          ),
+          confirmLabel: 'Tetap Lanjutkan',
+          cancelLabel: 'Batal',
+          isDestructive: false,
         );
 
         if (proceed != true) {

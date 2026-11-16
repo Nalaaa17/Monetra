@@ -14,6 +14,7 @@ import '../widgets/six_month_trend_chart.dart';
 import '../../home/widgets/spending_progress_card.dart';
 import '../../home/widgets/monthly_activity_calendar.dart';
 import '../../home/widgets/floating_bottom_bar.dart';
+import '../widgets/export_report_sheet.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -50,6 +51,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           style: AppTypography.headlineMedium.copyWith(fontSize: 18),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            tooltip: 'Ekspor Laporan (PDF / Excel)',
+            onPressed: reportAsync.valueOrNull == null
+                ? null
+                : () {
+                    ExportReportSheet.show(
+                      context,
+                      selectedDate: selectedDate,
+                      summary: reportAsync.value!,
+                    );
+                  },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Segarkan',
@@ -139,6 +153,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                           children: [
                             // Ringkasan Masuk vs Keluar + Net Cashflow
                             _buildCashflowCard(context, report),
+                            const SizedBox(height: 12),
+
+                            // Tombol Ekspor Cepat (PDF & Excel/CSV)
+                            _buildExportQuickBanner(context, selectedDate, report),
                             const SizedBox(height: 14),
 
                             // 2 Kartu Metrik: Rata-rata Harian & Hari Terboros
@@ -441,6 +459,52 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildExportQuickBanner(
+    BuildContext context,
+    DateTime selectedDate,
+    MonthlyReportSummary report,
+  ) {
+    return InkWell(
+      onTap: () => ExportReportSheet.show(
+        context,
+        selectedDate: selectedDate,
+        summary: report,
+      ),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Theme.of(context).dividerColor),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.file_download_outlined, size: 18, color: AppColors.primaryDark),
+            const SizedBox(width: 8),
+            Text(
+              'Ekspor Laporan (PDF & Excel)',
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 12.5,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              'Buka',
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.primaryDark,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 11, color: AppColors.primaryDark),
+          ],
+        ),
       ),
     );
   }

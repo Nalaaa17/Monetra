@@ -17,6 +17,7 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  bool _navigated = false;
 
   @override
   void initState() {
@@ -24,33 +25,50 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 400),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    _scaleAnimation = Tween<double>(begin: 0.92, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
 
     _controller.forward();
-
-    // Otomatis pindah ke Onboarding (jika baru pertama kali) atau ke Home Screen setelah 1.5 detik
-    Future.delayed(const Duration(milliseconds: 1500), _navigateToNext);
+    _startTransition();
   }
 
-  Future<void> _navigateToNext() async {
+  Future<void> _startTransition() async {
+    final isCompletedFuture = OnboardingService.isCompleted();
+
+    // Animasi cepat dan halus (400ms) tanpa jeda beku 1.5 detik
+    await Future.wait([
+      isCompletedFuture,
+      Future.delayed(const Duration(milliseconds: 400)),
+    ]);
+
     if (!mounted) return;
-    final isCompleted = await OnboardingService.isCompleted();
-    if (mounted) {
-      if (isCompleted) {
-        context.go(AppRouter.home);
-      } else {
-        context.go(AppRouter.onboarding);
-      }
+    final isCompleted = await isCompletedFuture;
+    _navigate(isCompleted);
+  }
+
+  void _navigate(bool isCompleted) {
+    if (_navigated || !mounted) return;
+    _navigated = true;
+
+    if (isCompleted) {
+      context.go(AppRouter.home);
+    } else {
+      context.go(AppRouter.onboarding);
     }
+  }
+
+  Future<void> _skipImmediately() async {
+    if (_navigated) return;
+    final isCompleted = await OnboardingService.isCompleted();
+    _navigate(isCompleted);
   }
 
   @override
@@ -61,8 +79,10 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
-      onTap: _navigateToNext,
+      onTap: _skipImmediately,
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: SafeArea(
@@ -76,17 +96,18 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Logo Monetra Transparan
+                        // Logo Monetra dengan Ambient Glow
                         Container(
-                          width: 120,
-                          height: 120,
+                          width: 112,
+                          height: 112,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.25),
-                                blurRadius: 24,
-                                offset: const Offset(0, 8),
+                                color: AppColors.primary.withValues(alpha: isDark ? 0.35 : 0.22),
+                                blurRadius: 36,
+                                spreadRadius: 4,
+                                offset: const Offset(0, 10),
                               ),
                             ],
                           ),
@@ -95,23 +116,23 @@ class _SplashScreenState extends State<SplashScreen>
                             fit: BoxFit.contain,
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 22),
 
                         // Nama Aplikasi
                         Text(
                           'Monetra',
                           style: AppTypography.headlineLarge.copyWith(
-                            fontSize: 32,
+                            fontSize: 34,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2,
-                            color: AppColors.primaryDark,
+                            letterSpacing: 0.5,
+                            color: isDark ? Colors.white : AppColors.primaryDark,
                           ),
                         ),
                         const SizedBox(height: 6),
 
                         // Tagline Aplikasi
                         Text(
-                          'Pencatatan Keuangan Pribadi',
+                          'Kelola Keuangan Pribadi & Bisnis',
                           style: AppTypography.bodyMedium.copyWith(
                             color: AppColors.textSecondaryOf(context),
                             fontSize: 14,
@@ -129,24 +150,42 @@ class _SplashScreenState extends State<SplashScreen>
                 left: 0,
                 right: 0,
                 bottom: 24,
-                child: Column(
-                  children: [
-                    Text(
-                      'Multi-Wallet • Offline-First',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.textSecondaryOf(context),
-                        letterSpacing: 0.5,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Multi-Wallet • Offline-First • Privat',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.textSecondaryOf(context),
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'v1.0.0',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.textSecondaryOf(context).withValues(alpha: 0.6),
-                        fontSize: 10,
+                      const SizedBox(height: 4),
+                      Text(
+                        'v1.0.0',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.textSecondaryOf(context).withValues(alpha: 0.5),
+                          fontSize: 10,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -156,4 +195,3 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
-

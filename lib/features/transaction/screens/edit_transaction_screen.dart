@@ -6,6 +6,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/repositories/transaction_repository.dart';
 import '../../../shared/providers/repository_providers.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../home/providers/home_providers.dart';
 import '../providers/transaction_form_provider.dart';
 import '../widgets/account_chips_selector.dart';
@@ -238,6 +239,51 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
                 ReceiptAttachmentCard(
                   imagePath: _imagePath,
                   onImageSelected: (path) => setState(() => _imagePath = path),
+                  onOcrResultApplied: (result) {
+                    setState(() {
+                      if (result.detectedAmount != null) {
+                        _rawAmount = result.detectedAmount.toString();
+                      }
+                      if (result.noteSuggestion != null &&
+                          _noteController.text.trim().isEmpty) {
+                        _noteController.text = result.noteSuggestion!;
+                      }
+                      if (result.detectedDate != null) {
+                        _selectedDate = result.detectedDate!;
+                      }
+                      if (result.suggestedCategory != null &&
+                          categoriesAsync.valueOrNull != null) {
+                        final cats = categoriesAsync.value!;
+                        final target = result.suggestedCategory!.toLowerCase();
+                        final match = cats.firstWhere(
+                          (c) =>
+                              c.name.toLowerCase().contains(target) ||
+                              target.contains(c.name.toLowerCase()),
+                          orElse: () => cats.first,
+                        );
+                        _selectedCategoryId = match.id;
+                      }
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded,
+                                color: Colors.white, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Struk diterapkan: ${CurrencyFormatter.format(result.detectedAmount ?? 0)}',
+                              ),
+                            ),
+                          ],
+                        ),
+                        backgroundColor: const Color(0xFF059669),
+                        behavior: SnackBarBehavior.floating,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 18),
 
@@ -581,28 +627,12 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
   }
 
   void _handleDelete() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Transaksi?'),
-        content: Text(
+    final confirm = await AppDialog.delete(
+      context,
+      title: 'Hapus Transaksi?',
+      message:
           'Yakin ingin menghapus transaksi "${widget.detail.note ?? widget.detail.categoryName ?? 'ini'}" sebesar ${CurrencyFormatter.format(widget.detail.amount)}? Saldo akun akan dikembalikan otomatis.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Hapus Transaksi',
     );
 
     if (confirm == true) {

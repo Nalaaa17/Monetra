@@ -8,6 +8,8 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../data/repositories/recurring_transaction_repository.dart';
 import '../../../shared/providers/repository_providers.dart';
+import '../../../core/utils/app_snack_bar.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../home/providers/home_providers.dart';
 import '../providers/recurring_providers.dart';
 import '../widgets/recurring_form_modal.dart';
@@ -699,29 +701,15 @@ class _RecurringTransactionsScreenState
       item.rule,
     );
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Catat Sekarang?'),
-        content: Text(
+    final confirmed = await AppDialog.confirm(
+      context,
+      type: AppDialogType.info,
+      icon: Icons.schedule_rounded,
+      title: 'Catat Sekarang?',
+      message:
           "Catat '${item.title}' sebesar ${CurrencyFormatter.format(item.amount)} ke dompet ${item.accountName} hari ini?\n\nJadwal berikutnya otomatis digeser ke ${DateFormatter.formatShort(previewNext)} agar tidak tercatat ganda.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.black,
-            ),
-            child: const Text('Ya, Catat'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Ya, Catat',
+      cancelLabel: 'Batal',
     );
 
     if (confirmed != true) return;
@@ -733,13 +721,9 @@ class _RecurringTransactionsScreenState
     final nextLabel = updatedNext != null
         ? ' • Berikutnya ${DateFormatter.formatShort(updatedNext)}'
         : '';
-    ScaffoldMessenger.of(this.context).showSnackBar(
-      SnackBar(
-        content: Text(
-          "'${item.title}' dicatat hari ini$nextLabel.",
-        ),
-        backgroundColor: AppColors.tertiary,
-      ),
+    AppSnackBar.showSuccess(
+      context,
+      "'${item.title}' dicatat hari ini$nextLabel.",
     );
   }
 
@@ -747,29 +731,12 @@ class _RecurringTransactionsScreenState
     BuildContext context,
     RecurringTransactionDetail item,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Hapus Jadwal Rutin?'),
-        content: Text(
+    final confirmed = await AppDialog.delete(
+      context,
+      title: 'Hapus Jadwal Rutin?',
+      message:
           "Jadwal '${item.title}' akan dihapus dan tidak lagi mencatat otomatis.\n\nTransaksi yang sudah tercatat di Riwayat tetap aman tersimpan.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.danger,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Hapus Jadwal',
     );
 
     if (confirmed != true) return;

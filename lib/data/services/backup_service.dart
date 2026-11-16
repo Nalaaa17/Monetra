@@ -77,7 +77,7 @@ class BackupService {
     return baseDir;
   }
 
-  /// Menghasilkan statistik data saat ini
+  /// Menghasilkan statistik data saat ini untuk profil aktif
   static Future<BackupStats> getCurrentStats() async {
     final db = await AppDatabase.instance;
 
@@ -105,38 +105,110 @@ class BackupService {
     );
   }
 
-  /// Ekspor seluruh data ke teks JSON yang diformat
+  /// Ekspor seluruh data (multi-profil gabungan + meta) ke teks JSON
   static Future<String> exportToJsonString() async {
-    final db = await AppDatabase.instance;
+    final metaDb = await AppDatabase.metaInstance;
+    final profiles = await metaDb.query('profiles');
+    final metaSettings = await metaDb.query('app_settings');
+    final currentActiveKey = await AppDatabase.getActiveProfileKey();
 
-    final accounts = await db.query('accounts');
-    final categories = await db.query('categories');
-    final transactions = await db.query('transactions');
-    final transfers = await db.query('transfers');
-    final goals = await db.query('goals');
-    final goalContributions = await db.query('goal_contributions');
-    final recurringTransactions = await db.query('recurring_transactions');
+    final Map<String, dynamic> profilesData = {};
 
-    final payload = {
-      'app': 'Monetra',
-      'version': 2,
-      'exportedAt': DateTime.now().toIso8601String(),
-      'stats': {
-        'accounts': accounts.length,
-        'categories': categories.length,
-        'transactions': transactions.length,
-        'transfers': transfers.length,
-        'goals': goals.length,
-        'recurring_transactions': recurringTransactions.length,
-      },
-      'data': {
+    Future<Map<String, dynamic>> dumpProfileDb(dynamic db) async {
+      final accounts = await db.query('accounts');
+      final categories = await db.query('categories');
+      final transactions = await db.query('transactions');
+      final transfers = await db.query('transfers');
+      final goals = await db.query('goals');
+      final goalContributions = await db.query('goal_contributions');
+      final recurring = await db.query('recurring_transactions');
+
+      List<Map<String, dynamic>> budgets = [];
+      try { budgets = (await db.query('category_budgets')).cast<Map<String, dynamic>>(); } catch (_) {}
+
+      List<Map<String, dynamic>> debts = [];
+      try { debts = (await db.query('debts')).cast<Map<String, dynamic>>(); } catch (_) {}
+
+      List<Map<String, dynamic>> debtContribs = [];
+      try { debtContribs = (await db.query('debt_contributions')).cast<Map<String, dynamic>>(); } catch (_) {}
+
+      List<Map<String, dynamic>> investments = [];
+      try { investments = (await db.query('investments')).cast<Map<String, dynamic>>(); } catch (_) {}
+
+      List<Map<String, dynamic>> menus = [];
+      try { menus = (await db.query('menus')).cast<Map<String, dynamic>>(); } catch (_) {}
+
+      List<Map<String, dynamic>> settings = [];
+      try { settings = (await db.query('app_settings')).cast<Map<String, dynamic>>(); } catch (_) {}
+
+      List<Map<String, dynamic>> vacations = [];
+      try { vacations = (await db.query('vacations')).cast<Map<String, dynamic>>(); } catch (_) {}
+
+      List<Map<String, dynamic>> vacationAllocations = [];
+      try { vacationAllocations = (await db.query('vacation_allocations')).cast<Map<String, dynamic>>(); } catch (_) {}
+
+      return {
         'accounts': accounts,
         'categories': categories,
         'transactions': transactions,
         'transfers': transfers,
         'goals': goals,
         'goal_contributions': goalContributions,
-        'recurring_transactions': recurringTransactions,
+        'recurring_transactions': recurring,
+        'category_budgets': budgets,
+        'debts': debts,
+        'debt_contributions': debtContribs,
+        'investments': investments,
+        'menus': menus,
+        'app_settings': settings,
+        'vacations': vacations,
+        'vacation_allocations': vacationAllocations,
+      };
+    }
+
+    for (final p in profiles) {
+      final pKey = p['key'] as String;
+      if (pKey == currentActiveKey) {
+        final activeDb = await AppDatabase.instance;
+        profilesData[pKey] = await dumpProfileDb(activeDb);
+      } else {
+        await AppDatabase.switchProfile(pKey);
+        final db = await AppDatabase.instance;
+        profilesData[pKey] = await dumpProfileDb(db);
+      }
+    }
+
+    // Kembalikan ke profil semula
+    await AppDatabase.switchProfile(currentActiveKey);
+
+    final activeDump = profilesData[currentActiveKey] as Map<String, dynamic>? ?? {};
+
+    final payload = {
+      'app': 'Monetra',
+      'version': 3,
+      'exportedAt': DateTime.now().toIso8601String(),
+      'activeProfileKey': currentActiveKey,
+      'meta': {
+        'profiles': profiles,
+        'settings': metaSettings,
+      },
+      'profilesData': profilesData,
+      'stats': {
+        'accounts': (activeDump['accounts'] as List?)?.length ?? 0,
+        'categories': (activeDump['categories'] as List?)?.length ?? 0,
+        'transactions': (activeDump['transactions'] as List?)?.length ?? 0,
+        'transfers': (activeDump['transfers'] as List?)?.length ?? 0,
+        'goals': (activeDump['goals'] as List?)?.length ?? 0,
+        'recurring_transactions': (activeDump['recurring_transactions'] as List?)?.length ?? 0,
+      },
+      'data': {
+        'accounts': activeDump['accounts'] ?? [],
+        'categories': activeDump['categories'] ?? [],
+        'transactions': activeDump['transactions'] ?? [],
+        'transfers': activeDump['transfers'] ?? [],
+        'goals': activeDump['goals'] ?? [],
+        'goal_contributions': activeDump['goal_contributions'] ?? [],
+        'recurring_transactions': activeDump['recurring_transactions'] ?? [],
       }
     };
 
@@ -247,91 +319,138 @@ class BackupService {
     try {
       final dynamic decoded = jsonDecode(jsonString);
       if (decoded is! Map<String, dynamic>) return false;
-      if (decoded['app'] != 'Monetra' || !decoded.containsKey('data')) {
-        return false;
+      if (decoded['app'] != 'Monetra') return false;
+
+      Future<void> restoreProfileDbData(dynamic db, Map<String, dynamic> data) async {
+        final accounts = (data['accounts'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final categories = (data['categories'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final transactions = (data['transactions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final transfers = (data['transfers'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final goals = (data['goals'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final goalContributions = (data['goal_contributions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final recurringTransactions =
+            (data['recurring_transactions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final categoryBudgets = (data['category_budgets'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final debts = (data['debts'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final debtContributions = (data['debt_contributions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final investments = (data['investments'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final menus = (data['menus'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final settings = (data['app_settings'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final vacations = (data['vacations'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final vacationAllocations =
+            (data['vacation_allocations'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+
+        await db.transaction((txn) async {
+          await txn.delete('goal_contributions');
+          await txn.delete('goals');
+          await txn.delete('recurring_transactions');
+          await txn.delete('transfers');
+          await txn.delete('transactions');
+          await txn.delete('categories');
+          await txn.delete('accounts');
+          try { await txn.delete('category_budgets'); } catch (_) {}
+          try { await txn.delete('debt_contributions'); } catch (_) {}
+          try { await txn.delete('debts'); } catch (_) {}
+          try { await txn.delete('investments'); } catch (_) {}
+          try { await txn.delete('menus'); } catch (_) {}
+          try { await txn.delete('app_settings'); } catch (_) {}
+          try { await txn.delete('vacation_allocations'); } catch (_) {}
+          try { await txn.delete('vacations'); } catch (_) {}
+
+          for (final acc in accounts) { await txn.insert('accounts', acc); }
+          for (final cat in categories) { await txn.insert('categories', cat); }
+          for (final tx in transactions) { await txn.insert('transactions', tx); }
+          for (final tr in transfers) { await txn.insert('transfers', tr); }
+          for (final g in goals) { await txn.insert('goals', g); }
+          for (final gc in goalContributions) { await txn.insert('goal_contributions', gc); }
+          for (final rr in recurringTransactions) { await txn.insert('recurring_transactions', rr); }
+          for (final b in categoryBudgets) { await txn.insert('category_budgets', b); }
+          for (final d in debts) { await txn.insert('debts', d); }
+          for (final dc in debtContributions) { await txn.insert('debt_contributions', dc); }
+          for (final inv in investments) { await txn.insert('investments', inv); }
+          for (final m in menus) { await txn.insert('menus', m); }
+          for (final s in settings) { await txn.insert('app_settings', s); }
+          for (final v in vacations) { await txn.insert('vacations', v); }
+          for (final va in vacationAllocations) { await txn.insert('vacation_allocations', va); }
+
+          await txn.rawUpdate('''
+            UPDATE goal_contributions
+            SET sourceAccountId = (
+              SELECT sourceAccountId FROM goals WHERE goals.id = goal_contributions.goalId
+            )
+            WHERE sourceAccountId IS NULL
+          ''');
+          await txn.rawUpdate('''
+            UPDATE accounts
+            SET category = CASE
+              WHEN LOWER(name) LIKE '%seabank%' THEN 'tabungan'
+              ELSE 'harian'
+            END
+            WHERE category IS NULL OR category = ''
+          ''');
+        });
+
+        for (final gMap in goals) {
+          try {
+            final goal = Goal.fromMap(gMap);
+            if (goal.id == null) continue;
+            if (goal.reminderEnabled && !goal.isDone && goal.status == 'active') {
+              await NotificationService.scheduleGoalReminder(
+                goalId: goal.id!,
+                goalName: goal.name,
+                deadline: goal.deadline,
+                remainingAmount: goal.remainingAmount,
+              );
+            } else {
+              await NotificationService.cancelGoalReminder(goal.id!);
+            }
+          } catch (_) {}
+        }
       }
 
-      final data = decoded['data'] as Map<String, dynamic>;
-      final accounts = (data['accounts'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-      final categories = (data['categories'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-      final transactions = (data['transactions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-      final transfers = (data['transfers'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-      final goals = (data['goals'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-      final goalContributions = (data['goal_contributions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-      final recurringTransactions =
-          (data['recurring_transactions'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      // 1. Cek format multi-profil v3
+      if (decoded.containsKey('profilesData') && decoded['profilesData'] is Map) {
+        final profilesData = decoded['profilesData'] as Map<String, dynamic>;
+        final metaMap = decoded['meta'] as Map<String, dynamic>? ?? {};
+        final profilesList = (metaMap['profiles'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final metaSettings = (metaMap['settings'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final targetActiveKey = decoded['activeProfileKey'] as String? ?? AppDatabase.defaultProfileKey;
 
-      final db = await AppDatabase.instance;
-
-      // Jalankan dalam SQLite Transaction agar aman jika ada kegagalan
-      await db.transaction((txn) async {
-        await txn.delete('goal_contributions');
-        await txn.delete('goals');
-        await txn.delete('recurring_transactions');
-        await txn.delete('transfers');
-        await txn.delete('transactions');
-        await txn.delete('categories');
-        await txn.delete('accounts');
-
-        for (final acc in accounts) {
-          await txn.insert('accounts', acc);
-        }
-        for (final cat in categories) {
-          await txn.insert('categories', cat);
-        }
-        for (final tx in transactions) {
-          await txn.insert('transactions', tx);
-        }
-        for (final tr in transfers) {
-          await txn.insert('transfers', tr);
-        }
-        for (final g in goals) {
-          await txn.insert('goals', g);
-        }
-        for (final gc in goalContributions) {
-          await txn.insert('goal_contributions', gc);
-        }
-        for (final rr in recurringTransactions) {
-          await txn.insert('recurring_transactions', rr);
-        }
-
-        // Pastikan backup versi lama tanpa sourceAccountId/category tetap konsisten
-        await txn.rawUpdate('''
-          UPDATE goal_contributions
-          SET sourceAccountId = (
-            SELECT sourceAccountId FROM goals WHERE goals.id = goal_contributions.goalId
-          )
-          WHERE sourceAccountId IS NULL
-        ''');
-        await txn.rawUpdate('''
-          UPDATE accounts
-          SET category = CASE
-            WHEN LOWER(name) LIKE '%seabank%' THEN 'tabungan'
-            ELSE 'harian'
-          END
-          WHERE category IS NULL OR category = ''
-        ''');
-      });
-
-      // Jadwalkan ulang notifikasi H-3 untuk semua target aktif yang dipulihkan
-      for (final gMap in goals) {
-        try {
-          final goal = Goal.fromMap(gMap);
-          if (goal.id == null) continue;
-          if (goal.reminderEnabled && !goal.isDone && goal.status == 'active') {
-            await NotificationService.scheduleGoalReminder(
-              goalId: goal.id!,
-              goalName: goal.name,
-              deadline: goal.deadline,
-              remainingAmount: goal.remainingAmount,
-            );
-          } else {
-            await NotificationService.cancelGoalReminder(goal.id!);
+        final metaDb = await AppDatabase.metaInstance;
+        if (profilesList.isNotEmpty) {
+          await metaDb.delete('profiles');
+          for (final p in profilesList) {
+            await metaDb.insert('profiles', p);
           }
-        } catch (_) {}
+        }
+        if (metaSettings.isNotEmpty) {
+          await metaDb.delete('app_settings');
+          for (final s in metaSettings) {
+            await metaDb.insert('app_settings', s);
+          }
+        }
+
+        for (final entry in profilesData.entries) {
+          final pKey = entry.key;
+          final pData = entry.value as Map<String, dynamic>;
+          await AppDatabase.switchProfile(pKey);
+          final pDb = await AppDatabase.instance;
+          await restoreProfileDbData(pDb, pData);
+        }
+
+        await AppDatabase.switchProfile(targetActiveKey);
+        return true;
+      }
+      // 2. Format legacy (single profile) -> pulihkan ke profil default 'Pribadi'
+      else if (decoded.containsKey('data')) {
+        await AppDatabase.switchProfile(AppDatabase.defaultProfileKey);
+        final db = await AppDatabase.instance;
+        final data = decoded['data'] as Map<String, dynamic>;
+        await restoreProfileDbData(db, data);
+        return true;
       }
 
-      return true;
+      return false;
     } catch (e) {
       debugPrint('Error restoring backup: $e');
       return false;
@@ -353,12 +472,10 @@ class BackupService {
     try {
       if (await file.exists()) {
         await file.delete();
-        return true;
       }
-      return false;
+      return true;
     } catch (_) {
       return false;
     }
   }
 }
-

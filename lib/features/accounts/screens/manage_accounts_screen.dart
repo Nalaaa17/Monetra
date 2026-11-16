@@ -7,6 +7,7 @@ import '../../../core/utils/color_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/repositories/account_repository.dart';
 import '../../../shared/providers/repository_providers.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../home/providers/home_providers.dart';
 import '../widgets/account_form_modal.dart';
 
@@ -539,32 +540,18 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
     BuildContext context,
     WidgetRef ref,
     AccountWithBalance item,
-  ) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardOf(context),
-        title: Text('Hapus Akun?', style: AppTypography.titleMedium),
-        content: Text(
+  ) async {
+    final confirmed = await AppDialog.delete(
+      context,
+      title: 'Hapus Akun?',
+      message:
           'Akun "${item.name}" akan dihapus. Riwayat transaksi terkait akan tetap tersimpan.',
-          style: AppTypography.bodySmall,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await ref.read(accountRepositoryProvider).deleteAccount(item.id);
-              ref.read(homeRefreshTriggerProvider.notifier).state++;
-            },
-            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      confirmLabel: 'Hapus Akun',
     );
+
+    if (confirmed) {
+      await ref.read(accountRepositoryProvider).deleteAccount(item.id);
+      ref.read(homeRefreshTriggerProvider.notifier).state++;
+    }
   }
 }

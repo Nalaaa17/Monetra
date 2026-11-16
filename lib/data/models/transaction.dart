@@ -8,6 +8,7 @@ class TransactionModel {
   final DateTime date;
   final DateTime createdAt;
   final String? imagePath;
+  final int? vacationId;
 
   const TransactionModel({
     this.id,
@@ -19,11 +20,13 @@ class TransactionModel {
     required this.date,
     required this.createdAt,
     this.imagePath,
+    this.vacationId,
   });
 
   bool get isIncome => type == 'income';
   bool get isExpense => type == 'expense';
   bool get hasReceipt => imagePath != null && imagePath!.isNotEmpty;
+  bool get isVacation => vacationId != null;
 
   Map<String, dynamic> toMap() {
     return {
@@ -36,6 +39,7 @@ class TransactionModel {
       'date': date.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
       'imagePath': imagePath,
+      if (vacationId != null) 'vacationId': vacationId,
     };
   }
 
@@ -50,6 +54,7 @@ class TransactionModel {
       date: DateTime.parse(map['date'] as String),
       createdAt: DateTime.parse(map['createdAt'] as String),
       imagePath: map['imagePath'] as String?,
+      vacationId: map['vacationId'] as int?,
     );
   }
 
@@ -64,6 +69,7 @@ class TransactionModel {
     DateTime? createdAt,
     String? imagePath,
     bool clearImage = false,
+    int? vacationId,
   }) {
     return TransactionModel(
       id: id ?? this.id,
@@ -75,6 +81,7 @@ class TransactionModel {
       date: date ?? this.date,
       createdAt: createdAt ?? this.createdAt,
       imagePath: clearImage ? null : (imagePath ?? this.imagePath),
+      vacationId: vacationId ?? this.vacationId,
     );
   }
 }

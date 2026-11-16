@@ -7,18 +7,24 @@ import '../../features/budget/screens/budget_screen.dart';
 import '../../features/debts/screens/debt_screen.dart';
 import '../../features/goals/screens/goals_screen.dart';
 import '../../features/history/screens/history_screen.dart';
+import '../../features/hpp/screens/hpp_calculator_screen.dart';
+import '../../features/hpp/screens/menu_catalog_screen.dart';
 import '../../features/home/screens/all_features_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/investasi/screens/investasi_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
+import '../../features/profile/screens/manage_profiles_screen.dart';
 import '../../features/recurring/screens/recurring_transactions_screen.dart';
 import '../../features/reports/screens/reports_screen.dart';
 import '../../features/settings/screens/backup_screen.dart';
+import '../../features/settings/screens/security_settings_screen.dart';
 import '../../features/splash/screens/splash_screen.dart';
 import '../../features/tools/screens/money_calculator_screen.dart';
 import '../../features/transaction/providers/transaction_form_provider.dart';
 import '../../features/transaction/screens/add_transaction_screen.dart';
 import '../../features/transaction/screens/transfer_screen.dart';
+import '../../features/vacation/screens/vacation_detail_screen.dart';
+import '../../features/vacation/screens/vacations_screen.dart';
 
 CustomTransitionPage<void> _buildTransitionPage(
     Widget child, GoRouterState state) {
@@ -63,6 +69,12 @@ class AppRouter {
   static const String investasi = '/investasi';
   static const String utang = '/utang';
   static const String onboarding = '/onboarding';
+  static const String profiles = '/profiles';
+  static const String hppCalculator = '/hpp';
+  static const String menuCatalog = '/catalog';
+  static const String securitySettings = '/settings/security';
+  static const String vacations = '/vacations';
+  static const String vacationDetail = '/vacations/detail';
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -170,6 +182,39 @@ class AppRouter {
         path: utang,
         pageBuilder: (context, state) =>
             _buildTransitionPage(const DebtScreen(), state),
+      ),
+      GoRoute(
+        path: profiles,
+        pageBuilder: (context, state) =>
+            _buildTransitionPage(const ManageProfilesScreen(), state),
+      ),
+      GoRoute(
+        path: hppCalculator,
+        pageBuilder: (context, state) =>
+            _buildTransitionPage(const HppCalculatorScreen(), state),
+      ),
+      GoRoute(
+        path: menuCatalog,
+        pageBuilder: (context, state) =>
+            _buildTransitionPage(const MenuCatalogScreen(), state),
+      ),
+      GoRoute(
+        path: securitySettings,
+        pageBuilder: (context, state) =>
+            _buildTransitionPage(const SecuritySettingsScreen(), state),
+      ),
+      GoRoute(
+        path: vacations,
+        pageBuilder: (context, state) =>
+            _buildTransitionPage(const VacationsScreen(), state),
+      ),
+      GoRoute(
+        path: vacationDetail,
+        pageBuilder: (context, state) {
+          final idStr = state.uri.queryParameters['id'] ?? '0';
+          final id = int.tryParse(idStr) ?? 0;
+          return _buildTransitionPage(VacationDetailScreen(vacationId: id), state);
+        },
       ),
     ],
   );

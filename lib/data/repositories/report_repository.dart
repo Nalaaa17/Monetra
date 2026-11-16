@@ -106,6 +106,7 @@ class MonthlyReportSummary {
   final String? highestExpenseDay;
   final int highestExpenseAmount;
   final List<CategoryExpenseShare> categoryExpenses;
+  final List<CategoryExpenseShare> categoryIncomes;
   final List<AccountExpenseShare> accountExpenses;
 
   const MonthlyReportSummary({
@@ -118,6 +119,7 @@ class MonthlyReportSummary {
     this.highestExpenseDay,
     required this.highestExpenseAmount,
     required this.categoryExpenses,
+    this.categoryIncomes = const [],
     required this.accountExpenses,
   });
 
@@ -174,6 +176,39 @@ class ReportRepository {
           categoryId: (row['categoryId'] as num?)?.toInt() ?? -1,
           categoryName: (row['categoryName'] as String?) ?? 'Tanpa Kategori',
           colorHex: (row['colorHex'] as String?) ?? '0xFF6B7280',
+          iconCodePoint: (row['iconCodePoint'] as num?)?.toInt() ?? 0,
+          totalAmount: amount,
+          percentage: percentage,
+        ),
+      );
+    }
+
+    // 2b. Pemasukan per Kategori
+    final incomeCategoryRows = await db.rawQuery('''
+      SELECT 
+        COALESCE(c.id, -1) as categoryId,
+        COALESCE(c.name, 'Tanpa Kategori') as categoryName,
+        COALESCE(c.colorHex, '0xFF10B981') as colorHex,
+        c.iconCodePoint as iconCodePoint,
+        COALESCE(SUM(t.amount), 0) as totalAmount
+      FROM transactions t
+      LEFT JOIN categories c ON t.categoryId = c.id
+      WHERE t.type = 'income' AND t.date >= ? AND t.date < ?
+      GROUP BY COALESCE(c.id, -1)
+      ORDER BY totalAmount DESC
+    ''', [startDate, endDate]);
+
+    final List<CategoryExpenseShare> categoryIncomes = [];
+    for (final row in incomeCategoryRows) {
+      final amount = (row['totalAmount'] as num?)?.toInt() ?? 0;
+      final percentage =
+          totalIncome > 0 ? (amount / totalIncome) * 100 : 0.0;
+
+      categoryIncomes.add(
+        CategoryExpenseShare(
+          categoryId: (row['categoryId'] as num?)?.toInt() ?? -1,
+          categoryName: (row['categoryName'] as String?) ?? 'Tanpa Kategori',
+          colorHex: (row['colorHex'] as String?) ?? '0xFF10B981',
           iconCodePoint: (row['iconCodePoint'] as num?)?.toInt() ?? 0,
           totalAmount: amount,
           percentage: percentage,
@@ -244,6 +279,7 @@ class ReportRepository {
       highestExpenseDay: topDay,
       highestExpenseAmount: topAmount,
       categoryExpenses: categoryExpenses,
+      categoryIncomes: categoryIncomes,
       accountExpenses: accountExpenses,
     );
   }

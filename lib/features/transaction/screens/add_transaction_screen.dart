@@ -162,6 +162,50 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     ReceiptAttachmentCard(
                       imagePath: formState.imagePath,
                       onImageSelected: formNotifier.setImagePath,
+                      onOcrResultApplied: (result) {
+                        if (result.detectedAmount != null) {
+                          formNotifier.setAmount(result.detectedAmount!);
+                        }
+                        if (result.noteSuggestion != null &&
+                            _noteController.text.trim().isEmpty) {
+                          _noteController.text = result.noteSuggestion!;
+                          formNotifier.setNote(result.noteSuggestion!);
+                        }
+                        if (result.detectedDate != null) {
+                          formNotifier.setDate(result.detectedDate!);
+                        }
+                        if (result.suggestedCategory != null &&
+                            categoriesAsync.valueOrNull != null) {
+                          final cats = categoriesAsync.value!;
+                          final target = result.suggestedCategory!.toLowerCase();
+                          final match = cats.firstWhere(
+                            (c) =>
+                                c.name.toLowerCase().contains(target) ||
+                                target.contains(c.name.toLowerCase()),
+                            orElse: () => cats.first,
+                          );
+                          formNotifier.setCategory(match.id!);
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                const Icon(Icons.check_circle_rounded,
+                                    color: Colors.white, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Struk diterapkan: ${CurrencyFormatter.format(result.detectedAmount ?? 0)}',
+                                  ),
+                                ),
+                              ],
+                            ),
+                            backgroundColor: const Color(0xFF059669),
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 18),
 

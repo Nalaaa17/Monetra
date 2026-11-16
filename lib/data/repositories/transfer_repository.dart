@@ -126,4 +126,135 @@ class TransferRepository {
       );
     }).toList();
   }
+
+  /// Eksekusi transfer saldo antar profil (Jembatan Pribadi <-> Bisnis: Prive & Suntik Modal)
+  Future<void> executeInterProfileTransfer({
+    required String fromProfileKey,
+    required String fromProfileName,
+    required bool isFromBusiness,
+    required int fromAccountId,
+    required String fromAccountName,
+    required String toProfileKey,
+    required String toProfileName,
+    required bool isToBusiness,
+    required int toAccountId,
+    required String toAccountName,
+    required int amount,
+    String? note,
+    DateTime? date,
+  }) async {
+    final transferDate = date ?? DateTime.now();
+    final dateStr = transferDate.toIso8601String();
+    final nowStr = DateTime.now().toIso8601String();
+
+    final fromDb = await AppDatabase.getDatabaseForProfile(fromProfileKey);
+    final toDb = await AppDatabase.getDatabaseForProfile(toProfileKey);
+
+    // Tentukan kategori & label cerdas
+    String fromCategoryName;
+    String toCategoryName;
+    String fromDefaultNote;
+    String toDefaultNote;
+
+    if (isFromBusiness && !isToBusiness) {
+      // Bisnis -> Pribadi (Prive / Tarik Gaji Owner)
+      fromCategoryName = 'Prive / Tarik Modal';
+      toCategoryName = 'Gaji / Hasil Bisnis';
+      fromDefaultNote = note?.isNotEmpty == true
+          ? note!
+          : 'Prive ke $toProfileName ($toAccountName)';
+      toDefaultNote = note?.isNotEmpty == true
+          ? note!
+          : 'Gaji dari $fromProfileName ($fromAccountName)';
+    } else if (!isFromBusiness && isToBusiness) {
+      // Pribadi -> Bisnis (Suntik Modal Owner)
+      fromCategoryName = 'Suntik Modal Usaha';
+      toCategoryName = 'Setor Modal Usaha';
+      fromDefaultNote = note?.isNotEmpty == true
+          ? note!
+          : 'Suntik Modal ke $toProfileName ($toAccountName)';
+      toDefaultNote = note?.isNotEmpty == true
+          ? note!
+          : 'Suntik Modal dari $fromProfileName ($fromAccountName)';
+    } else {
+      // Antar Pribadi atau Antar Bisnis
+      fromCategoryName = 'Transfer Keluar Profil';
+      toCategoryName = 'Transfer Masuk Profil';
+      fromDefaultNote = note?.isNotEmpty == true
+          ? note!
+          : 'Transfer ke $toProfileName ($toAccountName)';
+      toDefaultNote = note?.isNotEmpty == true
+          ? note!
+          : 'Transfer dari $fromProfileName ($fromAccountName)';
+    }
+
+    // Helper cari atau buat kategori
+    Future<int?> findOrCreateCategory(
+      dynamic db,
+      String name,
+      String type,
+      int iconCodePoint,
+      String colorHex,
+    ) async {
+      try {
+        final existing = await db.query(
+          'categories',
+          columns: ['id'],
+          where: 'LOWER(name) = ? AND type = ?',
+          whereArgs: [name.toLowerCase(), type],
+          limit: 1,
+        );
+        if (existing.isNotEmpty) {
+          return existing.first['id'] as int;
+        }
+        return await db.insert('categories', {
+          'name': name,
+          'iconCodePoint': iconCodePoint,
+          'colorHex': colorHex,
+          'type': type,
+          'isActive': 1,
+        });
+      } catch (_) {
+        return null;
+      }
+    }
+
+    // 1. Eksekusi di DB Asal (Pengeluaran / Penarikan Modal)
+    final fromCatId = await findOrCreateCategory(
+      fromDb,
+      fromCategoryName,
+      'expense',
+      0xe491,
+      '0xFFEF4444',
+    );
+
+    await fromDb.insert('transactions', {
+      'type': 'expense',
+      'amount': amount,
+      'accountId': fromAccountId,
+      'categoryId': fromCatId,
+      'note': fromDefaultNote,
+      'date': dateStr,
+      'createdAt': nowStr,
+    });
+
+    // 2. Eksekusi di DB Tujuan (Pemasukan / Penambahan Modal)
+    final toCatId = await findOrCreateCategory(
+      toDb,
+      toCategoryName,
+      'income',
+      0xe8e5,
+      '0xFF10B981',
+    );
+
+    await toDb.insert('transactions', {
+      'type': 'income',
+      'amount': amount,
+      'accountId': toAccountId,
+      'categoryId': toCatId,
+      'note': toDefaultNote,
+      'date': dateStr,
+      'createdAt': nowStr,
+    });
+  }
 }

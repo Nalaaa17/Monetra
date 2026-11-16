@@ -42,21 +42,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Slide 1
-    expect(find.text('Kelola Banyak Dompet & Rekening'), findsOneWidget);
+    // Slide 1: Pilih Fokus Finansialmu
+    expect(find.text('Pilih Fokus Finansialmu'), findsOneWidget);
+    expect(find.text('Keuangan Pribadi'), findsOneWidget);
     expect(find.text('Lanjut'), findsOneWidget);
 
-    // Tap Lanjut -> Slide 2
+    // Tap Lanjut -> Slide 2: Pilih Dompet & Bank Kamu
     await tester.tap(find.text('Lanjut'));
     await tester.pumpAndSettle();
-    expect(find.text('Catat Cepat & Riwayat Rapi'), findsOneWidget);
+    expect(find.text('Pilih Dompet & Bank Kamu'), findsOneWidget);
+    expect(find.text('BCA'), findsOneWidget);
 
-    // Tap Lanjut -> Slide 3
-    await tester.tap(find.text('Lanjut'));
-    await tester.pumpAndSettle();
-    expect(find.text('Wujudkan Target & Kelola Utang'), findsOneWidget);
-
-    // Tap Lanjut -> Slide 4 (Input Nama)
+    // Tap Lanjut -> Slide 3: Nama Panggilan & Ringkasan
     await tester.tap(find.text('Lanjut'));
     await tester.pumpAndSettle();
     expect(find.text('Selamat Datang!'), findsOneWidget);

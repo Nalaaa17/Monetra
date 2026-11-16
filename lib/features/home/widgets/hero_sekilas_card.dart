@@ -6,6 +6,7 @@ import '../../../../core/constants/app_typography.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../data/repositories/account_repository.dart';
+import '../../profile/providers/profile_provider.dart';
 import '../providers/home_providers.dart';
 
 class HeroSekilasCard extends ConsumerWidget {
@@ -19,9 +20,12 @@ class HeroSekilasCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isHidden = ref.watch(isBalanceHiddenProvider);
+    final isBusiness = ref.watch(activeProfileProvider).valueOrNull?.isBusiness ?? false;
+    final todaySummaryAsync = ref.watch(todaySummaryProvider);
     final totalAssets = summary.totalPhysicalNetWorth;
     final hasGoals = summary.allocatedInGoals > 0;
     final hasDebts = summary.allocatedInDebts > 0;
+    final hasVacations = summary.allocatedInVacation > 0;
 
     return Container(
       width: double.infinity,
@@ -49,7 +53,7 @@ class HeroSekilasCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Total Aset',
+                isBusiness ? 'Kas & Modal Usaha' : 'Total Aset',
                 style: AppTypography.bodySmall.copyWith(
                   color: Colors.white.withValues(alpha: 0.65),
                   fontWeight: FontWeight.w600,
@@ -100,117 +104,238 @@ class HeroSekilasCard extends ConsumerWidget {
 
           const SizedBox(height: 14),
 
-          // Baris 3: Dua Kolom Ramping: Uang Harian & Tabungan (Bebas Siap Pakai)
-          Row(
-            children: [
-              // Kolom Uang Harian
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          // Baris 3: Profil Bisnis: Omzet & Laba Hari Ini | Profil Pribadi: Uang Harian & Tabungan
+          if (isBusiness)
+            todaySummaryAsync.when(
+              data: (today) {
+                final netProfit = today.income - today.expense;
+                return Row(
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
+                    // Kolom Omzet Hari Ini
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Omzet Hari Ini',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            'Uang Harian',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                          const SizedBox(height: 4),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              isHidden
+                                  ? '••••••'
+                                  : CurrencyFormatter.format(today.income),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        isHidden
-                            ? '••••••'
-                            : CurrencyFormatter.format(summary.dailySpendingBalance),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
+
+                    Container(
+                      height: 32,
+                      width: 1,
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                    const SizedBox(width: 16),
+
+                    // Kolom Laba Bersih Hari Ini
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: netProfit >= 0
+                                      ? const Color(0xFF3B82F6)
+                                      : AppColors.danger,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Laba Bersih Hari Ini',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              isHidden
+                                  ? '••••••'
+                                  : CurrencyFormatter.format(netProfit),
+                              style: TextStyle(
+                                color: netProfit >= 0
+                                    ? const Color(0xFF60A5FA)
+                                    : Colors.redAccent,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
-              ),
-
-              Container(
-                height: 32,
-                width: 1,
-                color: Colors.white.withValues(alpha: 0.08),
-              ),
-              const SizedBox(width: 16),
-
-              // Kolom Tabungan
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            color: AppColors.tertiary,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            'Tabungan',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                );
+              },
+              loading: () => const SizedBox(height: 32),
+              error: (_, _) => const SizedBox.shrink(),
+            )
+          else
+            Row(
+              children: [
+                // Kolom Uang Harian
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        isHidden
-                            ? '••••••'
-                            : CurrencyFormatter.format(summary.savingsBalance),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Uang Harian',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.6),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          isHidden
+                              ? '••••••'
+                              : CurrencyFormatter.format(summary.dailySpendingBalance),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
 
-          if (hasGoals || hasDebts) ...[
+                Container(
+                  height: 32,
+                  width: 1,
+                  color: Colors.white.withValues(alpha: 0.08),
+                ),
+                const SizedBox(width: 16),
+
+                // Kolom Tabungan
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: AppColors.tertiary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Tabungan',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.6),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          isHidden
+                              ? '••••••'
+                              : CurrencyFormatter.format(summary.savingsBalance),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+          if (hasGoals || hasDebts || hasVacations) ...[
             const SizedBox(height: 14),
             Row(
               children: [
@@ -224,7 +349,7 @@ class HeroSekilasCard extends ConsumerWidget {
                     onTap: () => context.push(AppRouter.goals),
                     isHidden: isHidden,
                   ),
-                if (hasGoals && hasDebts) const SizedBox(width: 8),
+                if (hasGoals && (hasDebts || hasVacations)) const SizedBox(width: 8),
                 if (hasDebts)
                   _buildAllocatedCard(
                     context: context,
@@ -233,6 +358,17 @@ class HeroSekilasCard extends ConsumerWidget {
                     icon: Icons.account_balance_wallet_outlined,
                     accentColor: const Color(0xFF38BDF8),
                     onTap: () => context.push(AppRouter.utang),
+                    isHidden: isHidden,
+                  ),
+                if (hasDebts && hasVacations) const SizedBox(width: 8),
+                if (hasVacations)
+                  _buildAllocatedCard(
+                    context: context,
+                    label: 'Dana Liburan',
+                    amount: summary.allocatedInVacation,
+                    icon: Icons.beach_access_rounded,
+                    accentColor: const Color(0xFF0284C7),
+                    onTap: () => context.push(AppRouter.vacations),
                     isHidden: isHidden,
                   ),
               ],

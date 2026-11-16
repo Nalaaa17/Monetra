@@ -7,6 +7,8 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/services/backup_service.dart';
 import '../../home/providers/home_providers.dart';
+import '../../../core/utils/app_snack_bar.dart';
+import '../../../shared/widgets/app_dialog.dart';
 
 class BackupScreen extends ConsumerStatefulWidget {
   const BackupScreen({super.key});
@@ -478,28 +480,16 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   }
 
   void _handleRestoreFile(File file) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Pulihkan Data?'),
-        content: const Text(
+    final confirm = await AppDialog.confirm(
+      context,
+      type: AppDialogType.warning,
+      icon: Icons.restore_rounded,
+      title: 'Pulihkan Data?',
+      message:
           'Data catatan saat ini akan digantikan dengan data dari file cadangan ini. Lanjutkan?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF059669),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Pulihkan Sekarang'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Pulihkan Sekarang',
+      cancelLabel: 'Batal',
+      isDestructive: false,
     );
 
     if (confirm == true) {

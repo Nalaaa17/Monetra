@@ -3,6 +3,7 @@ import '../models/account.dart';
 import '../models/goal.dart';
 import '../models/transaction.dart';
 import '../services/notification_service.dart';
+import 'vacation_repository.dart';
 
 class BalanceProjectionWarning {
   final String accountName;
@@ -16,18 +17,21 @@ class BalanceProjectionWarning {
 
 class AccountWithBalance {
   final Account account;
-  final int balance; // Saldo bebas / siap pakai (sudah dikurangi alokasi Goal & Utang)
+  final int balance; // Saldo bebas / siap pakai (sudah dikurangi alokasi Goal, Utang & Liburan)
   final int allocatedInGoals; // Dana yang disisihkan di Target/Goal
   final int allocatedInDebts; // Dana yang disisihkan di Utang
+  final int allocatedInVacation; // Dana yang disisihkan di Kantong Liburan
 
   const AccountWithBalance({
     required this.account,
     required this.balance,
     this.allocatedInGoals = 0,
     this.allocatedInDebts = 0,
+    this.allocatedInVacation = 0,
   });
 
-  int get totalAllocated => allocatedInGoals + allocatedInDebts;
+  int get totalAllocated =>
+      allocatedInGoals + allocatedInDebts + allocatedInVacation;
   int get physicalBalance => balance + totalAllocated;
   int get id => account.id!;
   String get name => account.name;
@@ -42,9 +46,10 @@ class AccountWithBalance {
 class BalanceSummary {
   final int dailySpendingBalance; // Saldo bebas Uang Harian
   final int savingsBalance; // Saldo bebas Tabungan
-  final int totalNetWorth; // Total saldo bebas siap pakai (tidak termasuk dana Target/Utang)
+  final int totalNetWorth; // Total saldo bebas siap pakai (tidak termasuk dana Target/Utang/Liburan)
   final int allocatedInGoals; // Total dana yang disisihkan di Target
   final int allocatedInDebts; // Total dana yang disisihkan di Utang
+  final int allocatedInVacation; // Total dana yang disisihkan di Kantong Liburan
   final List<String> dailyAccountNames;
   final List<String> savingsAccountNames;
 
@@ -54,11 +59,13 @@ class BalanceSummary {
     required this.totalNetWorth,
     this.allocatedInGoals = 0,
     this.allocatedInDebts = 0,
+    this.allocatedInVacation = 0,
     this.dailyAccountNames = const [],
     this.savingsAccountNames = const [],
   });
 
-  int get totalAllocated => allocatedInGoals + allocatedInDebts;
+  int get totalAllocated =>
+      allocatedInGoals + allocatedInDebts + allocatedInVacation;
   int get totalPhysicalNetWorth => totalNetWorth + totalAllocated;
 }
 
@@ -138,13 +145,18 @@ class AccountRepository {
     // 7. Sum dana yang disisihkan di Utang (belum keluar fisik)
     final allocatedInDebts = await calculateDebtAllocatedForAccount(accountId);
 
+    // 8. Sum dana yang disisihkan di Kantong Liburan aktif
+    final allocatedInVacations =
+        await VacationRepository().calculateVacationAllocatedForAccount(accountId);
+
     return initialBalance +
         totalIncome -
         totalExpense +
         totalTransferIn -
         totalTransferOut -
         allocatedInGoals -
-        allocatedInDebts;
+        allocatedInDebts -
+        allocatedInVacations;
   }
 
   /// Menghitung total dana yang sedang disisihkan di Target dari rekening ini
@@ -205,11 +217,65 @@ class AccountRepository {
       final balance = await calculateAccountBalance(acc.id!);
       final allocatedGoals = await calculateGoalAllocatedForAccount(acc.id!);
       final allocatedDebts = await calculateDebtAllocatedForAccount(acc.id!);
+      final allocatedVacations =
+          await VacationRepository().calculateVacationAllocatedForAccount(acc.id!);
       result.add(AccountWithBalance(
         account: acc,
         balance: balance,
         allocatedInGoals: allocatedGoals,
         allocatedInDebts: allocatedDebts,
+        allocatedInVacation: allocatedVacations,
+      ));
+    }
+
+    return result;
+  }
+
+  /// Mengambil semua akun beserta saldo bebasnya untuk profil tertentu
+  Future<List<AccountWithBalance>> getAccountsWithBalancesForProfile(
+    String profileKey,
+  ) async {
+    final db = await AppDatabase.getDatabaseForProfile(profileKey);
+    final rows = await db.query(
+      'accounts',
+      where: 'isArchived = 0',
+      orderBy: 'id ASC',
+    );
+    final accounts = rows.map((r) => Account.fromMap(r)).toList();
+    final List<AccountWithBalance> result = [];
+
+    for (final acc in accounts) {
+      final accountId = acc.id!;
+      final initialBalance = acc.initialBalance;
+
+      final incRes = await db.rawQuery(
+        "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE accountId = ? AND type = 'income'",
+        [accountId],
+      );
+      final inc = (incRes.first['total'] as num?)?.toInt() ?? 0;
+
+      final expRes = await db.rawQuery(
+        "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE accountId = ? AND type = 'expense'",
+        [accountId],
+      );
+      final exp = (expRes.first['total'] as num?)?.toInt() ?? 0;
+
+      final tInRes = await db.rawQuery(
+        "SELECT COALESCE(SUM(amount), 0) as total FROM transfers WHERE toAccountId = ?",
+        [accountId],
+      );
+      final tIn = (tInRes.first['total'] as num?)?.toInt() ?? 0;
+
+      final tOutRes = await db.rawQuery(
+        "SELECT COALESCE(SUM(amount), 0) as total FROM transfers WHERE fromAccountId = ?",
+        [accountId],
+      );
+      final tOut = (tOutRes.first['total'] as num?)?.toInt() ?? 0;
+
+      final balance = initialBalance + inc - exp + tIn - tOut;
+      result.add(AccountWithBalance(
+        account: acc,
+        balance: balance,
       ));
     }
 
@@ -220,6 +286,8 @@ class AccountRepository {
     final accountsWithBalance = await getAllAccountsWithBalances();
     final totalAllocatedInGoals = await calculateTotalAllocatedInGoals();
     final totalAllocatedInDebts = await calculateTotalAllocatedInDebts();
+    final totalAllocatedInVacations =
+        await VacationRepository().calculateTotalAllocatedInVacations();
 
     int dailySpending = 0;
     int savings = 0;
@@ -246,6 +314,7 @@ class AccountRepository {
       totalNetWorth: total,
       allocatedInGoals: totalAllocatedInGoals,
       allocatedInDebts: totalAllocatedInDebts,
+      allocatedInVacation: totalAllocatedInVacations,
       dailyAccountNames: dailyNames,
       savingsAccountNames: savingsNames,
     );
@@ -478,6 +547,11 @@ class AccountRepository {
       await txn.delete(
         'recurring_transactions',
         where: 'accountId = ?',
+        whereArgs: [id],
+      );
+      await txn.delete(
+        'vacation_allocations',
+        where: 'sourceAccountId = ?',
         whereArgs: [id],
       );
       await txn.delete('goals', where: 'sourceAccountId = ?', whereArgs: [id]);

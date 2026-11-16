@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_typography.dart';
 import '../../../../core/router/app_router.dart';
+import '../../profile/providers/profile_provider.dart';
 import 'quick_feature_modals.dart';
 
-class MainMenuGrid extends StatelessWidget {
+class MainMenuGrid extends ConsumerWidget {
   const MainMenuGrid({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isBusiness = ref.watch(activeProfileProvider).valueOrNull?.isBusiness ?? false;
 
     return Container(
       width: double.infinity,
@@ -79,69 +82,129 @@ class MainMenuGrid extends StatelessWidget {
 
           const SizedBox(height: 18),
 
-          // Grid 2 Baris x 4 Kolom
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildMenuItem(
-                context,
-                icon: Icons.pie_chart_outline_rounded,
-                label: 'Budget',
-                onTap: () => context.push(AppRouter.budget),
-              ),
-              _buildMenuItem(
-                context,
-                icon: Icons.track_changes_rounded,
-                label: 'Goals',
-                onTap: () => context.push(AppRouter.goals),
-              ),
-              _buildMenuItem(
-                context,
-                icon: Icons.account_balance_rounded,
-                label: 'Aset',
-                onTap: () => context.push(AppRouter.manageAccounts),
-              ),
-              _buildMenuItem(
-                context,
-                icon: Icons.smart_toy_outlined,
-                label: 'AI Advisor',
-                badge: 'Soon',
-                onTap: () => QuickFeatureModals.showAIAdvisorModal(context),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 18),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildMenuItem(
-                context,
-                icon: Icons.trending_up_rounded,
-                label: 'Investasi',
-                onTap: () => context.push(AppRouter.investasi),
-              ),
-              _buildMenuItem(
-                context,
-                icon: Icons.handshake_outlined,
-                label: 'Utang',
-                onTap: () => context.push(AppRouter.utang),
-              ),
-              _buildMenuItem(
-                context,
-                icon: Icons.bar_chart_rounded,
-                label: 'Laporan',
-                onTap: () => context.push(AppRouter.reports),
-              ),
-              _buildMenuItem(
-                context,
-                icon: Icons.more_horiz_rounded,
-                label: 'Lainnya',
-                onTap: () => context.push(AppRouter.allFeatures),
-              ),
-            ],
-          ),
+          // Grid 2 Baris x 4 Kolom (Disesuaikan otomatis untuk Profil Bisnis vs Pribadi)
+          if (isBusiness) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildMenuItem(
+                  context,
+                  icon: Icons.inventory_2_rounded,
+                  label: 'Katalog',
+                  onTap: () => context.push(AppRouter.menuCatalog),
+                ),
+                _buildMenuItem(
+                  context,
+                  icon: Icons.calculate_rounded,
+                  label: 'HPP',
+                  onTap: () => context.push(AppRouter.hppCalculator),
+                ),
+                _buildMenuItem(
+                  context,
+                  icon: Icons.point_of_sale_rounded,
+                  label: 'Kas Usaha',
+                  onTap: () => context.push(AppRouter.manageAccounts),
+                ),
+                _buildMenuItem(
+                  context,
+                  icon: Icons.handshake_outlined,
+                  label: 'Utang',
+                  onTap: () => context.push(AppRouter.utang),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildMenuItem(
+                  context,
+                  icon: Icons.receipt_long_rounded,
+                  label: 'Riwayat',
+                  onTap: () => context.push(AppRouter.history),
+                ),
+                _buildMenuItem(
+                  context,
+                  icon: Icons.bar_chart_rounded,
+                  label: 'Laporan',
+                  onTap: () => context.push(AppRouter.reports),
+                ),
+                _buildMenuItem(
+                  context,
+                  icon: Icons.category_outlined,
+                  label: 'Kategori',
+                  onTap: () => context.push(AppRouter.manageCategories),
+                ),
+                _buildMenuItem(
+                  context,
+                  icon: Icons.apps_rounded,
+                  label: 'Semua',
+                  onTap: () => context.push(AppRouter.allFeatures),
+                ),
+              ],
+            ),
+          ] else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildMenuItem(
+                  context,
+                  icon: Icons.pie_chart_outline_rounded,
+                  label: 'Budget',
+                  onTap: () => context.push(AppRouter.budget),
+                ),
+                _buildMenuItem(
+                  context,
+                  icon: Icons.track_changes_rounded,
+                  label: 'Goals',
+                  onTap: () => context.push(AppRouter.goals),
+                ),
+                _buildMenuItem(
+                  context,
+                  icon: Icons.account_balance_rounded,
+                  label: 'Aset',
+                  onTap: () => context.push(AppRouter.manageAccounts),
+                ),
+                _buildMenuItem(
+                  context,
+                  icon: Icons.smart_toy_outlined,
+                  label: 'AI Advisor',
+                  badge: 'Soon',
+                  onTap: () => QuickFeatureModals.showAIAdvisorModal(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildMenuItem(
+                  context,
+                  icon: Icons.trending_up_rounded,
+                  label: 'Investasi',
+                  onTap: () => context.push(AppRouter.investasi),
+                ),
+                _buildMenuItem(
+                  context,
+                  icon: Icons.handshake_outlined,
+                  label: 'Utang',
+                  onTap: () => context.push(AppRouter.utang),
+                ),
+                _buildMenuItem(
+                  context,
+                  icon: Icons.bar_chart_rounded,
+                  label: 'Laporan',
+                  onTap: () => context.push(AppRouter.reports),
+                ),
+                _buildMenuItem(
+                  context,
+                  icon: Icons.more_horiz_rounded,
+                  label: 'Lainnya',
+                  onTap: () => context.push(AppRouter.allFeatures),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

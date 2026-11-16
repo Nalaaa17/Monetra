@@ -9,6 +9,7 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../data/repositories/goal_repository.dart';
 import '../../../../shared/providers/repository_providers.dart';
+import '../../../../shared/widgets/app_dialog.dart';
 import '../../home/providers/home_providers.dart';
 import 'goal_contribution_modal.dart';
 import 'goal_form_modal.dart';
@@ -331,68 +332,36 @@ class GoalCard extends ConsumerWidget {
     );
   }
 
-  void _showRealizeOptionsDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardOf(context),
-        title: Text('Realisasi Target', style: AppTypography.titleMedium),
-        content: Text(
+  void _showRealizeOptionsDialog(BuildContext context, WidgetRef ref) async {
+    final confirmed = await AppDialog.confirm(
+      context,
+      type: AppDialogType.success,
+      icon: Icons.check_circle_outline_rounded,
+      title: 'Realisasi Target',
+      message:
           'Target "${detail.name}" telah tercapai. Buka kunci saldo ${CurrencyFormatter.format(detail.lockedAmount)} untuk digunakan?',
-          style: AppTypography.bodySmall,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.tertiary,
-            ),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await ref
-                  .read(goalRepositoryProvider)
-                  .realizeGoalAsExpense(detail.id);
-              ref.read(homeRefreshTriggerProvider.notifier).state++;
-            },
-            child: const Text(
-              'Gunakan Saldo',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+      confirmLabel: 'Gunakan Saldo',
+      cancelLabel: 'Batal',
     );
+
+    if (confirmed) {
+      await ref.read(goalRepositoryProvider).realizeGoalAsExpense(detail.id);
+      ref.read(homeRefreshTriggerProvider.notifier).state++;
+    }
   }
 
-  void _handleDelete(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardOf(context),
-        title: Text('Hapus Target?', style: AppTypography.titleMedium),
-        content: Text(
+  void _handleDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await AppDialog.delete(
+      context,
+      title: 'Hapus Target?',
+      message:
           'Target "${detail.name}" akan dihapus. Saldo yang telah dialokasikan akan dikembalikan ke akun sumber.',
-          style: AppTypography.bodySmall,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              await ref.read(goalRepositoryProvider).deleteGoal(detail.id);
-              ref.read(homeRefreshTriggerProvider.notifier).state++;
-            },
-            child: const Text('Hapus', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      confirmLabel: 'Hapus Target',
     );
+
+    if (confirmed) {
+      await ref.read(goalRepositoryProvider).deleteGoal(detail.id);
+      ref.read(homeRefreshTriggerProvider.notifier).state++;
+    }
   }
 }

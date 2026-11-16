@@ -94,6 +94,7 @@ class NotificationService {
     required String goalName,
     required DateTime deadline,
     required int remainingAmount,
+    String? profileKey,
   }) async {
     resolveAndSetLocalTimezone();
 
@@ -123,6 +124,7 @@ class NotificationService {
             goalId: goalId,
             goalName: goalName,
             remainingAmount: remainingAmount,
+            profileKey: profileKey,
           );
         }
         return;
@@ -147,6 +149,8 @@ class NotificationService {
       final body =
           "Target '$goalName' jatuh tempo 3 hari lagi. Kurang ${CurrencyFormatter.format(remainingAmount)}.";
 
+      final payloadTag = 'profile:${profileKey ?? 'default'};goalId:$goalId';
+
       try {
         await _notificationsPlugin.zonedSchedule(
           goalId,
@@ -154,6 +158,7 @@ class NotificationService {
           body,
           scheduledTz,
           notificationDetails,
+          payload: payloadTag,
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
@@ -166,6 +171,7 @@ class NotificationService {
           body,
           scheduledTz,
           notificationDetails,
+          payload: payloadTag,
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
@@ -180,6 +186,7 @@ class NotificationService {
     required int goalId,
     required String goalName,
     required int remainingAmount,
+    String? profileKey,
   }) async {
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
       return;
@@ -198,11 +205,14 @@ class NotificationService {
         iOS: DarwinNotificationDetails(),
       );
 
+      final payloadTag = 'profile:${profileKey ?? 'default'};goalId:$goalId';
+
       await _notificationsPlugin.show(
         goalId,
         'Target Segera Jatuh Tempo! 🎯',
         "Target '$goalName' mendekati tenggat waktu. Kurang ${CurrencyFormatter.format(remainingAmount)}.",
         notificationDetails,
+        payload: payloadTag,
       );
     } catch (e) {
       debugPrint('Error show notification: $e');

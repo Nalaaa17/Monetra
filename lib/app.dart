@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
+import 'features/security/widgets/app_lock_wrapper.dart';
 
 class MonetraApp extends ConsumerWidget {
   const MonetraApp({super.key});
@@ -18,6 +19,7 @@ class MonetraApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
       routerConfig: AppRouter.router,
+      builder: (context, child) => AppLockWrapper(child: child),
     );
   }
 }

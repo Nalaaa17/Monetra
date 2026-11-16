@@ -14,6 +14,7 @@ import '../../../data/repositories/account_repository.dart';
 import '../../../data/repositories/transaction_repository.dart';
 import '../../../data/repositories/transfer_repository.dart';
 import '../../../shared/providers/repository_providers.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../home/providers/home_providers.dart';
 import '../../home/widgets/floating_bottom_bar.dart';
 import '../../transaction/screens/edit_transaction_screen.dart';
@@ -324,73 +325,89 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 1. Segmented Control Jenis Transaksi (Rapi, Seimbang & Bebas Scroll)
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E222A) : const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.black.withValues(alpha: 0.05),
+          // 1. Segmented Control Jenis Transaksi (Termasuk 🌴 Liburan)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E222A) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.black.withValues(alpha: 0.05),
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                _buildTypeSegment(
-                  context,
-                  label: 'Semua',
-                  isSelected: filter.type == null,
-                  activeColor: AppColors.primary,
-                  onTap: () {
-                    filterNotifier.state = filter.copyWith(
-                      type: null,
-                      clearType: true,
-                    );
-                  },
-                ),
-                _buildTypeSegment(
-                  context,
-                  label: 'Pengeluaran',
-                  isSelected: filter.type == 'expense',
-                  activeColor: AppColors.danger,
-                  onTap: () {
-                    final clearCat = selectedCategory != null &&
-                        selectedCategory.type != 'expense';
-                    filterNotifier.state = filter.copyWith(
-                      type: 'expense',
-                      clearCategory: clearCat,
-                    );
-                  },
-                ),
-                _buildTypeSegment(
-                  context,
-                  label: 'Pemasukan',
-                  isSelected: filter.type == 'income',
-                  activeColor: const Color(0xFF059669),
-                  onTap: () {
-                    final clearCat = selectedCategory != null &&
-                        selectedCategory.type != 'income';
-                    filterNotifier.state = filter.copyWith(
-                      type: 'income',
-                      clearCategory: clearCat,
-                    );
-                  },
-                ),
-                _buildTypeSegment(
-                  context,
-                  label: 'Transfer',
-                  isSelected: filter.type == 'transfer',
-                  activeColor: const Color(0xFF0284C7),
-                  onTap: () {
-                    filterNotifier.state = filter.copyWith(
-                      type: 'transfer',
-                      clearCategory: true,
-                    );
-                  },
-                ),
-              ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildTypeSegment(
+                    context,
+                    label: 'Semua',
+                    isSelected: filter.type == null,
+                    activeColor: AppColors.primary,
+                    onTap: () {
+                      filterNotifier.state = filter.copyWith(
+                        type: null,
+                        clearType: true,
+                      );
+                    },
+                  ),
+                  _buildTypeSegment(
+                    context,
+                    label: 'Pengeluaran',
+                    isSelected: filter.type == 'expense',
+                    activeColor: AppColors.danger,
+                    onTap: () {
+                      final clearCat = selectedCategory != null &&
+                          selectedCategory.type != 'expense';
+                      filterNotifier.state = filter.copyWith(
+                        type: 'expense',
+                        clearCategory: clearCat,
+                      );
+                    },
+                  ),
+                  _buildTypeSegment(
+                    context,
+                    label: 'Pemasukan',
+                    isSelected: filter.type == 'income',
+                    activeColor: const Color(0xFF059669),
+                    onTap: () {
+                      final clearCat = selectedCategory != null &&
+                          selectedCategory.type != 'income';
+                      filterNotifier.state = filter.copyWith(
+                        type: 'income',
+                        clearCategory: clearCat,
+                      );
+                    },
+                  ),
+                  _buildTypeSegment(
+                    context,
+                    label: 'Transfer',
+                    isSelected: filter.type == 'transfer',
+                    activeColor: const Color(0xFF0284C7),
+                    onTap: () {
+                      filterNotifier.state = filter.copyWith(
+                        type: 'transfer',
+                        clearCategory: true,
+                      );
+                    },
+                  ),
+                  _buildTypeSegment(
+                    context,
+                    label: '🌴 Liburan',
+                    isSelected: filter.type == 'vacation',
+                    activeColor: const Color(0xFF0284C7),
+                    onTap: () {
+                      filterNotifier.state = filter.copyWith(
+                        type: 'vacation',
+                        clearCategory: true,
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -521,39 +538,34 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(vertical: 7),
-          decoration: BoxDecoration(
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark
+                  ? activeColor.withValues(alpha: 0.2)
+                  : activeColor.withValues(alpha: 0.12))
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(
             color: isSelected
-                ? (isDark
-                    ? activeColor.withValues(alpha: 0.2)
-                    : activeColor.withValues(alpha: 0.12))
+                ? activeColor.withValues(alpha: 0.45)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(
-              color: isSelected
-                  ? activeColor.withValues(alpha: 0.45)
-                  : Colors.transparent,
-            ),
           ),
-          child: Center(
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                label,
-                style: AppTypography.bodySmall.copyWith(
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  fontSize: 12,
-                  color: isSelected
-                      ? (isDark ? Colors.white : activeColor)
-                      : AppColors.textSecondaryOf(context),
-                ),
-              ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: AppTypography.bodySmall.copyWith(
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              fontSize: 12,
+              color: isSelected
+                  ? (isDark ? Colors.white : activeColor)
+                  : AppColors.textSecondaryOf(context),
             ),
           ),
         ),
@@ -1096,107 +1108,289 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   }
 
   void _showTransferDetailDialog(BuildContext context, TransferDetail tr) {
-    showDialog(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showGeneralDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.swap_horiz_rounded, color: Color(0xFF0284C7)),
-            SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                'Detail Transfer',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss',
+      barrierColor: Colors.black.withValues(alpha: 0.65),
+      transitionDuration: const Duration(milliseconds: 220),
+      transitionBuilder: (ctx, anim, _, child) {
+        final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutBack);
+        return ScaleTransition(
+          scale: Tween<double>(begin: 0.9, end: 1.0).animate(curved),
+          child: FadeTransition(opacity: anim, child: child),
+        );
+      },
+      pageBuilder: (ctx, _, __) {
+        return Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            constraints: const BoxConstraints(maxWidth: 380),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.black.withValues(alpha: 0.06),
+                width: 1,
               ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              CurrencyFormatter.format(tr.amount),
-              style: AppTypography.headlineLarge.copyWith(
-                fontSize: 24,
-                color: const Color(0xFF0284C7),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Dari: ${tr.fromAccountName}',
-              style: AppTypography.titleMedium,
-            ),
-            Text('Ke: ${tr.toAccountName}', style: AppTypography.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              'Tanggal: ${DateFormatter.formatFull(tr.date)}',
-              style: AppTypography.bodyMedium,
-            ),
-            if (tr.note?.isNotEmpty == true) ...[
-              const SizedBox(height: 4),
-              Text('Catatan: ${tr.note}', style: AppTypography.bodyMedium),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => EditTransferScreen(detail: tr),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.15),
+                  blurRadius: 32,
+                  offset: const Offset(0, 16),
                 ),
-              );
-            },
-            child: const Text('Ubah'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final confirm = await showDialog<bool>(
-                context: ctx,
-                builder: (c) => AlertDialog(
-                  title: const Text('Hapus Transfer?'),
-                  content: const Text(
-                    'Saldo yang dipindahkan akan dikembalikan ke akun asal.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(c, false),
-                      child: const Text('Batal'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(c, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.danger,
-                        foregroundColor: Colors.white,
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Icon Header
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF0284C7).withValues(alpha: 0.3),
+                          width: 1.5,
+                        ),
                       ),
-                      child: const Text('Hapus'),
+                      child: const Center(
+                        child: Icon(
+                          Icons.swap_horiz_rounded,
+                          color: Color(0xFF0284C7),
+                          size: 26,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    Text(
+                      'Detail Transfer',
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimaryOf(context),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+
+                    Text(
+                      CurrencyFormatter.format(tr.amount),
+                      style: AppTypography.headlineMedium.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0284C7),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Rekening Box
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.04)
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.06)
+                              : Colors.grey.shade200,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'DARI',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    fontSize: 10,
+                                    letterSpacing: 0.8,
+                                    color: AppColors.textSecondaryOf(context),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  tr.fromAccountName,
+                                  style: AppTypography.titleSmall.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            child: Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 18,
+                              color: Color(0xFF0284C7),
+                            ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  'TUJUAN',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    fontSize: 10,
+                                    letterSpacing: 0.8,
+                                    color: AppColors.textSecondaryOf(context),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  tr.toAccountName,
+                                  style: AppTypography.titleSmall.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Info Tanggal & Catatan
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Tanggal',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.textSecondaryOf(context),
+                          ),
+                        ),
+                        Text(
+                          DateFormatter.formatFull(tr.date),
+                          style: AppTypography.bodySmall.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (tr.note?.isNotEmpty == true) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Catatan',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textSecondaryOf(context),
+                            ),
+                          ),
+                          Flexible(
+                            child: Text(
+                              tr.note!,
+                              style: AppTypography.bodySmall.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 20),
+
+                    // Actions Row
+                    Row(
+                      children: [
+                        // Tombol Hapus (Destructive)
+                        IconButton(
+                          onPressed: () async {
+                            final confirm = await AppDialog.delete(
+                              context,
+                              title: 'Hapus Transfer?',
+                              message:
+                                  'Saldo ${CurrencyFormatter.format(tr.amount)} akan otomatis dikembalikan ke rekening ${tr.fromAccountName}.',
+                              confirmLabel: 'Hapus Transfer',
+                            );
+
+                            if (confirm == true) {
+                              final repo = ref.read(transferRepositoryProvider);
+                              await repo.deleteTransfer(tr.id);
+                              ref.read(homeRefreshTriggerProvider.notifier).state++;
+                              if (ctx.mounted) Navigator.pop(ctx);
+                            }
+                          },
+                          icon: const Icon(Icons.delete_outline_rounded),
+                          color: AppColors.danger,
+                          tooltip: 'Hapus Transfer',
+                        ),
+                        const SizedBox(width: 6),
+                        // Tombol Ubah
+                        Expanded(
+                          child: SizedBox(
+                            height: 42,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => EditTransferScreen(detail: tr),
+                                  ),
+                                );
+                              },
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text('Ubah'),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Tombol Tutup
+                        Expanded(
+                          child: SizedBox(
+                            height: 42,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0284C7),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text('Tutup'),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              );
-
-              if (confirm == true) {
-                final repo = ref.read(transferRepositoryProvider);
-                await repo.deleteTransfer(tr.id);
-                ref.read(homeRefreshTriggerProvider.notifier).state++;
-                if (ctx.mounted) Navigator.pop(ctx);
-              }
-            },
-            child: const Text(
-              'Hapus',
-              style: TextStyle(color: AppColors.danger),
+              ),
             ),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Tutup'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

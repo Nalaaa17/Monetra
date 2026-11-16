@@ -9,6 +9,7 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/goal.dart';
 import '../../../data/repositories/goal_repository.dart';
 import '../../../shared/providers/repository_providers.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../home/providers/home_providers.dart';
 
 void showGoalFormModal(
@@ -488,24 +489,16 @@ class _GoalFormBottomSheetContentState
             .where((a) => a.id == _selectedAccountId)
             .firstOrNull;
         if (chosenAcc != null && extraReserveAmount > chosenAcc.balance) {
-          final proceed = await showDialog<bool>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Saldo Bebas Kurang'),
-              content: Text(
+          final proceed = await AppDialog.confirm(
+            context,
+            type: AppDialogType.warning,
+            icon: Icons.account_balance_wallet_outlined,
+            title: 'Saldo Bebas Kurang',
+            message:
                 'Dana yang disisihkan (${CurrencyFormatter.format(extraReserveAmount)}) melebihi saldo bebas di "${chosenAcc.name}" (${CurrencyFormatter.format(chosenAcc.balance)}). Tetap simpan?',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Batal'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Tetap Simpan'),
-                ),
-              ],
-            ),
+            confirmLabel: 'Tetap Simpan',
+            cancelLabel: 'Batal',
+            isDestructive: false,
           );
           if (proceed != true) {
             if (mounted) setState(() => _isSubmitting = false);

@@ -90,6 +90,12 @@ class AllFeaturesScreen extends StatelessWidget {
                 onTap: () => context.push(AppRouter.goals),
               ),
               _FeatureItem(
+                icon: Icons.beach_access_rounded,
+                title: 'Kantong Liburan',
+                subtitle: 'Sisihkan bujet trip & catat pos liburan',
+                onTap: () => context.push(AppRouter.vacations),
+              ),
+              _FeatureItem(
                 icon: Icons.trending_up_rounded,
                 title: 'Portofolio Investasi',
                 subtitle: 'Reksadana, saham, emas & simulasi',
@@ -145,10 +151,46 @@ class AllFeaturesScreen extends StatelessWidget {
                 onTap: () => context.push(AppRouter.manageCategories),
               ),
               _FeatureItem(
+                icon: Icons.switch_account_rounded,
+                title: 'Profil Pribadi & Bisnis',
+                subtitle: 'Pemisahan pembukuan harian & usaha',
+                onTap: () => context.push(AppRouter.profiles),
+              ),
+              _FeatureItem(
                 icon: Icons.cloud_sync_outlined,
                 title: 'Cadangkan & Pulihkan',
                 subtitle: 'Ekspor database offline JSON',
                 onTap: () => context.push(AppRouter.backup),
+              ),
+              _FeatureItem(
+                icon: Icons.fingerprint_rounded,
+                title: 'Kunci Biometrik & PIN',
+                subtitle: 'Sidik jari, wajah & kunci aplikasi',
+                onTap: () => context.push(AppRouter.securitySettings),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // 4. BISNIS & USAHA (HPP, KATALOG & OMZET)
+          _buildSectionHeader(context, 'FITUR BISNIS & USAHA'),
+          const SizedBox(height: 8),
+          _buildFeatureGroup(
+            context,
+            isDark,
+            items: [
+              _FeatureItem(
+                icon: Icons.calculate_rounded,
+                title: 'Kalkulator HPP & Harga Jual',
+                subtitle: 'Hitung modal resep FnB & tarif jasa ideal',
+                onTap: () => context.push(AppRouter.hppCalculator),
+              ),
+              _FeatureItem(
+                icon: Icons.inventory_2_rounded,
+                title: 'Katalog Produk & Quick Sale',
+                subtitle: 'Daftar jualan & catat omzet cepat kasir',
+                onTap: () => context.push(AppRouter.menuCatalog),
               ),
             ],
           ),

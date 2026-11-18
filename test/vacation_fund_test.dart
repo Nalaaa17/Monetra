@@ -114,7 +114,7 @@ void main() {
     expect(bcaVacAccount.remainingAmount, 1500000); // Sisa BCA di liburan = 1.5jt
 
     // 7. Verifikasi transaksi muncul di Riwayat Transaksi dengan tanda/badge Liburan
-    final detailedTxs = await txRepo.getTransactionsDetailed();
+    final detailedTxs = await txRepo.getAllTransactionDetails();
     expect(detailedTxs.length, 1);
     expect(detailedTxs.first.vacationName, 'Liburan ke Bali 🌴');
     expect(detailedTxs.first.isVacation, true);

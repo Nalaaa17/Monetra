@@ -44,9 +44,24 @@ class IconHelper {
     Icons.category_rounded.codePoint: Icons.category_rounded,
     Icons.flag_rounded.codePoint: Icons.flag_rounded,
     Icons.savings_rounded.codePoint: Icons.savings_rounded,
+
+    // Profil & Bisnis
+    Icons.person_rounded.codePoint: Icons.person_rounded,
+    Icons.person.codePoint: Icons.person,
+    Icons.people_rounded.codePoint: Icons.people_rounded,
+    Icons.home_rounded.codePoint: Icons.home_rounded,
+    Icons.favorite_rounded.codePoint: Icons.favorite_rounded,
+    Icons.storefront_rounded.codePoint: Icons.storefront_rounded,
+    Icons.storefront.codePoint: Icons.storefront,
+    Icons.business_rounded.codePoint: Icons.business_rounded,
+    Icons.business.codePoint: Icons.business,
+    Icons.local_shipping_rounded.codePoint: Icons.local_shipping_rounded,
+    Icons.point_of_sale_rounded.codePoint: Icons.point_of_sale_rounded,
+    Icons.handyman_rounded.codePoint: Icons.handyman_rounded,
+    Icons.campaign_rounded.codePoint: Icons.campaign_rounded,
   };
 
-  static IconData getIcon(int codePoint) {
-    return _iconMap[codePoint] ?? Icons.category_rounded;
+  static IconData getIcon(int codePoint, {IconData fallback = Icons.category_rounded}) {
+    return _iconMap[codePoint] ?? fallback;
   }
 }

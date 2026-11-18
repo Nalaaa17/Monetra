@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/color_helper.dart';
+import '../../../core/utils/icon_helper.dart';
 import '../../../data/database/app_database.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../core/utils/app_snack_bar.dart';
@@ -28,15 +29,30 @@ class _ManageProfilesScreenState extends ConsumerState<ManageProfilesScreen> {
     '0xFF6366F1', // Indigo
   ];
 
-  static const List<int> _profileIcons = [
-    0xe491, // Icons.person_rounded
-    0xe5e1, // Icons.storefront_rounded
-    0xe59c, // Icons.shopping_bag_rounded
-    0xe11e, // Icons.business_rounded
-    0xe532, // Icons.restaurant_rounded
-    0xe6f2, // Icons.work_rounded
-    0xe3b3, // Icons.local_shipping_rounded
-    0xe3ab, // Icons.local_cafe_rounded
+  static final List<int> _personalIcons = [
+    Icons.person_rounded.codePoint,
+    Icons.people_rounded.codePoint,
+    Icons.home_rounded.codePoint,
+    Icons.favorite_rounded.codePoint,
+    Icons.school_rounded.codePoint,
+    Icons.account_balance_wallet_rounded.codePoint,
+    Icons.flight_takeoff_rounded.codePoint,
+    Icons.sports_esports_rounded.codePoint,
+    Icons.fitness_center_rounded.codePoint,
+    Icons.pets_rounded.codePoint,
+  ];
+
+  static final List<int> _businessIcons = [
+    Icons.storefront_rounded.codePoint,
+    Icons.shopping_bag_rounded.codePoint,
+    Icons.restaurant_rounded.codePoint,
+    Icons.local_cafe_rounded.codePoint,
+    Icons.business_rounded.codePoint,
+    Icons.point_of_sale_rounded.codePoint,
+    Icons.local_shipping_rounded.codePoint,
+    Icons.trending_up_rounded.codePoint,
+    Icons.handyman_rounded.codePoint,
+    Icons.campaign_rounded.codePoint,
   ];
 
   @override
@@ -107,8 +123,7 @@ class _ManageProfilesScreenState extends ConsumerState<ManageProfilesScreen> {
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(
-                            // ignore: non_const_argument_for_const_parameter
-                            IconData(p.iconCodePoint, fontFamily: 'MaterialIcons'),
+                            IconHelper.getIcon(p.iconCodePoint, fallback: p.isBusiness ? Icons.storefront_rounded : Icons.person_rounded),
                             color: color,
                             size: 26,
                           ),
@@ -239,13 +254,6 @@ class _ManageProfilesScreenState extends ConsumerState<ManageProfilesScreen> {
           child: Text('Gagal memuat profil: $e'),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        onPressed: () => _showProfileDialog(context),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Profil Baru'),
-      ),
     );
   }
 
@@ -255,7 +263,10 @@ class _ManageProfilesScreenState extends ConsumerState<ManageProfilesScreen> {
     final nameCtrl = TextEditingController(text: existingProfile?.name ?? '');
     String selectedType = existingProfile?.type ?? 'personal';
     String selectedColor = existingProfile?.colorHex ?? _paletteColors.first;
-    int selectedIcon = existingProfile?.iconCodePoint ?? _profileIcons.first;
+    int selectedIcon = existingProfile?.iconCodePoint ??
+        (selectedType == 'business'
+            ? _businessIcons.first
+            : _personalIcons.first);
     bool switchNow = true;
 
     showModalBottomSheet(
@@ -320,7 +331,9 @@ class _ManageProfilesScreenState extends ConsumerState<ManageProfilesScreen> {
                               borderRadius: BorderRadius.circular(12),
                               onTap: () => setModalState(() {
                                 selectedType = 'personal';
-                                selectedIcon = 0xe491; // Icons.person
+                                if (!_personalIcons.contains(selectedIcon)) {
+                                  selectedIcon = _personalIcons.first;
+                                }
                               }),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -366,8 +379,10 @@ class _ManageProfilesScreenState extends ConsumerState<ManageProfilesScreen> {
                               borderRadius: BorderRadius.circular(12),
                               onTap: () => setModalState(() {
                                 selectedType = 'business';
-                                selectedIcon = 0xe5e1; // Icons.storefront
                                 selectedColor = '0xFF3B82F6';
+                                if (!_businessIcons.contains(selectedIcon)) {
+                                  selectedIcon = _businessIcons.first;
+                                }
                               }),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -420,8 +435,7 @@ class _ManageProfilesScreenState extends ConsumerState<ManageProfilesScreen> {
                         hintText: selectedType == 'business' ? 'Contoh: Toko Kopi, Kafe Berkah' : 'Contoh: Pribadi, Keluarga',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         prefixIcon: Icon(
-                          // ignore: non_const_argument_for_const_parameter
-                          IconData(selectedIcon, fontFamily: 'MaterialIcons'),
+                          IconHelper.getIcon(selectedIcon, fallback: selectedType == 'business' ? Icons.storefront_rounded : Icons.person_rounded),
                           color: activeColor,
                         ),
                       ),
@@ -477,38 +491,44 @@ class _ManageProfilesScreenState extends ConsumerState<ManageProfilesScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    SizedBox(
-                      height: 48,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _profileIcons.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 8),
-                        itemBuilder: (_, i) {
-                          final code = _profileIcons[i];
-                          final isSelected = code == selectedIcon;
-                          return GestureDetector(
-                            onTap: () => setModalState(() => selectedIcon = code),
-                            child: Container(
-                              width: 46,
-                              height: 46,
-                              decoration: BoxDecoration(
-                                color: isSelected ? activeColor.withValues(alpha: 0.18) : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04)),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isSelected ? activeColor : Colors.transparent,
-                                  width: 1.5,
+                    Builder(
+                      builder: (context) {
+                        final availableIcons = selectedType == 'business'
+                            ? _businessIcons
+                            : _personalIcons;
+                        return SizedBox(
+                          height: 48,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: availableIcons.length,
+                            separatorBuilder: (_, _) => const SizedBox(width: 8),
+                            itemBuilder: (_, i) {
+                              final code = availableIcons[i];
+                              final isSelected = code == selectedIcon;
+                              return GestureDetector(
+                                onTap: () => setModalState(() => selectedIcon = code),
+                                child: Container(
+                                  width: 46,
+                                  height: 46,
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? activeColor.withValues(alpha: 0.18) : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.04)),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isSelected ? activeColor : Colors.transparent,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    IconHelper.getIcon(code),
+                                    color: isSelected ? activeColor : AppColors.textPrimaryOf(context),
+                                    size: 22,
+                                  ),
                                 ),
-                              ),
-                              child: Icon(
-                                // ignore: non_const_argument_for_const_parameter
-                                IconData(code, fontFamily: 'MaterialIcons'),
-                                color: isSelected ? activeColor : AppColors.textPrimaryOf(context),
-                                size: 22,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                              );
+                            },
+                          ),
+                        );
+                      },
                     ),
 
                     if (!isEdit) ...[

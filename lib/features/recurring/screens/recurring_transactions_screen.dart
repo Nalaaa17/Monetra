@@ -717,7 +717,7 @@ class _RecurringTransactionsScreenState
     final updatedNext = await repo.recordOccurrenceNow(item.id);
     ref.read(homeRefreshTriggerProvider.notifier).state++;
 
-    if (!mounted) return;
+    if (!context.mounted) return;
     final nextLabel = updatedNext != null
         ? ' • Berikutnya ${DateFormatter.formatShort(updatedNext)}'
         : '';
@@ -744,8 +744,8 @@ class _RecurringTransactionsScreenState
     await repo.deleteRecurring(item.id);
     ref.read(homeRefreshTriggerProvider.notifier).state++;
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(this.context).showSnackBar(
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Jadwal '${item.title}' berhasil dihapus.")),
     );
   }

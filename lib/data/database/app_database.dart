@@ -36,6 +36,16 @@ class AppDatabase {
   // Override untuk pengujian (unit/widget test)
   static String? testDbPath;
   static String? testMetaDbPath;
+  static String? _testSessionId;
+
+  static String _getTestTempDir() {
+    _testSessionId ??= 'test_${DateTime.now().microsecondsSinceEpoch}';
+    final dir = Directory(p.join(Directory.systemTemp.path, 'monetra_$_testSessionId'));
+    if (!dir.existsSync()) {
+      dir.createSync(recursive: true);
+    }
+    return dir.path;
+  }
 
   /// Mendapatkan instance database meta global (`monetra_meta.db`)
   static Future<Database> get metaInstance async {
@@ -80,7 +90,7 @@ class AppDatabase {
     }
     if (testDbPath != null) {
       if (testDbPath == inMemoryDatabasePath) {
-        return inMemoryDatabasePath;
+        return p.join(_getTestTempDir(), fileName);
       }
       final dir = p.dirname(testDbPath!);
       return p.join(dir, fileName);
@@ -671,6 +681,16 @@ class AppDatabase {
       _metaDatabase = null;
     }
     _activeProfileKey = null;
+
+    if (_testSessionId != null) {
+      try {
+        final dir = Directory(p.join(Directory.systemTemp.path, 'monetra_$_testSessionId'));
+        if (dir.existsSync()) {
+          dir.deleteSync(recursive: true);
+        }
+      } catch (_) {}
+      _testSessionId = null;
+    }
   }
 
   // --------------------------------------------------------------------------

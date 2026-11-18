@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/icon_helper.dart';
 import '../../../data/models/vacation.dart';
 import '../../../data/repositories/account_repository.dart';
 import '../../home/providers/home_providers.dart';
@@ -277,8 +278,7 @@ class _CreateVacationSheetState extends ConsumerState<CreateVacationSheet> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
-                                IconData(acc.iconCodePoint,
-                                    fontFamily: 'MaterialIcons'),
+                                IconHelper.getIcon(acc.iconCodePoint),
                                 color: accColor,
                                 size: 18,
                               ),

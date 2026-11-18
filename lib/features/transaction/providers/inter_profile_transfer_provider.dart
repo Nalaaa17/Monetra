@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/database/app_database.dart';
-import '../../../data/models/profile_model.dart';
 import '../../../data/repositories/account_repository.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../home/providers/home_providers.dart';

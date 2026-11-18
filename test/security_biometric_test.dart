@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:monetra/data/database/app_database.dart';
 import 'package:monetra/data/services/biometric_service.dart';
-import 'package:monetra/features/security/providers/security_providers.dart';
 import 'package:monetra/features/security/screens/app_lock_screen.dart';
 import 'package:monetra/features/settings/screens/security_settings_screen.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -21,34 +20,35 @@ void main() {
     await AppDatabase.close();
   });
 
-  test('BiometricService saves and reads settings from database correctly', () async {
-    // Default should be false
-    final defaultEnabled = await BiometricService.isBiometricLockEnabled();
-    expect(defaultEnabled, false);
+  test(
+    'BiometricService saves and reads settings from database correctly',
+    () async {
+      // Default should be false
+      final defaultEnabled = await BiometricService.isBiometricLockEnabled();
+      expect(defaultEnabled, false);
 
-    // Set to true
-    await BiometricService.setBiometricLockEnabled(true);
-    final updated = await BiometricService.isBiometricLockEnabled();
-    expect(updated, true);
+      // Set to true
+      await BiometricService.setBiometricLockEnabled(true);
+      final updated = await BiometricService.isBiometricLockEnabled();
+      expect(updated, true);
 
-    // Test lock on resume setting
-    await BiometricService.setLockOnResumeEnabled(false);
-    expect(await BiometricService.isLockOnResumeEnabled(), false);
+      // Test lock on resume setting
+      await BiometricService.setLockOnResumeEnabled(false);
+      expect(await BiometricService.isLockOnResumeEnabled(), false);
 
-    await BiometricService.setLockOnResumeEnabled(true);
-    expect(await BiometricService.isLockOnResumeEnabled(), true);
-  });
+      await BiometricService.setLockOnResumeEnabled(true);
+      expect(await BiometricService.isLockOnResumeEnabled(), true);
+    },
+  );
 
-  testWidgets('AppLockScreen renders correctly with fingerprint prompt', (WidgetTester tester) async {
+  testWidgets('AppLockScreen renders correctly with fingerprint prompt', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(400, 850));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
-          home: AppLockScreen(),
-        ),
-      ),
+      const ProviderScope(child: MaterialApp(home: AppLockScreen())),
     );
     await tester.pump();
 
@@ -58,16 +58,14 @@ void main() {
     expect(find.text('Privat & Terenkripsi di Perangkat'), findsOneWidget);
   });
 
-  testWidgets('SecuritySettingsScreen displays options and hardware status', (WidgetTester tester) async {
+  testWidgets('SecuritySettingsScreen displays options and hardware status', (
+    WidgetTester tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(400, 850));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
-          home: SecuritySettingsScreen(),
-        ),
-      ),
+      const ProviderScope(child: MaterialApp(home: SecuritySettingsScreen())),
     );
     await tester.pumpAndSettle();
 

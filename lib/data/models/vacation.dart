@@ -161,6 +161,8 @@ class VacationDetail {
   int get totalAllocated =>
       accounts.fold(0, (sum, a) => sum + a.allocatedAmount);
 
+  int get totalBudget => vacation.targetBudget;
+
   int get totalSpent =>
       accounts.fold(0, (sum, a) => sum + a.spentAmount);
 

@@ -49,13 +49,16 @@ class _MenuCatalogScreenState extends ConsumerState<MenuCatalogScreen> {
       body: Column(
         children: [
           // Filter Chips
-          Padding(
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
                 _buildFilterChip('all', 'Semua Produk'),
                 const SizedBox(width: 8),
                 _buildFilterChip('fnb', 'Kuliner (FnB)'),
+                const SizedBox(width: 8),
+                _buildFilterChip('retail', 'Retail & Olshop'),
                 const SizedBox(width: 8),
                 _buildFilterChip('service', 'Jasa & Proyek'),
               ],
@@ -120,6 +123,13 @@ class _MenuCatalogScreenState extends ConsumerState<MenuCatalogScreen> {
 
   Widget _buildMenuItemCard(BuildContext context, bool isDark, MenuItem item) {
     final isFnb = item.type == 'fnb';
+    final isRetail = item.type == 'retail';
+    final tagColor = isFnb
+        ? Colors.orange
+        : (isRetail ? Colors.teal : const Color(0xFF3B82F6));
+    final tagIcon = isFnb
+        ? Icons.restaurant_rounded
+        : (isRetail ? Icons.shopping_bag_rounded : Icons.handyman_rounded);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -146,14 +156,12 @@ class _MenuCatalogScreenState extends ConsumerState<MenuCatalogScreen> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: isFnb
-                      ? Colors.orange.withValues(alpha: 0.15)
-                      : const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                  color: tagColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  isFnb ? Icons.restaurant_rounded : Icons.handyman_rounded,
-                  color: isFnb ? Colors.orange : const Color(0xFF3B82F6),
+                  tagIcon,
+                  color: tagColor,
                   size: 22,
                 ),
               ),

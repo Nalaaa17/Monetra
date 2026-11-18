@@ -37,11 +37,8 @@ class BiometricService {
       isAuthenticating = true;
       final didAuthenticate = await _auth.authenticate(
         localizedReason: localizedReason,
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: false, // Mengizinkan fallback ke PIN / Pola perangkat
-          useErrorDialogs: true,
-        ),
+        biometricOnly: false,
+        persistAcrossBackgrounding: true,
       );
       return didAuthenticate;
     } catch (e) {

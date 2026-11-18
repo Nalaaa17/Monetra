@@ -54,48 +54,62 @@ class DailyTransactionGroupCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Group Header: Tanggal & Ringkasan Kas Harian
+            // 1. Group Header: Tanggal & Ringkasan Kas Harian (Pemasukan & Pengeluaran)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: headerBg,
                 border: Border(bottom: BorderSide(color: dividerColor)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(5),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(7),
-                          ),
-                          child: const Icon(
-                            Icons.calendar_today_rounded,
-                            size: 13,
-                            color: AppColors.primaryDark,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            DateFormatter.formatRelative(group.date),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.titleMedium.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13.5,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(5),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(7),
+                              ),
+                              child: const Icon(
+                                Icons.calendar_today_rounded,
+                                size: 13,
+                                color: AppColors.primaryDark,
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                DateFormatter.formatRelative(group.date),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.titleMedium.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13.5,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${group.items.length + group.transfers.length} transaksi',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? Colors.white54 : AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  _buildDailyCashflowBadge(group),
+                  const SizedBox(height: 8),
+                  _buildDailyCashflowSummary(context, group),
                 ],
               ),
             ),
@@ -162,62 +176,117 @@ class DailyTransactionGroupCard extends StatelessWidget {
     );
   }
 
-  Widget _buildDailyCashflowBadge(DailyTransactionsGroup group) {
-    if (group.totalIncome > 0 && group.totalExpense == 0) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: const Color(0xFF059669).withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
+  Widget _buildDailyCashflowSummary(
+      BuildContext context, DailyTransactionsGroup group) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const incomeColor = Color(0xFF059669);
+    const expenseColor = AppColors.danger;
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children: [
+        // 1. Ringkasan Pemasukan Harian
+        _buildSummaryPill(
+          icon: Icons.arrow_downward_rounded,
+          label: 'Pemasukan',
+          amountText: group.totalIncome > 0
+              ? '+${CurrencyFormatter.format(group.totalIncome)}'
+              : 'Rp 0',
+          isActive: group.totalIncome > 0,
+          color: incomeColor,
+          isDark: isDark,
         ),
-        child: Text(
-          '+${CurrencyFormatter.format(group.totalIncome)}',
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF059669),
+        // 2. Ringkasan Pengeluaran Harian
+        _buildSummaryPill(
+          icon: Icons.arrow_upward_rounded,
+          label: 'Pengeluaran',
+          amountText: group.totalExpense > 0
+              ? '-${CurrencyFormatter.format(group.totalExpense)}'
+              : 'Rp 0',
+          isActive: group.totalExpense > 0,
+          color: expenseColor,
+          isDark: isDark,
+        ),
+        // 3. Mutasi Transfer (jika ada pada hari tersebut)
+        if (group.transfers.isNotEmpty)
+          _buildSummaryPill(
+            icon: Icons.swap_horiz_rounded,
+            label: 'Transfer',
+            amountText: '${group.transfers.length}x',
+            isActive: true,
+            color: AppColors.primaryDark,
+            isDark: isDark,
           ),
-        ),
-      );
-    } else if (group.totalExpense > 0 && group.totalIncome == 0) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: AppColors.danger.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          '-${CurrencyFormatter.format(group.totalExpense)}',
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: AppColors.danger,
+      ],
+    );
+  }
+
+  Widget _buildSummaryPill({
+    required IconData icon,
+    required String label,
+    required String amountText,
+    required bool isActive,
+    required Color color,
+    required bool isDark,
+  }) {
+    final mutedText = isDark ? Colors.white38 : Colors.black38;
+    final pillBg = isActive
+        ? color.withValues(alpha: 0.12)
+        : (isDark
+            ? Colors.white.withValues(alpha: 0.04)
+            : Colors.black.withValues(alpha: 0.03));
+    final borderColor = isActive
+        ? color.withValues(alpha: 0.25)
+        : (isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : Colors.black.withValues(alpha: 0.05));
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+      decoration: BoxDecoration(
+        color: pillBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 11.5,
+            color: isActive ? color : mutedText,
           ),
-        ),
-      );
-    } else if (group.totalIncome > 0 && group.totalExpense > 0) {
-      final net = group.totalIncome - group.totalExpense;
-      final isPos = net >= 0;
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: (isPos ? const Color(0xFF059669) : AppColors.danger)
-              .withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          isPos
-              ? '+${CurrencyFormatter.format(net)}'
-              : '-${CurrencyFormatter.format(-net)}',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            color: isPos ? const Color(0xFF059669) : AppColors.danger,
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$label: ',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.white70 : AppColors.textSecondary,
+                    ),
+                  ),
+                  TextSpan(
+                    text: amountText,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.bold,
+                      color: isActive ? color : mutedText,
+                    ),
+                  ),
+                ],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-        ),
-      );
-    }
-    return const SizedBox.shrink();
+        ],
+      ),
+    );
   }
 
   Widget _buildSwipeDeleteWrapper({

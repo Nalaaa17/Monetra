@@ -5,6 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/color_helper.dart';
+import '../../../core/utils/icon_helper.dart';
 import '../../../data/database/app_database.dart';
 import '../providers/profile_provider.dart';
 
@@ -132,8 +133,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                // ignore: non_const_argument_for_const_parameter
-                                IconData(p.iconCodePoint, fontFamily: 'MaterialIcons'),
+                                IconHelper.getIcon(p.iconCodePoint, fallback: p.isBusiness ? Icons.storefront_rounded : Icons.person_rounded),
                                 color: profileColor,
                                 size: 22,
                               ),

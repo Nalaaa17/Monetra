@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../features/accounts/screens/manage_accounts_screen.dart';
 import '../../features/accounts/screens/manage_categories_screen.dart';
 import '../../features/budget/screens/budget_screen.dart';
+import '../../features/business_tools/screens/promo_calculator_screen.dart';
+import '../../features/business_tools/screens/tax_calculator_screen.dart';
 import '../../features/debts/screens/debt_screen.dart';
 import '../../features/goals/screens/goals_screen.dart';
 import '../../features/history/screens/history_screen.dart';
@@ -72,6 +74,8 @@ class AppRouter {
   static const String profiles = '/profiles';
   static const String hppCalculator = '/hpp';
   static const String menuCatalog = '/catalog';
+  static const String promoCalculator = '/promo-calculator';
+  static const String taxCalculator = '/tax-calculator';
   static const String securitySettings = '/settings/security';
   static const String vacations = '/vacations';
   static const String vacationDetail = '/vacations/detail';
@@ -197,6 +201,16 @@ class AppRouter {
         path: menuCatalog,
         pageBuilder: (context, state) =>
             _buildTransitionPage(const MenuCatalogScreen(), state),
+      ),
+      GoRoute(
+        path: promoCalculator,
+        pageBuilder: (context, state) =>
+            _buildTransitionPage(const PromoCalculatorScreen(), state),
+      ),
+      GoRoute(
+        path: taxCalculator,
+        pageBuilder: (context, state) =>
+            _buildTransitionPage(const TaxCalculatorScreen(), state),
       ),
       GoRoute(
         path: securitySettings,

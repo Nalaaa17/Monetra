@@ -1123,7 +1123,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           child: FadeTransition(opacity: anim, child: child),
         );
       },
-      pageBuilder: (ctx, _, __) {
+      pageBuilder: (ctx, _, _) {
         return Center(
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),

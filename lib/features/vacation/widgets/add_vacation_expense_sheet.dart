@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/icon_helper.dart';
 import '../../../data/models/vacation.dart';
-import '../../accounts/providers/category_providers.dart';
 import '../../home/providers/home_providers.dart';
+import '../../transaction/providers/transaction_form_provider.dart';
 import '../providers/vacation_providers.dart';
 import '../../../shared/widgets/app_dialog.dart';
 
 class AddVacationExpenseSheet extends ConsumerStatefulWidget {
   final VacationDetail vacationDetail;
 
-  const AddVacationExpenseSheet({
-    super.key,
-    required this.vacationDetail,
-  });
+  const AddVacationExpenseSheet({super.key, required this.vacationDetail});
 
   @override
   ConsumerState<AddVacationExpenseSheet> createState() =>
@@ -62,7 +61,9 @@ class _AddVacationExpenseSheetState
     final amount = _parsedAmount;
     if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Masukkan nominal pengeluaran yang valid')),
+        const SnackBar(
+          content: Text('Masukkan nominal pengeluaran yang valid'),
+        ),
       );
       return;
     }
@@ -121,7 +122,7 @@ class _AddVacationExpenseSheetState
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final categoriesAsync = ref.watch(categoriesProvider);
+    final categoriesAsync = ref.watch(categoriesByTypeProvider('expense'));
 
     return Container(
       decoration: BoxDecoration(
@@ -249,16 +250,22 @@ class _AddVacationExpenseSheetState
                     },
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? const Color(0xFF0284C7).withValues(alpha: isDark ? 0.2 : 0.08)
+                            ? const Color(0xFF0284C7)
+                                  .withValues(alpha: isDark ? 0.2 : 0.08)
                             : (isDark ? Colors.grey.shade900 : Colors.white),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: isSelected
                               ? const Color(0xFF0284C7)
-                              : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+                              : (isDark
+                                    ? Colors.grey.shade800
+                                    : Colors.grey.shade200),
                           width: isSelected ? 2.0 : 1.0,
                         ),
                       ),
@@ -272,7 +279,7 @@ class _AddVacationExpenseSheetState
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(
-                              IconData(acc.iconCodePoint, fontFamily: 'MaterialIcons'),
+                              IconHelper.getIcon(acc.iconCodePoint),
                               color: accColor,
                               size: 18,
                             ),
@@ -330,8 +337,9 @@ class _AddVacationExpenseSheetState
                 const SizedBox(height: 8),
                 categoriesAsync.when(
                   data: (categories) {
-                    final expenseCats =
-                        categories.where((c) => c.type == 'expense').toList();
+                    final expenseCats = categories
+                        .where((c) => c.type == 'expense')
+                        .toList();
                     return Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -343,8 +351,9 @@ class _AddVacationExpenseSheetState
                           selectedColor: const Color(0xFF0284C7),
                           labelStyle: TextStyle(
                             color: isSelected ? Colors.white : null,
-                            fontWeight:
-                                isSelected ? FontWeight.bold : FontWeight.w500,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w500,
                             fontSize: 12,
                           ),
                           onSelected: (selected) {
@@ -357,7 +366,7 @@ class _AddVacationExpenseSheetState
                     );
                   },
                   loading: () => const SizedBox.shrink(),
-                  error: (_, __) => const SizedBox.shrink(),
+                  error: (_, _) => const SizedBox.shrink(),
                 ),
                 const SizedBox(height: 18),
 

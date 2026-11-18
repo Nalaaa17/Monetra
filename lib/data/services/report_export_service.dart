@@ -579,16 +579,19 @@ class ReportExportService {
     final file = File(filePath);
     await file.writeAsString(csvContent);
 
-    await Share.shareXFiles(
-      [
-        XFile(
-          filePath,
-          mimeType: 'text/csv',
-          name: fileName,
-        )
-      ],
-      subject: 'Laporan Mutasi Keuangan $safeProfileName ($year-$month)',
-      text: 'Berikut lampiran mutasi keuangan Monetra untuk periode $year-$month.',
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [
+          XFile(
+            filePath,
+            mimeType: 'text/csv',
+            name: fileName,
+          ),
+        ],
+        subject: 'Laporan Mutasi Keuangan $safeProfileName ($year-$month)',
+        text:
+            'Berikut lampiran mutasi keuangan Monetra untuk periode $year-$month.',
+      ),
     );
   }
 }

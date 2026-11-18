@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/app_snack_bar.dart';
@@ -14,7 +15,9 @@ class SecuritySettingsScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isBiometricEnabled = ref.watch(biometricLockEnabledProvider);
     final isLockOnResume = ref.watch(lockOnResumeEnabledProvider);
-    final hardwareSupportedAsync = ref.watch(biometricHardwareSupportedProvider);
+    final hardwareSupportedAsync = ref.watch(
+      biometricHardwareSupportedProvider,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.surfaceOf(context),
@@ -34,9 +37,10 @@ class SecuritySettingsScreen extends ConsumerWidget {
         children: [
           // 1. Status Hardware Biometrik
           hardwareSupportedAsync.when(
-            data: (isSupported) => _buildHardwareStatusCard(context, isSupported, isDark),
+            data: (isSupported) =>
+                _buildHardwareStatusCard(context, isSupported, isDark),
             loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           ),
           const SizedBox(height: 20),
 
@@ -55,7 +59,7 @@ class SecuritySettingsScreen extends ConsumerWidget {
               children: [
                 SwitchListTile(
                   value: isBiometricEnabled,
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                   secondary: Container(
                     width: 38,
                     height: 38,
@@ -89,7 +93,9 @@ class SecuritySettingsScreen extends ConsumerWidget {
                         localizedReason: 'Konfirmasi sidik jari atau PIN untuk mengaktifkan kunci aplikasi',
                       );
                       if (ok) {
-                        await ref.read(biometricLockEnabledProvider.notifier).setEnabled(true);
+                        await ref
+                            .read(biometricLockEnabledProvider.notifier)
+                            .setEnabled(true);
                         if (context.mounted) {
                           AppSnackBar.showSuccess(
                             context,
@@ -103,7 +109,9 @@ class SecuritySettingsScreen extends ConsumerWidget {
                         localizedReason: 'Konfirmasi sidik jari atau PIN untuk menonaktifkan kunci aplikasi',
                       );
                       if (ok) {
-                        await ref.read(biometricLockEnabledProvider.notifier).setEnabled(false);
+                        await ref
+                            .read(biometricLockEnabledProvider.notifier)
+                            .setEnabled(false);
                         if (context.mounted) {
                           AppSnackBar.showInfo(
                             context,
@@ -118,7 +126,7 @@ class SecuritySettingsScreen extends ConsumerWidget {
                   const Divider(height: 1),
                   SwitchListTile(
                     value: isLockOnResume,
-                    activeColor: AppColors.primary,
+                    activeThumbColor: AppColors.primary,
                     secondary: Container(
                       width: 38,
                       height: 38,
@@ -146,7 +154,9 @@ class SecuritySettingsScreen extends ConsumerWidget {
                       ),
                     ),
                     onChanged: (val) async {
-                      await ref.read(lockOnResumeEnabledProvider.notifier).setEnabled(val);
+                      await ref
+                          .read(lockOnResumeEnabledProvider.notifier)
+                          .setEnabled(val);
                     },
                   ),
                 ],
@@ -202,7 +212,11 @@ class SecuritySettingsScreen extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                const Icon(Icons.shield_outlined, size: 20, color: AppColors.primary),
+                const Icon(
+                  Icons.shield_outlined,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -221,7 +235,11 @@ class SecuritySettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHardwareStatusCard(BuildContext context, bool isSupported, bool isDark) {
+  Widget _buildHardwareStatusCard(
+    BuildContext context,
+    bool isSupported,
+    bool isDark,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
@@ -238,8 +256,12 @@ class SecuritySettingsScreen extends ConsumerWidget {
       child: Row(
         children: [
           Icon(
-            isSupported ? Icons.verified_user_rounded : Icons.lock_outline_rounded,
-            color: isSupported ? const Color(0xFF059669) : Colors.amber.shade700,
+            isSupported
+                ? Icons.verified_user_rounded
+                : Icons.lock_outline_rounded,
+            color: isSupported
+                ? const Color(0xFF059669)
+                : Colors.amber.shade700,
             size: 20,
           ),
           const SizedBox(width: 10),
@@ -251,7 +273,9 @@ class SecuritySettingsScreen extends ConsumerWidget {
               style: AppTypography.bodySmall.copyWith(
                 fontWeight: FontWeight.w600,
                 color: isSupported
-                    ? (isDark ? Colors.greenAccent.shade200 : const Color(0xFF059669))
+                    ? (isDark
+                          ? Colors.greenAccent.shade200
+                          : const Color(0xFF059669))
                     : (isDark ? Colors.amber.shade200 : Colors.amber.shade900),
                 fontSize: 12,
               ),

@@ -7,7 +7,6 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/services/backup_service.dart';
 import '../../home/providers/home_providers.dart';
-import '../../../core/utils/app_snack_bar.dart';
 import '../../../shared/widgets/app_dialog.dart';
 
 class BackupScreen extends ConsumerStatefulWidget {

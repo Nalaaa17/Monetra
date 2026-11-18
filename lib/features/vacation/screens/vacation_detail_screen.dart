@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/icon_helper.dart';
 import '../../../data/models/vacation.dart';
 import '../../../data/services/vacation_pdf_service.dart';
 import '../../home/providers/home_providers.dart';
@@ -15,12 +17,13 @@ import '../widgets/add_vacation_expense_sheet.dart';
 class VacationDetailScreen extends ConsumerWidget {
   final int vacationId;
 
-  const VacationDetailScreen({
-    super.key,
-    required this.vacationId,
-  });
+  const VacationDetailScreen({super.key, required this.vacationId});
 
-  Future<void> _completeVacation(BuildContext context, WidgetRef ref, VacationDetail detail) async {
+  Future<void> _completeVacation(
+    BuildContext context,
+    WidgetRef ref,
+    VacationDetail detail,
+  ) async {
     final confirm = await AppDialog.confirm(
       context,
       type: AppDialogType.success,
@@ -52,8 +55,7 @@ class VacationDetailScreen extends ConsumerWidget {
       context,
       icon: Icons.delete_outline_rounded,
       title: 'Hapus Trip?',
-      message:
-          'Alokasi dana akan dibatalkan dan sisa dana kembali ke rekening asal.',
+      message: 'Alokasi dana akan dibatalkan dan sisa dana kembali ke rekening asal.',
       confirmLabel: 'Hapus Trip',
     );
 
@@ -134,7 +136,11 @@ class VacationDetailScreen extends ConsumerWidget {
                     value: 'share_pdf',
                     child: Row(
                       children: [
-                        Icon(Icons.share_rounded, color: Color(0xFF0284C7), size: 18),
+                        Icon(
+                          Icons.share_rounded,
+                          color: Color(0xFF0284C7),
+                          size: 18,
+                        ),
                         SizedBox(width: 8),
                         Text('Bagikan Ringkasan PDF'),
                       ],
@@ -156,7 +162,11 @@ class VacationDetailScreen extends ConsumerWidget {
                       value: 'complete',
                       child: Row(
                         children: [
-                          Icon(Icons.flag_rounded, color: Color(0xFF0284C7), size: 18),
+                          Icon(
+                            Icons.flag_rounded,
+                            color: Color(0xFF0284C7),
+                            size: 18,
+                          ),
                           SizedBox(width: 8),
                           Text('Selesaikan Trip'),
                         ],
@@ -166,9 +176,16 @@ class VacationDetailScreen extends ConsumerWidget {
                     value: 'delete',
                     child: Row(
                       children: [
-                        Icon(Icons.delete_outline_rounded, color: AppColors.danger, size: 18),
+                        Icon(
+                          Icons.delete_outline_rounded,
+                          color: AppColors.danger,
+                          size: 18,
+                        ),
                         SizedBox(width: 8),
-                        Text('Hapus Trip', style: TextStyle(color: AppColors.danger)),
+                        Text(
+                          'Hapus Trip',
+                          style: TextStyle(color: AppColors.danger),
+                        ),
                       ],
                     ),
                   ),
@@ -210,7 +227,9 @@ class VacationDetailScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              ...detail.accounts.map((acc) => _buildAccountBreakdownCard(context, acc, isDark)),
+              ...detail.accounts.map(
+                (acc) => _buildAccountBreakdownCard(context, acc, isDark),
+              ),
 
               const SizedBox(height: 20),
 
@@ -244,7 +263,9 @@ class VacationDetailScreen extends ConsumerWidget {
                     color: AppColors.cardOf(context),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                      color: isDark
+                          ? Colors.grey.shade800
+                          : Colors.grey.shade200,
                     ),
                   ),
                   child: Center(
@@ -257,17 +278,24 @@ class VacationDetailScreen extends ConsumerWidget {
                   ),
                 )
               else
-                ...detail.transactions.map((tx) => _buildTransactionCard(context, tx, isDark)),
+                ...detail.transactions.map(
+                  (tx) => _buildTransactionCard(context, tx, isDark),
+                ),
             ],
           ),
           bottomSheet: vac.isActive
               ? Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: Theme.of(context).scaffoldBackgroundColor,
                     border: Border(
                       top: BorderSide(
-                        color: isDark ? Colors.grey.shade900 : Colors.grey.shade200,
+                        color: isDark
+                            ? Colors.grey.shade900
+                            : Colors.grey.shade200,
                       ),
                     ),
                   ),
@@ -279,7 +307,10 @@ class VacationDetailScreen extends ConsumerWidget {
                       icon: const Icon(Icons.add_rounded, size: 20),
                       label: const Text(
                         'Catat Pos Pengeluaran',
-                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0284C7),
@@ -295,16 +326,17 @@ class VacationDetailScreen extends ConsumerWidget {
               : null,
         );
       },
-      loading: () => const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      ),
-      error: (err, _) => Scaffold(
-        body: Center(child: Text('Error: $err')),
-      ),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (err, _) => Scaffold(body: Center(child: Text('Error: $err'))),
     );
   }
 
-  Widget _buildHeroCard(BuildContext context, VacationDetail detail, bool isDark) {
+  Widget _buildHeroCard(
+    BuildContext context,
+    VacationDetail detail,
+    bool isDark,
+  ) {
     final vac = detail.vacation;
 
     return Container(
@@ -313,9 +345,7 @@ class VacationDetailScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF161A23), // Obsidian Monetra Core
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.18),
@@ -402,7 +432,9 @@ class VacationDetailScreen extends ConsumerWidget {
               value: detail.spentPercentage,
               minHeight: 6,
               backgroundColor: Colors.white.withValues(alpha: 0.12),
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF38BDF8)),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFF38BDF8),
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -433,7 +465,11 @@ class VacationDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBurnRateCard(BuildContext context, VacationDetail detail, bool isDark) {
+  Widget _buildBurnRateCard(
+    BuildContext context,
+    VacationDetail detail,
+    bool isDark,
+  ) {
     final vac = detail.vacation;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -444,8 +480,16 @@ class VacationDetailScreen extends ConsumerWidget {
     int remainingDays = 1;
 
     if (vac.startDate != null && vac.endDate != null) {
-      final s = DateTime(vac.startDate!.year, vac.startDate!.month, vac.startDate!.day);
-      final e = DateTime(vac.endDate!.year, vac.endDate!.month, vac.endDate!.day);
+      final s = DateTime(
+        vac.startDate!.year,
+        vac.startDate!.month,
+        vac.startDate!.day,
+      );
+      final e = DateTime(
+        vac.endDate!.year,
+        vac.endDate!.month,
+        vac.endDate!.day,
+      );
       totalDays = (e.difference(s).inDays + 1).clamp(1, 365);
 
       if (today.isBefore(s)) {
@@ -459,7 +503,11 @@ class VacationDetailScreen extends ConsumerWidget {
         remainingDays = (e.difference(today).inDays + 1).clamp(0, totalDays);
       }
     } else {
-      final created = DateTime(vac.createdAt.year, vac.createdAt.month, vac.createdAt.day);
+      final created = DateTime(
+        vac.createdAt.year,
+        vac.createdAt.month,
+        vac.createdAt.day,
+      );
       elapsedDays = (today.difference(created).inDays + 1).clamp(1, 365);
       totalDays = elapsedDays;
       remainingDays = 1;
@@ -467,7 +515,9 @@ class VacationDetailScreen extends ConsumerWidget {
 
     // 2. Metrik Burn Rate Finansial
     final effectiveElapsed = elapsedDays > 0 ? elapsedDays : 1;
-    final dailyBurnRate = detail.totalSpent > 0 ? (detail.totalSpent / effectiveElapsed).round() : 0;
+    final dailyBurnRate = detail.totalSpent > 0
+        ? (detail.totalSpent / effectiveElapsed).round()
+        : 0;
 
     final effectiveRemaining = remainingDays > 0 ? remainingDays : 1;
     final safeDailyAllowance = detail.remainingBudget > 0
@@ -660,7 +710,10 @@ class VacationDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildAccountBreakdownCard(
-      BuildContext context, VacationAccountBreakdown acc, bool isDark) {
+    BuildContext context,
+    VacationAccountBreakdown acc,
+    bool isDark,
+  ) {
     final accColor = Color(int.parse(acc.colorHex));
 
     return Container(
@@ -683,7 +736,7 @@ class VacationDetailScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              IconData(acc.iconCodePoint, fontFamily: 'MaterialIcons'),
+              IconHelper.getIcon(acc.iconCodePoint),
               color: accColor,
               size: 18,
             ),
@@ -737,8 +790,7 @@ class VacationDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTransactionCard(
-      BuildContext context, dynamic tx, bool isDark) {
+  Widget _buildTransactionCard(BuildContext context, dynamic tx, bool isDark) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
@@ -758,8 +810,11 @@ class VacationDetailScreen extends ConsumerWidget {
               color: AppColors.danger.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.north_east_rounded,
-                color: AppColors.danger, size: 16),
+            child: const Icon(
+              Icons.north_east_rounded,
+              color: AppColors.danger,
+              size: 16,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(

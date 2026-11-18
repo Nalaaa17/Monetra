@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_typography.dart';
 import '../../../../core/utils/bank_logo_helper.dart';
 import '../../../../core/utils/color_helper.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/icon_helper.dart';
 import '../../../../data/models/profile_model.dart';
 import '../../../../data/repositories/account_repository.dart';
 import '../providers/inter_profile_transfer_provider.dart';
@@ -202,8 +202,7 @@ class InterProfileAccountsCard extends StatelessWidget {
                       child: Row(
                         children: [
                           Icon(
-                            // ignore: non_const_argument_for_const_parameter
-                            IconData(p.iconCodePoint, fontFamily: 'MaterialIcons'),
+                            IconHelper.getIcon(p.iconCodePoint, fallback: p.isBusiness ? Icons.storefront_rounded : Icons.person_rounded),
                             size: 16,
                             color: pColor,
                           ),
@@ -228,8 +227,7 @@ class InterProfileAccountsCard extends StatelessWidget {
                     children: [
                       if (selectedProfile != null) ...[
                         Icon(
-                          // ignore: non_const_argument_for_const_parameter
-                          IconData(selectedProfile.iconCodePoint, fontFamily: 'MaterialIcons'),
+                          IconHelper.getIcon(selectedProfile.iconCodePoint, fallback: selectedProfile.isBusiness ? Icons.storefront_rounded : Icons.person_rounded),
                           size: 13,
                           color: ColorHelper.parseHex(selectedProfile.colorHex),
                         ),

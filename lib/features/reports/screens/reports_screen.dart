@@ -13,7 +13,6 @@ import '../widgets/monthly_donut_chart.dart';
 import '../widgets/six_month_trend_chart.dart';
 import '../../home/widgets/spending_progress_card.dart';
 import '../../home/widgets/monthly_activity_calendar.dart';
-import '../../home/widgets/floating_bottom_bar.dart';
 import '../widgets/export_report_sheet.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
@@ -230,7 +229,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: const FloatingBottomBar(selectedIndex: 2),
     );
   }
 

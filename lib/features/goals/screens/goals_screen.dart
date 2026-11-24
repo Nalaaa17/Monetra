@@ -8,7 +8,6 @@ import '../../home/providers/home_providers.dart';
 import '../providers/goal_providers.dart';
 import '../widgets/goal_card.dart';
 import '../widgets/goal_form_modal.dart';
-import '../../home/widgets/floating_bottom_bar.dart';
 
 class GoalsScreen extends ConsumerStatefulWidget {
   const GoalsScreen({super.key});
@@ -136,7 +135,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen>
                                 child: InkWell(
                                   onTap: () => _tabController.animateTo(0),
                                   borderRadius: BorderRadius.circular(10),
-                                  child: Container(
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 220),
+                                    curve: Curves.easeOutCubic,
                                     padding: const EdgeInsets.symmetric(vertical: 10),
                                     decoration: BoxDecoration(
                                       color: _tabController.index == 0
@@ -177,7 +178,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen>
                                 child: InkWell(
                                   onTap: () => _tabController.animateTo(1),
                                   borderRadius: BorderRadius.circular(10),
-                                  child: Container(
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 220),
+                                    curve: Curves.easeOutCubic,
                                     padding: const EdgeInsets.symmetric(vertical: 10),
                                     decoration: BoxDecoration(
                                       color: _tabController.index == 1
@@ -260,7 +263,6 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen>
             ),
           ),
         ),
-        bottomNavigationBar: const FloatingBottomBar(selectedIndex: 3),
       );
   }
 

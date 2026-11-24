@@ -16,7 +16,6 @@ import '../../../data/repositories/transfer_repository.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../home/providers/home_providers.dart';
-import '../../home/widgets/floating_bottom_bar.dart';
 import '../../transaction/screens/edit_transaction_screen.dart';
 import '../../transaction/screens/edit_transfer_screen.dart';
 import '../providers/history_providers.dart';
@@ -248,8 +247,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         onItemTap: (tx) {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (_) => EditTransactionScreen(detail: tx),
+                            AppRouter.buildSmoothRoute(
+                              EditTransactionScreen(detail: tx),
                             ),
                           );
                         },
@@ -268,7 +267,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: const FloatingBottomBar(selectedIndex: 1),
     );
   }
 
@@ -1364,8 +1362,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                 Navigator.pop(ctx);
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(
-                                    builder: (_) => EditTransferScreen(detail: tr),
+                                  AppRouter.buildSmoothRoute(
+                                    EditTransferScreen(detail: tr),
                                   ),
                                 );
                               },

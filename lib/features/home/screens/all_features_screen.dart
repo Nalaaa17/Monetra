@@ -15,33 +15,16 @@ class AllFeaturesScreen extends ConsumerWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final activeProfile = ref.watch(activeProfileProvider).valueOrNull;
     final isBusiness = activeProfile?.isBusiness ?? false;
-    final profileName =
-        activeProfile?.name ?? (isBusiness ? 'Bisnis' : 'Pribadi');
 
     return Scaffold(
       backgroundColor: AppColors.surfaceOf(context),
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Semua Fitur',
-              style: AppTypography.titleLarge.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimaryOf(context),
-              ),
-            ),
-            Text(
-              isBusiness
-                  ? 'Mode Bisnis • $profileName'
-                  : 'Mode Pribadi • $profileName',
-              style: AppTypography.labelSmall.copyWith(
-                fontSize: 11,
-                color: isBusiness ? const Color(0xFF3B82F6) : AppColors.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+        title: Text(
+          'Semua Fitur',
+          style: AppTypography.titleLarge.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryOf(context),
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,

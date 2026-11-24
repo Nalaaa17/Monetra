@@ -13,6 +13,7 @@ import '../../features/hpp/screens/hpp_calculator_screen.dart';
 import '../../features/hpp/screens/menu_catalog_screen.dart';
 import '../../features/home/screens/all_features_screen.dart';
 import '../../features/home/screens/home_screen.dart';
+import '../../features/home/widgets/floating_bottom_bar.dart';
 import '../../features/investasi/screens/investasi_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/profile/screens/manage_profiles_screen.dart';
@@ -53,7 +54,64 @@ CustomTransitionPage<void> _buildTransitionPage(
   );
 }
 
+int _lastTabIndex = 0;
+
+CustomTransitionPage<void> _buildTabTransitionPage(
+    Widget child, GoRouterState state, int tabIndex) {
+  final direction = tabIndex >= _lastTabIndex ? 1.0 : -1.0;
+  _lastTabIndex = tabIndex;
+
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 260),
+    reverseTransitionDuration: const Duration(milliseconds: 220),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curvedAnimation = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
+      return SlideTransition(
+        position: Tween<Offset>(
+          begin: Offset(0.05 * direction, 0.0),
+          end: Offset.zero,
+        ).animate(curvedAnimation),
+        child: FadeTransition(
+          opacity: curvedAnimation,
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
 class AppRouter {
+  static Route<T> buildSmoothRoute<T>(Widget page) {
+    return PageRouteBuilder<T>(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionDuration: const Duration(milliseconds: 280),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.06, 0.0),
+            end: Offset.zero,
+          ).animate(curved),
+          child: FadeTransition(opacity: curved, child: child),
+        );
+      },
+    );
+  }
+
+  static final GlobalKey<NavigatorState> rootNavigatorKey =
+      GlobalKey<NavigatorState>(debugLabel: 'root');
+  static final GlobalKey<NavigatorState> shellNavigatorKey =
+      GlobalKey<NavigatorState>(debugLabel: 'shell');
+
   static const String splash = '/splash';
   static const String home = '/';
   static const String addTransaction = '/add';
@@ -81,6 +139,7 @@ class AppRouter {
   static const String vacationDetail = '/vacations/detail';
 
   static final GoRouter router = GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: splash,
     routes: [
       GoRoute(
@@ -93,10 +152,47 @@ class AppRouter {
         pageBuilder: (context, state) =>
             _buildTransitionPage(const OnboardingScreen(), state),
       ),
-      GoRoute(
-        path: home,
-        pageBuilder: (context, state) =>
-            _buildTransitionPage(const HomeScreen(), state),
+      ShellRoute(
+        navigatorKey: shellNavigatorKey,
+        builder: (context, state, child) {
+          final path = state.uri.path;
+          int selectedIndex = 0;
+          if (path == history) {
+            selectedIndex = 1;
+          } else if (path == reports) {
+            selectedIndex = 2;
+          } else if (path == goals) {
+            selectedIndex = 3;
+          }
+          return Scaffold(
+            extendBody: true,
+            body: child,
+            bottomNavigationBar:
+                FloatingBottomBar(selectedIndex: selectedIndex),
+          );
+        },
+        routes: [
+          GoRoute(
+            path: home,
+            pageBuilder: (context, state) =>
+                _buildTabTransitionPage(const HomeScreen(), state, 0),
+          ),
+          GoRoute(
+            path: history,
+            pageBuilder: (context, state) =>
+                _buildTabTransitionPage(const HistoryScreen(), state, 1),
+          ),
+          GoRoute(
+            path: reports,
+            pageBuilder: (context, state) =>
+                _buildTabTransitionPage(const ReportsScreen(), state, 2),
+          ),
+          GoRoute(
+            path: goals,
+            pageBuilder: (context, state) =>
+                _buildTabTransitionPage(const GoalsScreen(), state, 3),
+          ),
+        ],
       ),
       GoRoute(
         path: addTransaction,
@@ -123,11 +219,6 @@ class AppRouter {
         },
       ),
       GoRoute(
-        path: history,
-        pageBuilder: (context, state) =>
-            _buildTransitionPage(const HistoryScreen(), state),
-      ),
-      GoRoute(
         path: transfer,
         pageBuilder: (context, state) =>
             _buildTransitionPage(const TransferScreen(), state),
@@ -148,11 +239,6 @@ class AppRouter {
             _buildTransitionPage(const RecurringTransactionsScreen(), state),
       ),
       GoRoute(
-        path: reports,
-        pageBuilder: (context, state) =>
-            _buildTransitionPage(const ReportsScreen(), state),
-      ),
-      GoRoute(
         path: manageAccounts,
         pageBuilder: (context, state) =>
             _buildTransitionPage(const ManageAccountsScreen(), state),
@@ -161,11 +247,6 @@ class AppRouter {
         path: manageCategories,
         pageBuilder: (context, state) =>
             _buildTransitionPage(const ManageCategoriesScreen(), state),
-      ),
-      GoRoute(
-        path: goals,
-        pageBuilder: (context, state) =>
-            _buildTransitionPage(const GoalsScreen(), state),
       ),
       GoRoute(
         path: allFeatures,

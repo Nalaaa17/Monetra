@@ -346,12 +346,12 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
                 ? AppColors.primary.withValues(alpha: 0.18)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
-            border: isSelected
-                ? Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.45),
-                    width: 1.2,
-                  )
-                : null,
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.45)
+                  : Colors.transparent,
+              width: 1.2,
+            ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(

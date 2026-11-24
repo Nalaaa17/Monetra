@@ -23,27 +23,11 @@ class _AppLockWrapperState extends ConsumerState<AppLockWrapper>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    AppRouter.router.routerDelegate.addListener(_onRouteChanged);
 
     // Tampilkan halaman awal bergaya Livin saat cold launch setelah onboarding selesai
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkInitialLockState();
     });
-  }
-
-  void _onRouteChanged() {
-    final isQuickAccess = ref.read(isQuickAccessActiveProvider);
-    if (!isQuickAccess) return;
-
-    final location =
-        AppRouter.router.routerDelegate.currentConfiguration.uri.path;
-    if (location == AppRouter.home || location == AppRouter.splash) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ref.read(isQuickAccessActiveProvider.notifier).state = false;
-        }
-      });
-    }
   }
 
   Future<void> _checkInitialLockState() async {
@@ -52,6 +36,17 @@ class _AppLockWrapperState extends ConsumerState<AppLockWrapper>
 
     if (mounted) {
       ref.read(isAppLockedProvider.notifier).state = true;
+    }
+  }
+
+  Future<void> _handleQuickAction(String route) async {
+    ref.read(isQuickAccessActiveProvider.notifier).state = true;
+    try {
+      await AppRouter.router.push(route);
+    } finally {
+      if (mounted) {
+        ref.read(isQuickAccessActiveProvider.notifier).state = false;
+      }
     }
   }
 
@@ -89,7 +84,6 @@ class _AppLockWrapperState extends ConsumerState<AppLockWrapper>
 
   @override
   void dispose() {
-    AppRouter.router.routerDelegate.removeListener(_onRouteChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -98,11 +92,29 @@ class _AppLockWrapperState extends ConsumerState<AppLockWrapper>
   Widget build(BuildContext context) {
     final isLocked = ref.watch(isAppLockedProvider);
     final isQuickAccessActive = ref.watch(isQuickAccessActiveProvider);
+    final showLock = isLocked && !isQuickAccessActive;
 
     return Stack(
       children: [
         widget.child ?? const SizedBox.shrink(),
-        if (isLocked && !isQuickAccessActive) const AppLockScreen(),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 280),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, anim) => FadeTransition(
+            opacity: anim,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 1.03, end: 1.0).animate(anim),
+              child: child,
+            ),
+          ),
+          child: showLock
+              ? AppLockScreen(
+                  key: const ValueKey('app_lock_screen'),
+                  onQuickAction: _handleQuickAction,
+                )
+              : const SizedBox.shrink(key: ValueKey('app_unlocked')),
+        ),
       ],
     );
   }

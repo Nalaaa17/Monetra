@@ -9,6 +9,7 @@ import '../../../core/utils/bank_logo_helper.dart';
 import '../../../core/utils/color_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/icon_helper.dart';
 import '../../../data/repositories/account_repository.dart';
 import '../../../data/repositories/transaction_repository.dart';
 import '../../../shared/widgets/animated_currency.dart';
@@ -22,7 +23,6 @@ import '../../transaction/screens/edit_transaction_screen.dart';
 import '../providers/home_providers.dart';
 import '../widgets/hero_sekilas_card.dart';
 import '../widgets/main_menu_grid.dart';
-import '../widgets/floating_bottom_bar.dart';
 import '../widgets/quick_feature_modals.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -155,32 +155,35 @@ class HomeScreen extends ConsumerWidget {
             },
             itemBuilder: (ctx) => [
               _buildPopupMenuItem('transfer', Icons.swap_horiz_rounded,
-                  'Transfer Saldo'),
+                  const Color(0xFF3B82F6), 'Transfer Saldo'),
               _buildPopupMenuItem('backup', Icons.cloud_sync_outlined,
-                  'Cadangkan & Pulihkan'),
+                  const Color(0xFF10B981), 'Cadangkan & Pulihkan'),
+              const PopupMenuDivider(),
+              _buildPopupMenuItem('recurring', Icons.repeat_rounded,
+                  const Color(0xFF8B5CF6), 'Transaksi Berulang'),
+              _buildPopupMenuItem('calculator', Icons.calculate_outlined,
+                  const Color(0xFF8B5CF6), 'Kalkulator'),
+              _buildPopupMenuItem('goals', Icons.track_changes_rounded,
+                  const Color(0xFF10B981), 'Target Tabungan'),
+              _buildPopupMenuItem('reports', Icons.bar_chart_rounded,
+                  const Color(0xFF3B82F6), 'Laporan Keuangan'),
+              _buildPopupMenuItem('history', Icons.receipt_long_rounded,
+                  const Color(0xFF0EA5E9), 'Riwayat Transaksi'),
               const PopupMenuDivider(),
               _buildPopupMenuItem(
-                  'recurring', Icons.repeat_rounded, 'Transaksi Berulang'),
-              _buildPopupMenuItem(
-                  'calculator', Icons.calculate_outlined, 'Kalkulator'),
-              _buildPopupMenuItem('goals', Icons.track_changes_outlined,
-                  'Target Tabungan'),
-              _buildPopupMenuItem(
-                  'reports', Icons.bar_chart_rounded, 'Laporan Keuangan'),
-              _buildPopupMenuItem('history', Icons.receipt_long_outlined,
-                  'Riwayat Transaksi'),
+                  'accounts',
+                  Icons.account_balance_wallet_outlined,
+                  const Color(0xFF3B82F6),
+                  'Kelola Rekening'),
+              _buildPopupMenuItem('categories', Icons.category_outlined,
+                  const Color(0xFFF59E0B), 'Kelola Kategori'),
+              _buildPopupMenuItem('profiles', Icons.switch_account_rounded,
+                  const Color(0xFF8B5CF6), 'Kelola Profil'),
               const PopupMenuDivider(),
-              _buildPopupMenuItem('accounts',
-                  Icons.account_balance_wallet_outlined, 'Kelola Rekening'),
-              _buildPopupMenuItem(
-                  'categories', Icons.category_outlined, 'Kelola Kategori'),
-              _buildPopupMenuItem(
-                  'profiles', Icons.switch_account_rounded, 'Kelola Profil'),
-              const PopupMenuDivider(),
-              _buildPopupMenuItem(
-                  'lock', Icons.lock_outline_rounded, 'Kunci Layar'),
-              _buildPopupMenuItem(
-                  'about', Icons.info_outline_rounded, 'Tentang Monetra'),
+              _buildPopupMenuItem('lock', Icons.lock_outline_rounded,
+                  const Color(0xFF0EA5E9), 'Kunci Layar'),
+              _buildPopupMenuItem('about', Icons.info_outline_rounded,
+                  const Color(0xFF64748B), 'Tentang Monetra'),
             ],
           ),
         ],
@@ -312,26 +315,35 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
       ),
-      bottomNavigationBar: const FloatingBottomBar(selectedIndex: 0),
     );
   }
 
   PopupMenuItem<String> _buildPopupMenuItem(
     String value,
     IconData icon,
+    Color color,
     String title,
   ) {
     return PopupMenuItem<String>(
       value: value,
       child: Row(
         children: [
-          Icon(icon, size: 20),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 17, color: color),
+          ),
           const SizedBox(width: 12),
           Flexible(
             child: Text(
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
             ),
           ),
         ],
@@ -458,17 +470,24 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildTransactionItem(BuildContext context, TransactionDetail tx) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isIncome = tx.isIncome;
     final sign = isIncome ? '+' : '-';
-    final amountColor = isIncome ? AppColors.tertiary : AppColors.danger;
+    final amountColor = isIncome ? const Color(0xFF10B981) : AppColors.danger;
+    final catColor = tx.categoryColorHex != null
+        ? ColorHelper.parseHex(tx.categoryColorHex!)
+        : amountColor;
+    final catIcon = tx.categoryIconCodePoint != null
+        ? IconHelper.getIcon(tx.categoryIconCodePoint!)
+        : (isIncome
+            ? Icons.savings_outlined
+            : Icons.shopping_bag_outlined);
 
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => EditTransactionScreen(detail: tx),
-          ),
+          AppRouter.buildSmoothRoute(EditTransactionScreen(detail: tx)),
         );
       },
       borderRadius: BorderRadius.circular(14),
@@ -476,23 +495,54 @@ class HomeScreen extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
+          color: AppColors.cardOf(context),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Theme.of(context).dividerColor),
+          border: Border.all(
+            color: Theme.of(context)
+                .dividerColor
+                .withValues(alpha: isDark ? 0.35 : 0.6),
+          ),
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: isIncome
-                  ? AppColors.tertiary.withValues(alpha: 0.15)
-                  : AppColors.danger.withValues(alpha: 0.12),
-              child: Icon(
-                isIncome
-                    ? Icons.arrow_downward_rounded
-                    : Icons.arrow_upward_rounded,
-                color: isIncome ? const Color(0xFF059669) : AppColors.danger,
-                size: 20,
-              ),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: catColor.withValues(alpha: isDark ? 0.18 : 0.13),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Icon(
+                    catIcon,
+                    color: catColor,
+                    size: 21,
+                  ),
+                ),
+                Positioned(
+                  right: -2,
+                  bottom: -2,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: amountColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.cardOf(context),
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      isIncome ? Icons.add_rounded : Icons.remove_rounded,
+                      size: 8,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -618,7 +668,7 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Versi 1.1.0 (Release)',
+              'Versi 1.1.1 (Release)',
               style: AppTypography.labelSmall.copyWith(
                 color: AppColors.textSecondaryOf(context),
               ),

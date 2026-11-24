@@ -36,48 +36,15 @@ class MainMenuGrid extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Menu Utama & Ubah
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  'Menu Utama',
-                  style: AppTypography.titleLarge.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: 8),
-              InkWell(
-                onTap: () => context.push(AppRouter.allFeatures),
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.apps_rounded,
-                        size: 15,
-                        color: AppColors.textSecondaryOf(context),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Semua',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: AppColors.textSecondaryOf(context),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          // Header Menu Utama
+          Text(
+            'Menu Utama',
+            style: AppTypography.titleLarge.copyWith(
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
 
           const SizedBox(height: 18),

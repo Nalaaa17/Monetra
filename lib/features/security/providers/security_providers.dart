@@ -46,6 +46,9 @@ final lockOnResumeEnabledProvider =
 /// Menyimpan status apakah layar aplikasi saat ini sedang terkunci
 final isAppLockedProvider = StateProvider<bool>((ref) => false);
 
+/// Menandai bahwa pengguna sedang mengakses menu catat cepat tanpa login penuh
+final isQuickAccessActiveProvider = StateProvider<bool>((ref) => false);
+
 /// Menyimpan informasi apakah hardware perangkat mendukung biometrik
 final biometricHardwareSupportedProvider = FutureProvider<bool>((ref) async {
   return await BiometricService.isBiometricSupported();

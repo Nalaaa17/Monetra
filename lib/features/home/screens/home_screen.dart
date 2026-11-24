@@ -17,6 +17,7 @@ import '../../history/providers/history_providers.dart';
 import '../../onboarding/providers/onboarding_providers.dart';
 import '../../profile/providers/profile_provider.dart';
 import '../../profile/widgets/profile_switcher_sheet.dart';
+import '../../security/providers/security_providers.dart';
 import '../../transaction/screens/edit_transaction_screen.dart';
 import '../providers/home_providers.dart';
 import '../widgets/hero_sekilas_card.dart';
@@ -145,6 +146,9 @@ class HomeScreen extends ConsumerWidget {
                 context.push(AppRouter.profiles);
               } else if (val == 'advisor') {
                 QuickFeatureModals.showAIAdvisorModal(context);
+              } else if (val == 'lock') {
+                ref.read(isQuickAccessActiveProvider.notifier).state = false;
+                ref.read(isAppLockedProvider.notifier).state = true;
               } else if (val == 'about') {
                 _showAboutMonetraDialog(context);
               }
@@ -174,43 +178,38 @@ class HomeScreen extends ConsumerWidget {
                   'profiles', Icons.switch_account_rounded, 'Kelola Profil'),
               const PopupMenuDivider(),
               _buildPopupMenuItem(
+                  'lock', Icons.lock_outline_rounded, 'Kunci Layar'),
+              _buildPopupMenuItem(
                   'about', Icons.info_outline_rounded, 'Tentang Monetra'),
             ],
           ),
         ],
       ),
       body: RefreshIndicator(
+        color: AppColors.primary,
         onRefresh: () async {
           ref.read(homeRefreshTriggerProvider.notifier).state++;
+          await Future.wait([
+            ref.refresh(balanceSummaryProvider.future),
+            ref.refresh(accountsWithBalanceProvider.future),
+            ref.refresh(recentTransactionsProvider.future),
+          ]);
         },
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           children: [
-            // Greeting & Dashboard Title (sesuai gambar referensi)
+            // Greeting Ringkas & Bersih
             Text(
-              'Dashboard',
+              'Halo, $userName',
               style: AppTypography.headlineLarge.copyWith(
                 fontWeight: FontWeight.w800,
-                fontSize: 26,
-                letterSpacing: -0.5,
+                fontSize: 24,
+                letterSpacing: -0.4,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                Text(
-                  '• Halo, $userName ☀️',
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondaryOf(context),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             // 1. Hero Card: Sekilas Hari Ini (Sesuai Referensi Gambar 1)
             balanceSummaryAsync.when(
@@ -532,30 +531,47 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyTransactionsState(BuildContext context, ProfileLabels profileLabels) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: AppColors.cardOf(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        border: Border.all(
+          color: Theme.of(context)
+              .dividerColor
+              .withValues(alpha: isDark ? 0.35 : 0.6),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.receipt_long_outlined,
-              size: 48, color: AppColors.textSecondaryOf(context)),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.receipt_long_outlined,
+              size: 28,
+              color: isDark ? AppColors.primary : AppColors.primaryDark,
+            ),
+          ),
           const SizedBox(height: 12),
           Text(
             profileLabels.emptyTransactionMsg,
-            style: AppTypography.titleMedium,
+            style: AppTypography.titleMedium.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             profileLabels.isBusiness
-                ? 'Tekan tombol Catat Uang di bawah untuk mulai mencatat omzet penjualan atau biaya operasional toko.'
-                : 'Tekan tombol Catat Uang di bawah untuk mulai mencatat pengeluaran atau pemasukan.',
+                ? 'Tap tombol + di bawah untuk catat omzet atau biaya.'
+                : 'Tap tombol + di bawah untuk mulai mencatat.',
             textAlign: TextAlign.center,
-            style: AppTypography.bodyMedium.copyWith(
+            style: AppTypography.bodySmall.copyWith(
               color: AppColors.textSecondaryOf(context),
             ),
           ),
@@ -602,7 +618,7 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'Versi 1.0.1 (Release)',
+              'Versi 1.1.0 (Release)',
               style: AppTypography.labelSmall.copyWith(
                 color: AppColors.textSecondaryOf(context),
               ),

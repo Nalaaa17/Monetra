@@ -59,19 +59,19 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen>
               child: TextButton.icon(
                 style: TextButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 onPressed: () => showGoalFormModal(context, ref),
-                icon: const Icon(Icons.add, size: 18),
+                icon: const Icon(Icons.add_rounded, size: 18),
                 label: Text(
                   'Target',
                   style: AppTypography.labelMedium.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Colors.black,
                   ),
                 ),
               ),
@@ -94,7 +94,15 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen>
                 : 0.0;
             final overallPct = (overallProgress * 100).toInt();
 
-            return NestedScrollView(
+            return RefreshIndicator(
+              color: AppColors.primary,
+              notificationPredicate: (n) => n.depth == 2 || n.depth == 0,
+              onRefresh: () async {
+                ref.read(homeRefreshTriggerProvider.notifier).state++;
+                final f = ref.refresh(goalsListProvider.future);
+                await f;
+              },
+              child: NestedScrollView(
               headerSliverBuilder: (context, _) => [
                 SliverToBoxAdapter(
                   child: Padding(
@@ -235,6 +243,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen>
                   ),
                 ],
               ),
+            ),
             );
           },
           loading: () => const Center(

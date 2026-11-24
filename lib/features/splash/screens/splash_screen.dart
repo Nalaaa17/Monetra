@@ -178,7 +178,7 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'v1.0.0',
+                        'v1.1.0',
                         style: AppTypography.labelSmall.copyWith(
                           color: AppColors.textSecondaryOf(context).withValues(alpha: 0.5),
                           fontSize: 10,

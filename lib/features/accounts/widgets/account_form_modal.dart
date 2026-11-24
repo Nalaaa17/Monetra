@@ -121,41 +121,48 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
 
   Widget _buildTypeSegment(String type, String label, IconData icon) {
     final isSelected = _selectedType == type;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = isDark ? AppColors.primary : AppColors.primaryDark;
     return Expanded(
       child: InkWell(
         onTap: () => setState(() => _selectedType = type),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(9),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 9),
+          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 6),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.primary.withValues(alpha: 0.15)
+                ? AppColors.primary.withValues(alpha: 0.18)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(9),
           ),
           child: Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: 15,
-                  color: isSelected
-                      ? AppColors.primaryDark
-                      : AppColors.textSecondaryOf(context),
-                ),
-                const SizedBox(width: 5),
-                Text(
-                  label,
-                  style: AppTypography.labelMedium.copyWith(
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    fontSize: 12,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 16,
                     color: isSelected
-                        ? AppColors.primaryDark
+                        ? activeColor
                         : AppColors.textSecondaryOf(context),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    style: AppTypography.labelMedium.copyWith(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontSize: 12.5,
+                      color: isSelected
+                          ? activeColor
+                          : AppColors.textSecondaryOf(context),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -428,137 +435,107 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                   const SizedBox(height: 14),
                 ],
 
-                // 4. Kelompok Dana & Tipe Akun
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 4,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Kelompok', style: AppTypography.labelSmall),
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.all(3),
+                // 4. Tipe Akun (Full-width responsive segmented control)
+                Text('Tipe Akun', style: AppTypography.labelSmall),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceOf(context),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.dividerOf(context)),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildTypeSegment(
+                          'bank', 'Bank', Icons.account_balance_rounded),
+                      _buildTypeSegment(
+                          'ewallet', 'E-Wallet', Icons.wallet_rounded),
+                      _buildTypeSegment(
+                          'cash', 'Tunai', Icons.payments_rounded),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // 5. Kelompok Dana (Full-width responsive segmented control)
+                Text('Kelompok Dana', style: AppTypography.labelSmall),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceOf(context),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.dividerOf(context)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () =>
+                              setState(() => _selectedCategory = 'harian'),
+                          borderRadius: BorderRadius.circular(9),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 9),
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceOf(context),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: AppColors.dividerOf(context)),
+                              color: _selectedCategory == 'harian'
+                                  ? AppColors.primary.withValues(alpha: 0.18)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(9),
                             ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: InkWell(
-                                    onTap: () => setState(
-                                        () => _selectedCategory = 'harian'),
-                                    borderRadius: BorderRadius.circular(9),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: _selectedCategory == 'harian'
-                                            ? AppColors.primary
-                                                .withValues(alpha: 0.18)
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(9),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          'Harian',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight:
-                                                _selectedCategory == 'harian'
-                                                    ? FontWeight.bold
-                                                    : FontWeight.w500,
-                                            color: _selectedCategory == 'harian'
-                                                ? (isDark
-                                                    ? AppColors.primary
-                                                    : AppColors.primaryDark)
-                                                : AppColors.textSecondaryOf(
-                                                    context),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                            child: Center(
+                              child: Text(
+                                'Harian',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: _selectedCategory == 'harian'
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
+                                  color: _selectedCategory == 'harian'
+                                      ? (isDark
+                                          ? AppColors.primary
+                                          : AppColors.primaryDark)
+                                      : AppColors.textSecondaryOf(context),
                                 ),
-                                Expanded(
-                                  child: InkWell(
-                                    onTap: () => setState(
-                                        () => _selectedCategory = 'tabungan'),
-                                    borderRadius: BorderRadius.circular(9),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: _selectedCategory == 'tabungan'
-                                            ? AppColors.primary
-                                                .withValues(alpha: 0.18)
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(9),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          'Tabungan',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight:
-                                                _selectedCategory == 'tabungan'
-                                                    ? FontWeight.bold
-                                                    : FontWeight.w500,
-                                            color:
-                                                _selectedCategory == 'tabungan'
-                                                    ? (isDark
-                                                        ? AppColors.primary
-                                                        : AppColors.primaryDark)
-                                                    : AppColors.textSecondaryOf(
-                                                        context),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 5,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Tipe', style: AppTypography.labelSmall),
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.all(3),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () =>
+                              setState(() => _selectedCategory = 'tabungan'),
+                          borderRadius: BorderRadius.circular(9),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 9),
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceOf(context),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: AppColors.dividerOf(context)),
+                              color: _selectedCategory == 'tabungan'
+                                  ? AppColors.primary.withValues(alpha: 0.18)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(9),
                             ),
-                            child: Row(
-                              children: [
-                                _buildTypeSegment('bank', 'Bank',
-                                    Icons.account_balance_rounded),
-                                _buildTypeSegment('ewallet', 'E-Wallet',
-                                    Icons.wallet_rounded),
-                                _buildTypeSegment(
-                                    'cash', 'Tunai', Icons.payments_rounded),
-                              ],
+                            child: Center(
+                              child: Text(
+                                'Tabungan',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: _selectedCategory == 'tabungan'
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
+                                  color: _selectedCategory == 'tabungan'
+                                      ? (isDark
+                                          ? AppColors.primary
+                                          : AppColors.primaryDark)
+                                      : AppColors.textSecondaryOf(context),
+                                ),
+                              ),
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 22),
 

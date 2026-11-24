@@ -70,10 +70,10 @@ class HeroSekilasCard extends ConsumerWidget {
                   padding: const EdgeInsets.all(4),
                   child: Icon(
                     isHidden
-                        ? Icons.lock_outline_rounded
-                        : Icons.lock_open_rounded,
-                    color: Colors.white.withValues(alpha: 0.65),
-                    size: 18,
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: Colors.white.withValues(alpha: 0.72),
+                    size: 19,
                   ),
                 ),
               ),
@@ -82,14 +82,19 @@ class HeroSekilasCard extends ConsumerWidget {
 
           const SizedBox(height: 6),
 
-          // Baris 2: Nominal Utama Besar & Jelas
-          Text(
-            isHidden ? '••••••••' : CurrencyFormatter.format(totalAssets),
-            style: AppTypography.headlineLarge.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 30,
-              letterSpacing: -0.5,
+          // Baris 2: Nominal Utama Besar & Jelas (Anti-wrap)
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              isHidden ? '••••••••' : CurrencyFormatter.format(totalAssets),
+              maxLines: 1,
+              style: AppTypography.headlineLarge.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 30,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
 

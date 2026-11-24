@@ -212,18 +212,33 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           // 2. Konten Riwayat Harian
           Expanded(
             child: RefreshIndicator(
+              color: AppColors.primary,
               onRefresh: () async {
                 ref.read(homeRefreshTriggerProvider.notifier).state++;
+                await Future.wait([
+                  ref.refresh(groupedHistoryTransactionsProvider.future),
+                  ref.refresh(accountsWithBalanceProvider.future),
+                ]);
               },
               child: historyGroupsAsync.when(
                 data: (groups) {
                   if (groups.isEmpty) {
-                    if (filter.hasAnyFilter) {
-                      return _buildEmptySearchState(context);
-                    }
-                    return _buildEmptyHistoryState(context);
+                    return LayoutBuilder(
+                      builder: (context, constraints) => SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight,
+                          ),
+                          child: filter.hasAnyFilter
+                              ? _buildEmptySearchState(context)
+                              : _buildEmptyHistoryState(context),
+                        ),
+                      ),
+                    );
                   }
                   return ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
                     itemCount: groups.length,
                     itemBuilder: (context, index) {

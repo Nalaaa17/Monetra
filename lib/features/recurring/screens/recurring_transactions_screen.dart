@@ -50,8 +50,12 @@ class _RecurringTransactionsScreenState
         ],
       ),
       body: RefreshIndicator(
+        color: AppColors.primary,
         onRefresh: () async {
           ref.read(homeRefreshTriggerProvider.notifier).state++;
+          final refreshFuture =
+              ref.refresh(recurringTransactionsListProvider.future);
+          await refreshFuture;
         },
         child: listAsync.when(
           data: (items) {
@@ -60,6 +64,7 @@ class _RecurringTransactionsScreenState
             final filteredItems = _applyFilter(items);
 
             return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
               children: [
                 _buildSummaryCard(context, summary),

@@ -91,8 +91,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 }
               },
               child: RefreshIndicator(
+                color: AppColors.primary,
                 onRefresh: () async {
                   ref.read(homeRefreshTriggerProvider.notifier).state++;
+                  final f1 = ref.refresh(monthlyReportProvider.future);
+                  final f2 = ref.refresh(sixMonthTrendProvider.future);
+                  await Future.wait([f1, f2]);
                 },
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 280),
@@ -129,9 +133,22 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         if (report.totalIncome == 0 &&
                             report.totalExpense == 0) {
                           if (!hasTrendActivity) {
-                            return _buildEmptyMonthState(context, monthName);
+                            return LayoutBuilder(
+                              builder: (context, constraints) =>
+                                  SingleChildScrollView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    minHeight: constraints.maxHeight,
+                                  ),
+                                  child:
+                                      _buildEmptyMonthState(context, monthName),
+                                ),
+                              ),
+                            );
                           }
                           return ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 14),
                             children: [
@@ -148,6 +165,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         }
 
                         return ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 14),
                           children: [

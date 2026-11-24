@@ -6,7 +6,6 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/bank_brands.dart';
 import '../../../core/utils/bank_logo_helper.dart';
 import '../../../core/utils/color_helper.dart';
-import '../../../core/utils/currency_formatter.dart';
 import '../../../data/models/account.dart';
 import '../../../data/repositories/account_repository.dart';
 import '../../../shared/providers/repository_providers.dart';
@@ -114,28 +113,6 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
     setState(() {});
   }
 
-  List<BankBrand> _getAutocompleteSuggestions(String rawInput) {
-    final q = rawInput.trim().toLowerCase();
-    if (q.isEmpty) return const [];
-    final exactBrand = BankBrands.resolve(
-      logoKey: _selectedLogoKey,
-      accountName: rawInput,
-    );
-    if (exactBrand != null &&
-        exactBrand.displayName.toLowerCase() == q &&
-        _selectedLogoKey == exactBrand.key) {
-      return const [];
-    }
-
-    return BankBrands.all
-        .where((b) =>
-            b.displayName.toLowerCase().contains(q) ||
-            b.key.contains(q) ||
-            b.aliases.any((a) => a.contains(q)))
-        .take(5)
-        .toList();
-  }
-
   int _iconCodeForType(String type) {
     if (type == 'cash') return Icons.payments_rounded.codePoint;
     if (type == 'ewallet') return Icons.wallet_rounded.codePoint;
@@ -195,17 +172,15 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
         ? 'Nama Akun'
         : _nameController.text.trim();
 
-    final selectedBrand = BankBrands.findByKey(_selectedLogoKey) ??
-        BankLogoHelper.resolveBrand(_nameController.text);
     final popularBrands =
-        BankBrands.all.where((b) => b.isPopular).take(12).toList();
+        BankBrands.all.where((b) => b.isPopular).take(10).toList();
 
     return Material(
       color: Theme.of(context).cardColor,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(20, 14, 20, bottomInset + 20),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, bottomInset + 20),
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -216,7 +191,7 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                 // Top drag handle
                 Center(
                   child: Container(
-                    width: 40,
+                    width: 36,
                     height: 4,
                     decoration: BoxDecoration(
                       color: Colors.grey.withValues(alpha: 0.3),
@@ -224,284 +199,157 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
-                // Header Sheet
+                // Header Sheet (Clean & modern, no verbose subtitles)
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isEditing
-                                ? 'Edit ${widget.existing!.name}'
-                                : 'Tambah Akun Baru',
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            isEditing
-                                ? 'Perbarui data dompet atau rekening'
-                                : 'Hubungkan rekening bank, e-wallet, atau tunai',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondaryOf(context),
-                            ),
-                          ),
-                        ],
+                    Text(
+                      isEditing ? 'Edit Akun' : 'Tambah Akun',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded),
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
 
-                // 1. HERO LIVE PREVIEW CARD
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF161A23) : const Color(0xFF1E2430),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                // 1. Quick Brand Selector Strip
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          BankLogoHelper.buildAccountBadge(
-                            context: context,
-                            accountName: previewName,
-                            accountColor: previewColor,
-                            logoKey: _selectedLogoKey,
-                            size: 38,
-                            borderRadius: 10,
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: (_selectedCategory == 'tabungan'
-                                      ? const Color(0xFF38BDF8)
-                                      : const Color(0xFF34D399))
-                                  .withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _selectedCategory == 'tabungan'
-                                      ? Icons.savings_rounded
-                                      : Icons.bolt_rounded,
-                                  size: 13,
-                                  color: _selectedCategory == 'tabungan'
-                                      ? const Color(0xFF38BDF8)
-                                      : const Color(0xFF34D399),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  _selectedCategory == 'tabungan'
-                                      ? 'Tabungan'
-                                      : 'Uang Harian',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: _selectedCategory == 'tabungan'
-                                        ? const Color(0xFF38BDF8)
-                                        : const Color(0xFF34D399),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        previewName,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            !isEditing
-                                ? CurrencyFormatter.format(int.tryParse(
-                                        _balanceController.text
-                                            .replaceAll('.', '')
-                                            .replaceAll(',', '')) ??
-                                    0)
-                                : 'Saldo Terkelola Aktif',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.white.withValues(alpha: 0.7),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            _selectedType.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 10,
-                              letterSpacing: 1,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white.withValues(alpha: 0.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // 2. Pilih Bank / Brand
-                Text(
-                  'Pilih Bank / E-Wallet Indonesia',
-                  style: AppTypography.labelSmall.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                InkWell(
-                  onTap: _openFullBrandPicker,
-                  borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceOf(context),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: Theme.of(context)
-                            .dividerColor
-                            .withValues(alpha: 0.6),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.account_balance_rounded,
-                          size: 18,
-                          color: AppColors.primaryDark,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                selectedBrand != null
-                                    ? selectedBrand.displayName
-                                    : 'Cari Bank atau E-Wallet Indonesia...',
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: selectedBrand != null
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: selectedBrand != null
-                                      ? AppColors.textPrimaryOf(context)
-                                      : AppColors.textSecondaryOf(context),
+                      ...popularBrands.map((brand) {
+                        final isSelected = _selectedLogoKey == brand.key;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: InkWell(
+                            onTap: () => _applyBrandSelection(brand,
+                                forceUpdateName: !isEditing),
+                            borderRadius: BorderRadius.circular(12),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.primary
+                                        .withValues(alpha: isDark ? 0.22 : 0.16)
+                                    : AppColors.surfaceOf(context),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : Theme.of(context)
+                                          .dividerColor
+                                          .withValues(alpha: 0.5),
+                                  width: isSelected ? 1.5 : 1,
                                 ),
                               ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  BankLogoHelper.buildBrandBadge(
+                                    context: context,
+                                    brand: brand,
+                                    size: 22,
+                                    borderRadius: 6,
+                                  ),
+                                  const SizedBox(width: 7),
+                                  Text(
+                                    brand.displayName,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.w500,
+                                      color: isSelected
+                                          ? (isDark
+                                              ? AppColors.primary
+                                              : AppColors.primaryDark)
+                                          : AppColors.textPrimaryOf(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                      // Tombol Cari Bank Lainnya
+                      InkWell(
+                        onTap: _openFullBrandPicker,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceOf(context),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Theme.of(context)
+                                  .dividerColor
+                                  .withValues(alpha: 0.5),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.search_rounded,
+                                size: 16,
+                                color: AppColors.textSecondaryOf(context),
+                              ),
+                              const SizedBox(width: 5),
                               Text(
-                                'Tersedia ${BankBrands.all.length} bank nasional, digital, BPD & e-wallet',
+                                'Lainnya',
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   color: AppColors.textSecondaryOf(context),
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(
-                          Icons.keyboard_arrow_right_rounded,
-                          size: 20,
-                          color: Colors.grey,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-
-                // Quick Popular Brand Strip
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: popularBrands.map((brand) {
-                      final isSelected = _selectedLogoKey == brand.key;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: InkWell(
-                          onTap: () => _applyBrandSelection(brand,
-                              forceUpdateName: !isEditing),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? AppColors.primary
-                                      .withValues(alpha: isDark ? 0.22 : 0.16)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : Theme.of(context)
-                                        .dividerColor
-                                        .withValues(alpha: 0.6),
-                                width: isSelected ? 1.6 : 1,
-                              ),
-                            ),
-                            child: BankLogoHelper.buildBrandBadge(
-                              context: context,
-                              brand: brand,
-                              size: 32,
-                              borderRadius: 8,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                // 3. Nama Akun / Dompet
-                Text('Nama Akun / Dompet', style: AppTypography.labelSmall),
+                // 2. Nama Akun
+                Text('Nama Akun', style: AppTypography.labelSmall),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _nameController,
                   onChanged: _onNameChanged,
                   decoration: InputDecoration(
-                    hintText: 'Contoh: BCA Tabungan, GoPay Utama, Dompet Saku',
+                    hintText: 'Nama akun / dompet',
                     filled: true,
                     fillColor: AppColors.surfaceOf(context),
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: GestureDetector(
+                        onTap: _openFullBrandPicker,
+                        child: BankLogoHelper.buildAccountBadge(
+                          context: context,
+                          accountName: previewName,
+                          accountColor: previewColor,
+                          logoKey: _selectedLogoKey,
+                          size: 28,
+                          borderRadius: 8,
+                        ),
+                      ),
+                    ),
                     suffixIcon: _nameController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear_rounded, size: 18),
@@ -516,15 +364,23 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                           )
                         : null,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
                         color: Theme.of(context)
                             .dividerColor
-                            .withValues(alpha: 0.6),
+                            .withValues(alpha: 0.5),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                        color: Theme.of(context)
+                            .dividerColor
+                            .withValues(alpha: 0.4),
                       ),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
+                        horizontal: 14, vertical: 13),
                   ),
                   validator: (val) {
                     if (val == null || val.trim().isEmpty) {
@@ -533,37 +389,9 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                     return null;
                   },
                 ),
-                // Saran Auto-complete Bank / Dompet
-                Builder(
-                  builder: (context) {
-                    final suggestions =
-                        _getAutocompleteSuggestions(_nameController.text);
-                    if (suggestions.isEmpty) return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: suggestions.map((b) {
-                          return ActionChip(
-                            avatar: BankLogoHelper.buildBrandBadge(
-                              context: context,
-                              brand: b,
-                              size: 18,
-                              borderRadius: 4,
-                            ),
-                            label: Text(b.displayName),
-                            onPressed: () =>
-                                _applyBrandSelection(b, forceUpdateName: true),
-                          );
-                        }).toList(),
-                      ),
-                    );
-                  },
-                ),
                 const SizedBox(height: 14),
 
-                // 4. Saldo Awal (Khusus Tambah Baru)
+                // 3. Saldo Awal (Khusus Tambah Baru)
                 if (!isEditing) ...[
                   Text('Saldo Awal (Rp)', style: AppTypography.labelSmall),
                   const SizedBox(height: 6),
@@ -578,145 +406,163 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                       filled: true,
                       fillColor: AppColors.surfaceOf(context),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(14),
                         borderSide: BorderSide(
                           color: Theme.of(context)
                               .dividerColor
-                              .withValues(alpha: 0.6),
+                              .withValues(alpha: 0.5),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide(
+                          color: Theme.of(context)
+                              .dividerColor
+                              .withValues(alpha: 0.4),
                         ),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
+                          horizontal: 14, vertical: 13),
                     ),
                   ),
                   const SizedBox(height: 14),
                 ],
 
-                // 5. Kelompok Dana (Segmented Bar)
-                Text('Kelompok Dana', style: AppTypography.labelSmall),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardOf(context),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.dividerOf(context)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => setState(() => _selectedCategory = 'harian'),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 9),
+                // 4. Kelompok Dana & Tipe Akun
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Kelompok', style: AppTypography.labelSmall),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.all(3),
                             decoration: BoxDecoration(
-                              color: _selectedCategory == 'harian'
-                                  ? AppColors.primary.withValues(alpha: 0.15)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
+                              color: AppColors.surfaceOf(context),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: AppColors.dividerOf(context)),
                             ),
-                            child: Center(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.bolt_rounded,
-                                    size: 16,
-                                    color: _selectedCategory == 'harian'
-                                        ? AppColors.primaryDark
-                                        : AppColors.textSecondaryOf(context),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Uang Harian',
-                                    style: AppTypography.labelMedium.copyWith(
-                                      fontWeight: _selectedCategory == 'harian'
-                                          ? FontWeight.bold
-                                          : FontWeight.w500,
-                                      fontSize: 12,
-                                      color: _selectedCategory == 'harian'
-                                          ? AppColors.primaryDark
-                                          : AppColors.textSecondaryOf(context),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () => setState(
+                                        () => _selectedCategory = 'harian'),
+                                    borderRadius: BorderRadius.circular(9),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: _selectedCategory == 'harian'
+                                            ? AppColors.primary
+                                                .withValues(alpha: 0.18)
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(9),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          'Harian',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight:
+                                                _selectedCategory == 'harian'
+                                                    ? FontWeight.bold
+                                                    : FontWeight.w500,
+                                            color: _selectedCategory == 'harian'
+                                                ? (isDark
+                                                    ? AppColors.primary
+                                                    : AppColors.primaryDark)
+                                                : AppColors.textSecondaryOf(
+                                                    context),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => setState(() => _selectedCategory = 'tabungan'),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 9),
-                            decoration: BoxDecoration(
-                              color: _selectedCategory == 'tabungan'
-                                  ? AppColors.primary.withValues(alpha: 0.15)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Center(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.savings_rounded,
-                                    size: 16,
-                                    color: _selectedCategory == 'tabungan'
-                                        ? AppColors.primaryDark
-                                        : AppColors.textSecondaryOf(context),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Tabungan',
-                                    style: AppTypography.labelMedium.copyWith(
-                                      fontWeight: _selectedCategory == 'tabungan'
-                                          ? FontWeight.bold
-                                          : FontWeight.w500,
-                                      fontSize: 12,
-                                      color: _selectedCategory == 'tabungan'
-                                          ? AppColors.primaryDark
-                                          : AppColors.textSecondaryOf(context),
+                                ),
+                                Expanded(
+                                  child: InkWell(
+                                    onTap: () => setState(
+                                        () => _selectedCategory = 'tabungan'),
+                                    borderRadius: BorderRadius.circular(9),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: _selectedCategory == 'tabungan'
+                                            ? AppColors.primary
+                                                .withValues(alpha: 0.18)
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(9),
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          'Tabungan',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight:
+                                                _selectedCategory == 'tabungan'
+                                                    ? FontWeight.bold
+                                                    : FontWeight.w500,
+                                            color:
+                                                _selectedCategory == 'tabungan'
+                                                    ? (isDark
+                                                        ? AppColors.primary
+                                                        : AppColors.primaryDark)
+                                                    : AppColors.textSecondaryOf(
+                                                        context),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // 6. Tipe Akun (Segmented Bar)
-                Text('Tipe Akun', style: AppTypography.labelSmall),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardOf(context),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.dividerOf(context)),
-                  ),
-                  child: Row(
-                    children: [
-                      _buildTypeSegment(
-                          'bank', 'Bank', Icons.account_balance_rounded),
-                      _buildTypeSegment(
-                          'ewallet', 'E-Wallet', Icons.wallet_rounded),
-                      _buildTypeSegment(
-                          'cash', 'Cash', Icons.payments_rounded),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 5,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Tipe', style: AppTypography.labelSmall),
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceOf(context),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: AppColors.dividerOf(context)),
+                            ),
+                            child: Row(
+                              children: [
+                                _buildTypeSegment('bank', 'Bank',
+                                    Icons.account_balance_rounded),
+                                _buildTypeSegment('ewallet', 'E-Wallet',
+                                    Icons.wallet_rounded),
+                                _buildTypeSegment(
+                                    'cash', 'Tunai', Icons.payments_rounded),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 22),
 
-                // 7. Tombol Simpan
+                // 5. Tombol Simpan
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -725,6 +571,7 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.black,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -806,8 +653,10 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
       ref.read(homeRefreshTriggerProvider.notifier).state++;
       if (mounted) {
         Navigator.pop(context);
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(milliseconds: 1600),
             content: Text(isEditing
                 ? 'Akun "$name" berhasil diperbarui!'
                 : 'Akun "$name" berhasil ditambahkan!'),
@@ -817,8 +666,10 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(milliseconds: 2000),
             content: Text('Gagal menyimpan akun: $e'),
             backgroundColor: AppColors.danger,
           ),

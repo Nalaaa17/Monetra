@@ -219,10 +219,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         if (_selectedAccountIds.length > 1) {
           _selectedAccountIds.remove(id);
         } else {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Pilih minimal 1 akun untuk memulai Monetra'),
-              duration: Duration(seconds: 1),
+              duration: Duration(milliseconds: 1400),
             ),
           );
         }

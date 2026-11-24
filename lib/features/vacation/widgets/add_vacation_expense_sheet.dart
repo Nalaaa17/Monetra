@@ -60,8 +60,10 @@ class _AddVacationExpenseSheetState
   Future<void> _submit() async {
     final amount = _parsedAmount;
     if (amount <= 0) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
+          duration: Duration(milliseconds: 1600),
           content: Text('Masukkan nominal pengeluaran yang valid'),
         ),
       );
@@ -110,8 +112,12 @@ class _AddVacationExpenseSheetState
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal mencatat pengeluaran: $e')),
+          SnackBar(
+            duration: const Duration(milliseconds: 2000),
+            content: Text('Gagal mencatat pengeluaran: $e'),
+          ),
         );
       }
     } finally {

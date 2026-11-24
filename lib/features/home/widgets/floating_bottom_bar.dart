@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_typography.dart';
 import '../../../../core/router/app_router.dart';
 
 class FloatingBottomBar extends StatefulWidget {
@@ -43,140 +42,202 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
         return Material(
-          color: isDark ? const Color(0xFF161A23) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          color: Theme.of(ctx).cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           clipBehavior: Clip.antiAlias,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withValues(alpha: 0.35),
-                    borderRadius: BorderRadius.circular(2),
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 18),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.danger.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_upward_rounded,
-                    color: AppColors.danger,
-                    size: 22,
-                  ),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Pilih Transaksi',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
                 ),
-                title: Text(
-                  'Catat Pengeluaran',
-                  style: AppTypography.titleSmall.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimaryOf(ctx),
-                  ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    // 1. Pengeluaran
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          context.push(
+                            '${AppRouter.addTransaction}?type=expense',
+                            extra: {'type': 'expense'},
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: AppColors.danger.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: AppColors.danger.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.danger,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.arrow_upward_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              const Text(
+                                'Pengeluaran',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: AppColors.danger,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+
+                    // 2. Pemasukan
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          context.push(
+                            '${AppRouter.addTransaction}?type=income',
+                            extra: {'type': 'income'},
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF059669).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF059669).withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF059669),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.arrow_downward_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              const Text(
+                                'Pemasukan',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: Color(0xFF059669),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+
+                    // 3. Transfer
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          context.push(AppRouter.transfer);
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0284C7).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF0284C7).withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF0284C7),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.swap_horiz_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              const Text(
+                                'Transfer',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: Color(0xFF0284C7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                subtitle: Text(
-                  'Makan, bensin, belanja, tagihan bulanan...',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondaryOf(ctx),
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push(
-                    '${AppRouter.addTransaction}?type=expense',
-                    extra: {'type': 'expense'},
-                  );
-                },
-              ),
-              const SizedBox(height: 4),
-              Divider(height: 1, color: AppColors.dividerOf(ctx).withValues(alpha: 0.5)),
-              const SizedBox(height: 4),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.tertiary.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_downward_rounded,
-                    color: AppColors.tertiary,
-                    size: 22,
-                  ),
-                ),
-                title: Text(
-                  'Catat Pemasukan',
-                  style: AppTypography.titleSmall.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimaryOf(ctx),
-                  ),
-                ),
-                subtitle: Text(
-                  'Gaji, bonus, imbal hasil, penjualan...',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondaryOf(ctx),
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push(
-                    '${AppRouter.addTransaction}?type=income',
-                    extra: {'type': 'income'},
-                  );
-                },
-              ),
-              const SizedBox(height: 4),
-              Divider(height: 1, color: AppColors.dividerOf(ctx).withValues(alpha: 0.5)),
-              const SizedBox(height: 4),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(
-                    Icons.swap_horiz_rounded,
-                    color: AppColors.secondary,
-                    size: 22,
-                  ),
-                ),
-                title: Text(
-                  'Transfer Antar Rekening',
-                  style: AppTypography.titleSmall.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimaryOf(ctx),
-                  ),
-                ),
-                subtitle: Text(
-                  'Pindah saldo kas harian ke tabungan atau sebaliknya',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondaryOf(ctx),
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  context.push(AppRouter.transfer);
-                },
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      );
-    },
+        );
+      },
     );
   }
 

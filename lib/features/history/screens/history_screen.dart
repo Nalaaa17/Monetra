@@ -123,7 +123,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       SnackBar(
         content: Text(message),
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
+        duration: const Duration(milliseconds: 2200),
         action: SnackBarAction(
           label: 'Urungkan',
           textColor: AppColors.primary,
@@ -159,7 +159,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 onChanged: _onSearchChanged,
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
-                  hintText: 'Cari catatan, kategori, akun, nominal...',
+                  hintText: 'Cari transaksi...',
                   hintStyle: AppTypography.bodyMedium.copyWith(
                     color: AppColors.textSecondaryOf(context),
                     fontSize: 14,

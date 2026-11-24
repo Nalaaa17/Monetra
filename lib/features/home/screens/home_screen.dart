@@ -151,30 +151,28 @@ class HomeScreen extends ConsumerWidget {
             },
             itemBuilder: (ctx) => [
               _buildPopupMenuItem('transfer', Icons.swap_horiz_rounded,
-                  'Transfer Saldo Antar Akun'),
+                  'Transfer Saldo'),
               _buildPopupMenuItem('backup', Icons.cloud_sync_outlined,
-                  'Cadangkan & Pulihkan Data'),
+                  'Cadangkan & Pulihkan'),
               const PopupMenuDivider(),
               _buildPopupMenuItem(
                   'recurring', Icons.repeat_rounded, 'Transaksi Berulang'),
               _buildPopupMenuItem(
-                  'calculator', Icons.calculate_outlined, 'Kalkulator Uang'),
+                  'calculator', Icons.calculate_outlined, 'Kalkulator'),
               _buildPopupMenuItem('goals', Icons.track_changes_outlined,
-                  'Target Keuangan (Goals)'),
+                  'Target Tabungan'),
               _buildPopupMenuItem(
-                  'reports', Icons.bar_chart_rounded, 'Laporan Finansial'),
+                  'reports', Icons.bar_chart_rounded, 'Laporan Keuangan'),
               _buildPopupMenuItem('history', Icons.receipt_long_outlined,
                   'Riwayat Transaksi'),
               const PopupMenuDivider(),
               _buildPopupMenuItem('accounts',
-                  Icons.account_balance_wallet_outlined, 'Kelola Dompet / Rekening'),
+                  Icons.account_balance_wallet_outlined, 'Kelola Rekening'),
               _buildPopupMenuItem(
                   'categories', Icons.category_outlined, 'Kelola Kategori'),
               _buildPopupMenuItem(
-                  'profiles', Icons.switch_account_rounded, 'Kelola Profil Keuangan'),
+                  'profiles', Icons.switch_account_rounded, 'Kelola Profil'),
               const PopupMenuDivider(),
-              _buildPopupMenuItem('advisor', Icons.smart_toy_outlined,
-                  'AI Advisor (Coming Soon)'),
               _buildPopupMenuItem(
                   'about', Icons.info_outline_rounded, 'Tentang Monetra'),
             ],

@@ -186,8 +186,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           );
                           formNotifier.setCategory(match.id!);
                         }
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
+                            duration: const Duration(milliseconds: 1600),
                             content: Row(
                               children: [
                                 const Icon(Icons.check_circle_rounded,
@@ -202,7 +204,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             ),
                             backgroundColor: const Color(0xFF059669),
                             behavior: SnackBarBehavior.floating,
-                            duration: const Duration(seconds: 2),
                           ),
                         );
                       },
@@ -545,7 +546,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       controller: _noteController,
       onChanged: notifier.setNote,
       decoration: InputDecoration(
-        hintText: 'Catatan (misal: Bensin, Bayar Ressa, Makan siang)',
+        hintText: 'Catatan (opsional)',
         hintStyle: AppTypography.bodyMedium,
         prefixIcon: Icon(Icons.edit_note_rounded,
             color: AppColors.textSecondaryOf(context)),
@@ -621,7 +622,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
-            duration: const Duration(seconds: 3),
+            duration: const Duration(milliseconds: 1600),
             action: SnackBarAction(
               label: 'Catat Lagi',
               textColor: AppColors.primary,

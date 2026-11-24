@@ -47,7 +47,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Laporan Finansial',
+          'Laporan Keuangan',
           style: AppTypography.headlineMedium.copyWith(fontSize: 18),
         ),
         actions: [

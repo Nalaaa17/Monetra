@@ -47,15 +47,23 @@ class _CreateVacationSheetState extends ConsumerState<CreateVacationSheet> {
   Future<void> _submit(List<AccountWithBalance> accounts) async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Masukkan nama trip terlebih dahulu')),
+        const SnackBar(
+          duration: Duration(milliseconds: 1600),
+          content: Text('Masukkan nama trip terlebih dahulu'),
+        ),
       );
       return;
     }
 
     if (_totalBudget <= 0) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tentukan alokasi dana dari minimal 1 rekening')),
+        const SnackBar(
+          duration: Duration(milliseconds: 1600),
+          content: Text('Tentukan alokasi dana dari minimal 1 rekening'),
+        ),
       );
       return;
     }
@@ -63,8 +71,10 @@ class _CreateVacationSheetState extends ConsumerState<CreateVacationSheet> {
     for (final acc in accounts) {
       final alloc = _allocations[acc.id] ?? 0;
       if (alloc > acc.balance) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(milliseconds: 1600),
             content: Text(
               'Alokasi ${acc.name} melebihi saldo bebas (Rp ${CurrencyFormatter.format(acc.balance)})',
             ),
@@ -102,8 +112,12 @@ class _CreateVacationSheetState extends ConsumerState<CreateVacationSheet> {
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal membuat liburan: $e')),
+          SnackBar(
+            duration: const Duration(milliseconds: 2000),
+            content: Text('Gagal membuat liburan: $e'),
+          ),
         );
       }
     } finally {
@@ -188,8 +202,8 @@ class _CreateVacationSheetState extends ConsumerState<CreateVacationSheet> {
                       controller: _nameController,
                       style: const TextStyle(fontWeight: FontWeight.w600),
                       decoration: InputDecoration(
-                        labelText: 'Nama Trip / Liburan',
-                        hintText: 'Misal: Liburan ke Bali 🌴',
+                        labelText: 'Nama Trip',
+                        hintText: 'Nama perjalanan / liburan',
                         prefixIcon: const Icon(Icons.flight_takeoff_rounded,
                             size: 20, color: Color(0xFF0284C7)),
                         filled: true,
@@ -208,8 +222,8 @@ class _CreateVacationSheetState extends ConsumerState<CreateVacationSheet> {
                     TextField(
                       controller: _destController,
                       decoration: InputDecoration(
-                        labelText: 'Tujuan (Opsional)',
-                        hintText: 'Misal: Bali, Jogja, Jepang',
+                        labelText: 'Destinasi (opsional)',
+                        hintText: 'Kota atau lokasi tujuan',
                         prefixIcon: const Icon(Icons.place_outlined,
                             size: 20, color: Color(0xFF0284C7)),
                         filled: true,

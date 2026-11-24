@@ -681,8 +681,10 @@ class _RecurringTransactionsScreenState
     await repo.toggleActive(item.id, active);
     ref.read(homeRefreshTriggerProvider.notifier).state++;
     if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
+        duration: const Duration(milliseconds: 1600),
         content: Text(
           active
               ? "Jadwal '${item.title}' diaktifkan kembali."
@@ -745,8 +747,12 @@ class _RecurringTransactionsScreenState
     ref.read(homeRefreshTriggerProvider.notifier).state++;
 
     if (!context.mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Jadwal '${item.title}' berhasil dihapus.")),
+      SnackBar(
+        duration: const Duration(milliseconds: 1600),
+        content: Text("Jadwal '${item.title}' berhasil dihapus."),
+      ),
     );
   }
 

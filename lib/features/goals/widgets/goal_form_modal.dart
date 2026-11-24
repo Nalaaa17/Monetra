@@ -93,7 +93,7 @@ class _GoalFormBottomSheetContentState
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(20, 20, 20, bottomInset + 20),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, bottomInset + 20),
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -101,72 +101,62 @@ class _GoalFormBottomSheetContentState
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Top drag handle
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
                 // Header Sheet
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.12),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              isEditing ? Icons.edit_note_rounded : Icons.flag_rounded,
-                              color: isDark ? AppColors.primary : AppColors.primaryDark,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  isEditing ? 'Edit Target' : 'Buat Target Baru',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  isEditing
-                                      ? 'Perbarui rincian atau koreksi saldo target'
-                                      : 'Tentukan tujuan finansial dan tenggat waktu',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondaryOf(context),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                    Text(
+                      isEditing ? 'Edit Target' : 'Target Tabungan',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded),
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
                 ),
-                const Divider(height: 24),
+                const SizedBox(height: 16),
 
                 // 1. Nama Target
-                Text('Nama Target / Keperluan',
-                    style: AppTypography.labelSmall),
+                Text('Nama Target', style: AppTypography.labelSmall),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _nameController,
                   decoration: InputDecoration(
-                    hintText: 'Misal: Bayar Ressa, Liquid + Coil',
-                    prefixIcon: const Icon(Icons.edit_note_rounded),
+                    hintText: 'Misal: Tabungan Liburan, Beli Laptop',
+                    filled: true,
+                    fillColor: AppColors.surfaceOf(context),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                          color: Theme.of(context)
+                              .dividerColor
+                              .withValues(alpha: 0.4)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(
+                          color: Theme.of(context)
+                              .dividerColor
+                              .withValues(alpha: 0.4)),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 12),
@@ -178,138 +168,155 @@ class _GoalFormBottomSheetContentState
                     return null;
                   },
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
-                // 2. Target Nominal
-                Text('Target Nominal (Rp)',
-                    style: AppTypography.labelSmall),
-                const SizedBox(height: 6),
-                TextFormField(
-                  controller: _targetAmountController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: '710.000',
-                    prefixIcon: const Icon(Icons.attach_money_rounded),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                // 2. Target Nominal & Setoran Awal (Row)
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Target Nominal',
+                              style: AppTypography.labelSmall),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            controller: _targetAmountController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              hintText: '0',
+                              prefixText: 'Rp ',
+                              filled: true,
+                              fillColor: AppColors.surfaceOf(context),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(
+                                    color: Theme.of(context)
+                                        .dividerColor
+                                        .withValues(alpha: 0.4)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(
+                                    color: Theme.of(context)
+                                        .dividerColor
+                                        .withValues(alpha: 0.4)),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                            ),
+                            validator: (val) {
+                              if (val == null || val.trim().isEmpty) {
+                                return 'Target wajib diisi';
+                              }
+                              final parsed = int.tryParse(val
+                                  .replaceAll('.', '')
+                                  .replaceAll(',', ''));
+                              if (parsed == null || parsed <= 0) {
+                                return 'Harus > 0';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                  ),
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Target nominal wajib diisi';
-                    }
-                    final parsed = int.tryParse(
-                        val.replaceAll('.', '').replaceAll(',', ''));
-                    if (parsed == null || parsed <= 0) {
-                      return 'Nominal target harus lebih dari 0';
-                    }
-                    return null;
-                  },
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isEditing ? 'Terkumpul' : 'Setoran Awal',
+                            style: AppTypography.labelSmall,
+                          ),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            controller: _collectedAmountController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              hintText: '0',
+                              prefixText: 'Rp ',
+                              filled: true,
+                              fillColor: AppColors.surfaceOf(context),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(
+                                    color: Theme.of(context)
+                                        .dividerColor
+                                        .withValues(alpha: 0.4)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(
+                                    color: Theme.of(context)
+                                        .dividerColor
+                                        .withValues(alpha: 0.4)),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
-                // 3. Setoran Awal (Buat) / Saldo Terkumpul (Edit)
-                Text(
-                  isEditing
-                      ? 'Nominal Terkumpul Saat Ini (Rp)'
-                      : 'Setoran Awal (Opsional)',
-                  style: AppTypography.labelSmall,
-                ),
-                const SizedBox(height: 6),
-                TextFormField(
-                  controller: _collectedAmountController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: isEditing
-                        ? '0 (Bisa dikoreksi jika keliru)'
-                        : '0 (Isi nanti juga bisa)',
-                    prefixIcon: const Icon(Icons.savings_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                  ),
-                  validator: (val) {
-                    if (val != null && val.trim().isNotEmpty) {
-                      final parsed = int.tryParse(
-                          val.replaceAll('.', '').replaceAll(',', ''));
-                      if (parsed == null || parsed < 0) {
-                        return 'Nominal tidak boleh negatif';
-                      }
-                    }
-                    return null;
-                  },
-                ),
-                if (isEditing) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Anda dapat mengubah nominal terkumpul jika sebelumnya salah mencatat.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondaryOf(context),
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 14),
-
-                // 4. Tanggal Jatuh Tempo
-                Text('Tenggat Jatuh Tempo',
-                    style: AppTypography.labelSmall),
+                // 3. Tenggat Jatuh Tempo
+                Text('Tenggat Waktu', style: AppTypography.labelSmall),
                 const SizedBox(height: 6),
                 InkWell(
                   onTap: _pickDeadlineDate,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Theme.of(context).dividerColor),
-                      borderRadius: BorderRadius.circular(12),
+                      color: AppColors.surfaceOf(context),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          color: Theme.of(context)
+                              .dividerColor
+                              .withValues(alpha: 0.4)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: Row(
-                            children: [
-                              const Icon(Icons.calendar_month_rounded,
-                                  size: 20, color: AppColors.primaryDark),
-                              const SizedBox(width: 10),
-                              Flexible(
-                                child: Text(
-                                  DateFormatter.formatFull(_deadline),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600),
-                                ),
+                        Row(
+                          children: [
+                            const Icon(Icons.calendar_month_rounded,
+                                size: 18, color: AppColors.primaryDark),
+                            const SizedBox(width: 10),
+                            Text(
+                              DateFormatter.formatFull(_deadline),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        const Icon(Icons.arrow_drop_down_rounded),
+                        const Icon(Icons.keyboard_arrow_down_rounded,
+                            size: 18, color: Colors.grey),
                       ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
-                // 5. Akun Sumber / Dompet yang Dialokasikan
+                // 4. Sumber Rekening (Horizontal Scroll)
                 Text(
-                  isEditing
-                      ? 'Rekening Sumber Utama / Penyesuaian'
-                      : 'Diambil dari Dompet / Rekening (Setoran Awal)',
+                  isEditing ? 'Rekening Terhubung' : 'Rekening Sumber Dana',
                   style: AppTypography.labelSmall,
                 ),
                 const SizedBox(height: 6),
                 accountsAsync.when(
                   data: (accounts) {
                     if (accounts.isEmpty) {
-                      return const Text('Tidak ada akun tersedia.');
+                      return const Text('Tidak ada akun tersedia.',
+                          style: TextStyle(fontSize: 12));
                     }
                     if (_selectedAccountId == null ||
                         !accounts
@@ -317,47 +324,91 @@ class _GoalFormBottomSheetContentState
                       _selectedAccountId = accounts.first.account.id;
                     }
 
-                    return Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: accounts.map((acc) {
-                        final isSelected =
-                            _selectedAccountId == acc.account.id;
-                        final accColor =
-                            ColorHelper.parseHex(acc.account.colorHex);
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: accounts.map((acc) {
+                          final isSelected =
+                              _selectedAccountId == acc.account.id;
+                          final accColor =
+                              ColorHelper.parseHex(acc.account.colorHex);
 
-                        return ChoiceChip(
-                          selected: isSelected,
-                          avatar: BankLogoHelper.buildAccountBadge(
-                            context: context,
-                            accountName: acc.account.name,
-                            accountColor: accColor,
-                            logoKey: acc.account.logoKey,
-                            iconCodePoint: acc.account.iconCodePoint,
-                            size: 20,
-                            iconSize: 12,
-                            borderRadius: 6,
-                          ),
-                          label: Text(
-                            '${acc.account.name} (${CurrencyFormatter.format(acc.balance)})',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              color: isSelected ? Colors.black : null,
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: InkWell(
+                              onTap: () => setState(() =>
+                                  _selectedAccountId = acc.account.id),
+                              borderRadius: BorderRadius.circular(12),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? AppColors.primary
+                                          .withValues(alpha: isDark ? 0.22 : 0.16)
+                                      : AppColors.surfaceOf(context),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : Theme.of(context)
+                                            .dividerColor
+                                            .withValues(alpha: 0.4),
+                                    width: isSelected ? 1.5 : 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    BankLogoHelper.buildAccountBadge(
+                                      context: context,
+                                      accountName: acc.account.name,
+                                      accountColor: accColor,
+                                      logoKey: acc.account.logoKey,
+                                      iconCodePoint: acc.account.iconCodePoint,
+                                      size: 22,
+                                      iconSize: 12,
+                                      borderRadius: 6,
+                                    ),
+                                    const SizedBox(width: 7),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          acc.account.name,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: isSelected
+                                                ? FontWeight.bold
+                                                : FontWeight.w500,
+                                            color: isSelected
+                                                ? (isDark
+                                                    ? AppColors.primary
+                                                    : AppColors.primaryDark)
+                                                : AppColors.textPrimaryOf(
+                                                    context),
+                                          ),
+                                        ),
+                                        Text(
+                                          CurrencyFormatter.format(
+                                              acc.balance),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: AppColors.textSecondaryOf(
+                                                context),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
-                          selectedColor: AppColors.primary,
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() {
-                                _selectedAccountId = acc.account.id;
-                              });
-                            }
-                          },
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ),
                     );
                   },
                   loading: () => const SizedBox(
@@ -371,38 +422,53 @@ class _GoalFormBottomSheetContentState
                 ),
                 const SizedBox(height: 12),
 
-                // 6. Switches: Reminder & Repeat Monthly
-                SwitchListTile(
-                  value: _reminderEnabled,
-                  contentPadding: EdgeInsets.zero,
-                  activeThumbColor: AppColors.primaryDark,
-                  title: const Text(
-                    'Pengingat H-3 Jatuh Tempo',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                // 5. Switches: Reminder & Repeat Monthly (Compact Card)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceOf(context),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                        color: Theme.of(context)
+                            .dividerColor
+                            .withValues(alpha: 0.3)),
                   ),
-                  subtitle: const Text(
-                    'Kirim notifikasi lokal 3 hari sebelum tenggat',
-                    style: TextStyle(fontSize: 12),
+                  child: Column(
+                    children: [
+                      SwitchListTile(
+                        value: _reminderEnabled,
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                        activeThumbColor: AppColors.primaryDark,
+                        title: const Text(
+                          'Pengingat H-3',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                        onChanged: (val) =>
+                            setState(() => _reminderEnabled = val),
+                      ),
+                      const Divider(height: 1),
+                      SwitchListTile(
+                        value: _repeatMonthly,
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                        activeThumbColor: AppColors.primaryDark,
+                        title: const Text(
+                          'Ulangi Tiap Bulan',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                        onChanged: (val) =>
+                            setState(() => _repeatMonthly = val),
+                      ),
+                    ],
                   ),
-                  onChanged: (val) => setState(() => _reminderEnabled = val),
-                ),
-                SwitchListTile(
-                  value: _repeatMonthly,
-                  contentPadding: EdgeInsets.zero,
-                  activeThumbColor: AppColors.primaryDark,
-                  title: const Text(
-                    'Target Berulang Tiap Bulan',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: const Text(
-                    'Cocok untuk tagihan rutin (misal tiap tgl 23)',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                  onChanged: (val) => setState(() => _repeatMonthly = val),
                 ),
                 const SizedBox(height: 20),
 
-                // 7. Tombol Simpan
+                // 6. Tombol Simpan
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -410,6 +476,8 @@ class _GoalFormBottomSheetContentState
                     onPressed: _isSubmitting ? null : _saveGoal,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.black,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
@@ -544,8 +612,10 @@ class _GoalFormBottomSheetContentState
 
         if (mounted) {
           Navigator.pop(context);
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
+              duration: const Duration(milliseconds: 1600),
               content: Text('Target "${updatedGoal.name}" berhasil diperbarui!'),
               backgroundColor: const Color(0xFF059669),
             ),
@@ -579,8 +649,10 @@ class _GoalFormBottomSheetContentState
 
         if (mounted) {
           Navigator.pop(context);
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
+              duration: const Duration(milliseconds: 1600),
               content: Text(
                   'Target "${newGoal.name}" senilai ${CurrencyFormatter.format(targetAmount)} berhasil dibuat!'),
               backgroundColor: const Color(0xFF059669),
@@ -590,8 +662,10 @@ class _GoalFormBottomSheetContentState
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(milliseconds: 2000),
             content: Text('Gagal menyimpan target: $e'),
             backgroundColor: AppColors.danger,
           ),

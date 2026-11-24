@@ -84,8 +84,8 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
         appBar: AppBar(
           title: Text(
             _currentMode == TransferScreenMode.intraProfile
-                ? 'Transfer Antar Akun'
-                : 'Jembatan Pribadi ↔ Bisnis',
+                ? 'Transfer Saldo'
+                : 'Transfer Antar Profil',
             style: AppTypography.headlineMedium.copyWith(fontSize: 18),
           ),
           actions: [
@@ -152,7 +152,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                     const SizedBox(height: 16),
                     _buildNoteTextField(
                       controller: _intraNoteController,
-                      hint: 'Keterangan transfer (misal: Tarik tunai, Nabung)',
+                      hint: 'Keterangan (opsional)',
                       onChanged: intraFormNotifier.setNote,
                     ),
                     if (intraFormState.errorMessage != null) ...[
@@ -184,13 +184,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                       const SizedBox(height: 16),
                       _buildNoteTextField(
                         controller: _interNoteController,
-                        hint: interFormState.bridgeType ==
-                                InterTransferBridgeType.prive
-                            ? 'Catatan (misal: Gaji owner bulan ini, Bonus)'
-                            : interFormState.bridgeType ==
-                                    InterTransferBridgeType.suntikModal
-                                ? 'Catatan (misal: Talangan belanja bahan, Modal awal)'
-                                : 'Catatan transfer antar profil',
+                        hint: 'Keterangan (opsional)',
                         onChanged: interFormNotifier.setNote,
                       ),
                       if (interFormState.errorMessage != null) ...[
@@ -250,9 +244,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
-                                  _currentMode == TransferScreenMode.intraProfile
-                                      ? 'Kirim Transfer'
-                                      : 'Kirim Transfer Antar Profil',
+                                  'Kirim Transfer',
                                   maxLines: 1,
                                   style: AppTypography.titleMedium.copyWith(
                                     fontWeight: FontWeight.bold,
@@ -325,7 +317,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
           const SizedBox(width: 4),
           Expanded(
             child: _buildModeTab(
-              title: 'Jembatan Profil',
+              title: 'Antar Profil',
               icon: Icons.sync_alt_rounded,
               isSelected: _currentMode == TransferScreenMode.interProfile,
               onTap: () {
@@ -442,7 +434,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            'Nominal yang Dipindahkan',
+            'Nominal Transfer',
             style: AppTypography.labelSmall,
           ),
           const SizedBox(height: 6),
@@ -605,8 +597,10 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
             break;
         }
 
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(milliseconds: 1600),
             content: Row(
               children: [
                 const Icon(Icons.sync_alt_rounded,
@@ -617,7 +611,6 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
             ),
             backgroundColor: const Color(0xFF059669),
             behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
           ),
         );
         context.pop();

@@ -167,8 +167,8 @@ class _ManageProfilesScreenState extends ConsumerState<ManageProfilesScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 p.isBusiness
-                                    ? 'Kategori omzet, kulakan & kas usaha'
-                                    : 'Kategori belanja harian & tabungan',
+                                    ? 'Usaha, Omzet & HPP'
+                                    : 'Keuangan Pribadi & Tabungan',
                                 style: AppTypography.bodySmall.copyWith(
                                   color: AppColors.textSecondaryOf(context),
                                   fontSize: 12,
@@ -216,11 +216,12 @@ class _ManageProfilesScreenState extends ConsumerState<ManageProfilesScreen> {
                             onPressed: () async {
                               await switchActiveProfile(ref, p.key);
                               if (context.mounted) {
+                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text('Beralih ke profil "${p.name}"'),
                                     backgroundColor: color,
-                                    duration: const Duration(seconds: 2),
+                                    duration: const Duration(milliseconds: 1400),
                                   ),
                                 );
                               }
@@ -432,7 +433,7 @@ class _ManageProfilesScreenState extends ConsumerState<ManageProfilesScreen> {
                       controller: nameCtrl,
                       decoration: InputDecoration(
                         labelText: 'Nama Profil',
-                        hintText: selectedType == 'business' ? 'Contoh: Toko Kopi, Kafe Berkah' : 'Contoh: Pribadi, Keluarga',
+                        hintText: selectedType == 'business' ? 'Nama usaha / toko' : 'Nama profil pribadi',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         prefixIcon: Icon(
                           IconHelper.getIcon(selectedIcon, fallback: selectedType == 'business' ? Icons.storefront_rounded : Icons.person_rounded),
@@ -444,7 +445,7 @@ class _ManageProfilesScreenState extends ConsumerState<ManageProfilesScreen> {
 
                     // Pilih Warna
                     Text(
-                      'Pilih Warna Aksen',
+                      'Warna Aksen',
                       style: AppTypography.labelMedium.copyWith(
                         fontWeight: FontWeight.w600,
                         color: AppColors.textSecondaryOf(context),

@@ -54,8 +54,35 @@ class DebtRepository {
       if (accountId != null && additionalAmount > 0) {
         final now = DateTime.now();
         if (debt.isDebt) {
-          // Uang yang disisihkan untuk utang: dicatat di debt_contributions.
-          // Uang tetap ada di total aset kita, namun dikunci dari saldo siap pakai.
+          // Cari kategori default pengeluaran ('Tagihan' / 'Utang' / 'Cicilan' / 'Lainnya')
+          int? effectiveCatId;
+          final cats = await txn.query(
+            'categories',
+            where: "type = 'expense' AND isActive = 1 AND (LOWER(name) LIKE '%tagihan%' OR LOWER(name) LIKE '%utang%' OR LOWER(name) LIKE '%cicilan%' OR LOWER(name) = 'lainnya')",
+            orderBy: 'id ASC',
+            limit: 1,
+          );
+          if (cats.isNotEmpty) {
+            effectiveCatId = cats.first['id'] as int?;
+          }
+
+          // 1. Catat transaksi pengeluaran riil agar saldo rekening langsung terpotong & tercatat di riwayat
+          await txn.insert(
+            'transactions',
+            TransactionModel(
+              type: 'expense',
+              amount: additionalAmount,
+              accountId: accountId,
+              categoryId: effectiveCatId,
+              note: (note != null && note.trim().isNotEmpty)
+                  ? note.trim()
+                  : 'Bayar Utang: ${debt.title} (${debt.personName})',
+              date: now,
+              createdAt: now,
+            ).toMap(),
+          );
+
+          // 2. Catat riwayat di debt_contributions dengan isRealized = 1 (agar riwayat pembayaran tersimpan tanpa double-deduct)
           await txn.insert(
             'debt_contributions',
             {
@@ -65,19 +92,30 @@ class DebtRepository {
               'date': now.toIso8601String(),
               'note': (note != null && note.trim().isNotEmpty)
                   ? note.trim()
-                  : 'Sisihkan Utang: ${debt.title} (${debt.personName})',
-              'isRealized': 0,
+                  : 'Bayar Utang: ${debt.title} (${debt.personName})',
+              'isRealized': 1,
             },
           );
         } else {
           // Terima piutang adalah pemasukan uang riil ke rekening
+          int? effectiveCatId;
+          final cats = await txn.query(
+            'categories',
+            where: "type = 'income' AND isActive = 1 AND (LOWER(name) LIKE '%piutang%' OR LOWER(name) = 'tambahan uang' OR LOWER(name) = 'lainnya')",
+            orderBy: 'id ASC',
+            limit: 1,
+          );
+          if (cats.isNotEmpty) {
+            effectiveCatId = cats.first['id'] as int?;
+          }
+
           await txn.insert(
             'transactions',
             TransactionModel(
               type: 'income',
               amount: additionalAmount,
               accountId: accountId,
-              categoryId: null,
+              categoryId: effectiveCatId,
               note: (note != null && note.trim().isNotEmpty)
                   ? note.trim()
                   : 'Terima Piutang: ${debt.title} (${debt.personName})',

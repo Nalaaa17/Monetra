@@ -418,8 +418,10 @@ class _EditTransferScreenState extends ConsumerState<EditTransferScreen> {
 
       if (mounted) {
         _allowPop = true;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
+            duration: Duration(milliseconds: 1600),
             content: Text('Transfer berhasil diperbarui'),
             backgroundColor: Color(0xFF059669),
           ),
@@ -452,8 +454,12 @@ class _EditTransferScreenState extends ConsumerState<EditTransferScreen> {
 
       if (mounted) {
         _allowPop = true;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transfer telah dihapus')),
+          const SnackBar(
+            duration: Duration(milliseconds: 1600),
+            content: Text('Transfer telah dihapus'),
+          ),
         );
         Navigator.of(context).pop();
       }

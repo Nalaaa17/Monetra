@@ -320,8 +320,10 @@ class _ExportReportSheetState extends ConsumerState<ExportReportSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _isExporting = false);
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(milliseconds: 2000),
             content: Text('Gagal mengekspor PDF: $e'),
             backgroundColor: AppColors.danger,
           ),
@@ -360,8 +362,10 @@ class _ExportReportSheetState extends ConsumerState<ExportReportSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _isExporting = false);
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(milliseconds: 2000),
             content: Text('Gagal mengekspor Excel: $e'),
             backgroundColor: AppColors.danger,
           ),

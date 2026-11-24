@@ -35,8 +35,10 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
       final report = await reportRepo.getMonthlyReport(now.year, now.month);
       _monthlyRevenueCtrl.text = report.totalIncome.toString();
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(milliseconds: 1600),
             content: Text(
               'Omzet bulan ini berhasil dimuat: ${CurrencyFormatter.format(report.totalIncome)}',
             ),
@@ -46,8 +48,13 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memuat omzet: $e'), backgroundColor: AppColors.danger),
+          SnackBar(
+            duration: const Duration(milliseconds: 2000),
+            content: Text('Gagal memuat omzet: $e'),
+            backgroundColor: AppColors.danger,
+          ),
         );
       }
     } finally {
@@ -77,14 +84,14 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Kalkulator Pajak UMKM (PPh Final 0.5%)',
+              'Pajak UMKM (PPh Final 0.5%)',
               style: AppTypography.titleLarge.copyWith(
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimaryOf(context),
               ),
             ),
             Text(
-              'Perhitungan Resmi PP 55/2022 & Batas Bebas Pajak',
+              'Skema PP 55/2022',
               style: AppTypography.bodySmall.copyWith(
                 fontSize: 11,
                 color: AppColors.textSecondaryOf(context),
@@ -518,8 +525,10 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
     summary.writeln('Batas Setor: Tanggal 15 bulan berikutnya.');
 
     Clipboard.setData(ClipboardData(text: summary.toString()));
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
+        duration: Duration(milliseconds: 1600),
         content: Text('Rincian perhitungan pajak disalin ke clipboard!'),
         backgroundColor: AppColors.primary,
       ),

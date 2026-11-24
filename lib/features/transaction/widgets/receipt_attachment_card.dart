@@ -40,8 +40,10 @@ class ReceiptAttachmentCard extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(milliseconds: 2000),
             content: Text('Gagal mengambil foto: $e'),
             backgroundColor: AppColors.danger,
           ),
@@ -51,8 +53,10 @@ class ReceiptAttachmentCard extends StatelessWidget {
   }
 
   Future<void> _triggerOcrScan(BuildContext context, String path) async {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
+        duration: Duration(milliseconds: 1400),
         content: Row(
           children: [
             SizedBox(
@@ -64,7 +68,6 @@ class ReceiptAttachmentCard extends StatelessWidget {
             Text('Memindai struk belanja...'),
           ],
         ),
-        duration: Duration(milliseconds: 1200),
         behavior: SnackBarBehavior.floating,
       ),
     );

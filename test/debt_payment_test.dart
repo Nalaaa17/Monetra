@@ -68,23 +68,13 @@ void main() {
       expect(debts.first.remainingAmount, 1000000);
       expect(debts.first.isSettled, false);
 
-      // Verifikasi alokasi utang tidak memotong total aset, melainkan mengunci saldo siap pakai
+      // Verifikasi pembayaran utang langsung memotong saldo rekening riil
       final balance = await accountRepo.calculateAccountBalance(accId);
-      expect(
-        balance,
-        1500000,
-      ); // Saldo siap pakai berkurang 500.000 agar tidak bisa dipakai belanja
+      expect(balance, 1500000); // Saldo berkurang 500.000
 
       final summary = await accountRepo.getBalanceSummary();
-      expect(
-        summary.totalPhysicalNetWorth,
-        2000000,
-      ); // Total aset fisik TIDAK terpotong!
-      expect(
-        summary.allocatedInDebts,
-        500000,
-      ); // Dana terkunci di anggaran utang
-      expect(summary.totalNetWorth, 1500000); // Saldo bebas siap pakai
+      expect(summary.totalPhysicalNetWorth, 1500000); // Total aset fisik terpotong riil
+      expect(summary.totalNetWorth, 1500000);
 
       // Bayar sisa 1.000.000 -> status lunas
       await debtRepo.recordPayment(debtId, 1000000, accountId: accId);
@@ -93,6 +83,10 @@ void main() {
       expect(settledDebts.first.paidAmount, 1500000);
       expect(settledDebts.first.remainingAmount, 0);
       expect(settledDebts.first.isSettled, true);
+
+      // Saldo akhir setelah pelunasan penuh = 500.000
+      final finalBalance = await accountRepo.calculateAccountBalance(accId);
+      expect(finalBalance, 500000);
     });
 
     testWidgets(
@@ -160,15 +154,14 @@ void main() {
         await tester.pump(const Duration(milliseconds: 500));
 
         // Sheet muncul dengan pilihan rekening Mandiri
-        expect(
-          find.textContaining('Sisihkan / Bayar: Tagihan Kartu'),
-          findsOneWidget,
-        );
-        expect(find.textContaining('Mandiri (Rp 3.000.000)'), findsOneWidget);
-        expect(find.text('Lunasi Semua'), findsOneWidget);
+        expect(find.text('Bayar Utang'), findsOneWidget);
+        expect(find.text('Tagihan Kartu'), findsAtLeastNWidgets(1));
+        expect(find.text('Mandiri'), findsOneWidget);
+        expect(find.text('Bayar & Potong Saldo'), findsOneWidget);
+        expect(find.text('Lunasi'), findsOneWidget);
 
-        // Tap Lunasi Semua
-        await tester.tap(find.text('Lunasi Semua'));
+        // Tap Lunasi
+        await tester.tap(find.text('Lunasi'));
         await tester.pump();
 
         // Tutup sheet

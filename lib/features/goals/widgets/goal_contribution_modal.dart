@@ -82,99 +82,84 @@ class _AddContributionSheetState extends ConsumerState<_AddContributionSheet> {
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(20, 18, 20, bottomInset + 20),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, bottomInset + 20),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Top drag indicator
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+
               // Header
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Isi Tabungan: ${widget.detail.name}',
-                          style: const TextStyle(
-                            fontSize: 17,
+                        const Text(
+                          'Isi Tabungan',
+                          style: TextStyle(
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 2),
                         Text(
-                          'Dana akan disisihkan dari saldo bebas rekening terpilih',
+                          widget.detail.name,
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondaryOf(context),
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary
+                          .withValues(alpha: isDark ? 0.2 : 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      'Sisa ${CurrencyFormatter.format(widget.detail.remainingAmount)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isDark
+                            ? AppColors.primary
+                            : AppColors.primaryDark,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
 
-              // Sisa Target & Quick Fill Pill
-              SizedBox(
-                width: double.infinity,
-                child: Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary
-                            .withValues(alpha: isDark ? 0.2 : 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Sisa target: ${CurrencyFormatter.format(widget.detail.remainingAmount)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isDark
-                              ? AppColors.primary
-                              : AppColors.primaryDark,
-                        ),
-                      ),
-                    ),
-                    if (widget.detail.remainingAmount > 0)
-                      ActionChip(
-                        label: const Text(
-                          'Penuhi Sisa',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () {
-                          setState(() {
-                            _amountController.text =
-                                widget.detail.remainingAmount.toString();
-                          });
-                        },
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Input Nominal
-              Text('Nominal Disisihkan (Rp)', style: AppTypography.labelSmall),
+              // Input Nominal dengan tombol 'Penuhi'
+              Text('Nominal Disisihkan', style: AppTypography.labelSmall),
               const SizedBox(height: 6),
               TextField(
                 controller: _amountController,
@@ -183,29 +168,61 @@ class _AddContributionSheetState extends ConsumerState<_AddContributionSheet> {
                 autofocus: true,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  hintText: 'Contoh: 200000',
+                  hintText: '0',
                   prefixText: 'Rp ',
+                  filled: true,
+                  fillColor: AppColors.surfaceOf(context),
+                  suffixIcon: widget.detail.remainingAmount > 0
+                      ? TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _amountController.text =
+                                  widget.detail.remainingAmount.toString();
+                            });
+                          },
+                          child: Text(
+                            'Penuhi',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? AppColors.primary
+                                  : AppColors.primaryDark,
+                            ),
+                          ),
+                        )
+                      : null,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                        color: Theme.of(context)
+                            .dividerColor
+                            .withValues(alpha: 0.4)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                        color: Theme.of(context)
+                            .dividerColor
+                            .withValues(alpha: 0.4)),
                   ),
                   contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
                 ),
               ),
               const SizedBox(height: 14),
 
-              // Pilih Rekening / Dompet Sumber
+              // Pilih Rekening / Dompet Sumber (Horizontal Card Selector)
               Text(
-                'Diambil dari Dompet / Rekening',
-                style: AppTypography.labelSmall.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                'Sumber Dana',
+                style: AppTypography.labelSmall,
               ),
               const SizedBox(height: 8),
               accountsAsync.when(
                 data: (accounts) {
                   if (accounts.isEmpty) {
-                    return const Text('Tidak ada akun tersedia.');
+                    return const Text('Tidak ada akun tersedia.',
+                        style: TextStyle(fontSize: 12));
                   }
                   if (_selectedAccountId == null ||
                       !accounts.any((a) => a.id == _selectedAccountId)) {
@@ -222,72 +239,106 @@ class _AddContributionSheetState extends ConsumerState<_AddContributionSheet> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: accounts.map((acc) {
-                          final isSelected = _selectedAccountId == acc.id;
-                          final accColor = ColorHelper.parseHex(acc.colorHex);
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: accounts.map((acc) {
+                            final isSelected = _selectedAccountId == acc.id;
+                            final accColor = ColorHelper.parseHex(acc.colorHex);
 
-                          return ChoiceChip(
-                            selected: isSelected,
-                            avatar: BankLogoHelper.buildAccountBadge(
-                              context: context,
-                              accountName: acc.name,
-                              accountColor: accColor,
-                              logoKey: acc.logoKey,
-                              iconCodePoint: acc.iconCodePoint,
-                              size: 20,
-                              iconSize: 12,
-                              borderRadius: 6,
-                            ),
-                            label: Text(
-                              '${acc.name} (${CurrencyFormatter.format(acc.balance)})',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                                color: isSelected ? Colors.black : null,
-                              ),
-                            ),
-                            selectedColor: AppColors.primary,
-                            onSelected: (selected) {
-                              if (selected) {
-                                setState(() {
-                                  _selectedAccountId = acc.id;
-                                });
-                              }
-                            },
-                          );
-                        }).toList(),
-                      ),
-                      if (isExceeding) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.danger.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.warning_amber_rounded,
-                                  size: 16, color: AppColors.danger),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  'Melebihi saldo bebas "${selectedAcc.name}" (${CurrencyFormatter.format(selectedAcc.balance)})',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.danger,
-                                    fontWeight: FontWeight.w600,
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: InkWell(
+                                onTap: () => setState(
+                                    () => _selectedAccountId = acc.id),
+                                borderRadius: BorderRadius.circular(12),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppColors.primary
+                                            .withValues(alpha: isDark ? 0.22 : 0.16)
+                                        : AppColors.surfaceOf(context),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : Theme.of(context)
+                                              .dividerColor
+                                              .withValues(alpha: 0.4),
+                                      width: isSelected ? 1.5 : 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      BankLogoHelper.buildAccountBadge(
+                                        context: context,
+                                        accountName: acc.name,
+                                        accountColor: accColor,
+                                        logoKey: acc.logoKey,
+                                        iconCodePoint: acc.iconCodePoint,
+                                        size: 24,
+                                        iconSize: 13,
+                                        borderRadius: 6,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            acc.name,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.bold
+                                                  : FontWeight.w500,
+                                              color: isSelected
+                                                  ? (isDark
+                                                      ? AppColors.primary
+                                                      : AppColors.primaryDark)
+                                                  : AppColors.textPrimaryOf(
+                                                      context),
+                                            ),
+                                          ),
+                                          Text(
+                                            CurrencyFormatter.format(
+                                                acc.balance),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.textSecondaryOf(
+                                                  context),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      if (isExceeding) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded,
+                                size: 14, color: AppColors.danger),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Saldo "${selectedAcc.name}" kurang (${CurrencyFormatter.format(selectedAcc.balance)})',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ],
@@ -296,7 +347,8 @@ class _AddContributionSheetState extends ConsumerState<_AddContributionSheet> {
                 loading: () => const SizedBox(
                   height: 28,
                   child: Center(
-                    child: Text('Memuat akun...', style: TextStyle(fontSize: 12)),
+                    child:
+                        Text('Memuat akun...', style: TextStyle(fontSize: 12)),
                   ),
                 ),
                 error: (e, _) => Text('Gagal memuat akun: $e'),
@@ -304,20 +356,33 @@ class _AddContributionSheetState extends ConsumerState<_AddContributionSheet> {
               const SizedBox(height: 14),
 
               // Catatan
-              Text('Catatan (Opsional)', style: AppTypography.labelSmall),
+              Text('Catatan', style: AppTypography.labelSmall),
               const SizedBox(height: 6),
               TextField(
                 controller: _noteController,
                 decoration: InputDecoration(
-                  hintText: 'Misal: Sisihkan dari gajian',
+                  hintText: 'Keterangan (opsional)',
+                  filled: true,
+                  fillColor: AppColors.surfaceOf(context),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                        color: Theme.of(context)
+                            .dividerColor
+                            .withValues(alpha: 0.4)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                        color: Theme.of(context)
+                            .dividerColor
+                            .withValues(alpha: 0.4)),
                   ),
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
 
               // Submit Button
               SizedBox(
@@ -328,6 +393,7 @@ class _AddContributionSheetState extends ConsumerState<_AddContributionSheet> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.black,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -360,8 +426,10 @@ class _AddContributionSheetState extends ConsumerState<_AddContributionSheet> {
   Future<void> _submit() async {
     final amount = _parsedAmount;
     if (amount <= 0) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
+          duration: Duration(milliseconds: 1600),
           content: Text('Masukkan nominal setoran lebih dari Rp 0.'),
           backgroundColor: AppColors.danger,
         ),
@@ -369,8 +437,10 @@ class _AddContributionSheetState extends ConsumerState<_AddContributionSheet> {
       return;
     }
     if (_selectedAccountId == null) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
+          duration: Duration(milliseconds: 1600),
           content: Text('Pilih dompet / rekening sumber terlebih dahulu.'),
           backgroundColor: AppColors.danger,
         ),
@@ -418,8 +488,10 @@ class _AddContributionSheetState extends ConsumerState<_AddContributionSheet> {
       if (mounted) {
         final sourceLabel = chosenAcc?.name ?? 'rekening sumber';
         Navigator.pop(context);
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(milliseconds: 1600),
             content: Text(
               '${CurrencyFormatter.format(amount)} disisihkan dari $sourceLabel ke "${widget.detail.name}"!',
             ),
@@ -429,8 +501,10 @@ class _AddContributionSheetState extends ConsumerState<_AddContributionSheet> {
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(milliseconds: 2000),
             content: Text('Gagal menyisihkan dana: $e'),
             backgroundColor: AppColors.danger,
           ),

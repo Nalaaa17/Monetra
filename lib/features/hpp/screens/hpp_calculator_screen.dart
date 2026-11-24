@@ -1468,8 +1468,13 @@ class _HppCalculatorScreenState extends ConsumerState<HppCalculatorScreen>
     List<HppIngredientItem>? ingredients,
   }) async {
     if (name.isEmpty) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nama produk tidak boleh kosong'), backgroundColor: AppColors.danger),
+        const SnackBar(
+          duration: Duration(milliseconds: 1600),
+          content: Text('Nama produk tidak boleh kosong'),
+          backgroundColor: AppColors.danger,
+        ),
       );
       return;
     }
@@ -1492,8 +1497,10 @@ class _HppCalculatorScreenState extends ConsumerState<HppCalculatorScreen>
     ref.read(menuRefreshTriggerProvider.notifier).state++;
 
     if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          duration: const Duration(milliseconds: 1800),
           content: Text('Produk "$name" berhasil disimpan ke Katalog Jualan!'),
           backgroundColor: AppColors.primary,
           action: SnackBarAction(

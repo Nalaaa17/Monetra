@@ -141,9 +141,27 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            'Seluruh data Monetra tersimpan 100% lokal offline di memori HP Anda. Buat cadangan secara berkala agar catatan harian tidak hilang saat ganti perangkat atau update.',
-            style: AppTypography.bodyMedium,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF059669).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.lock_outline_rounded, size: 14, color: Color(0xFF059669)),
+                SizedBox(width: 6),
+                Text(
+                  '100% Offline & Tersimpan di HP Anda',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF059669),
+                  ),
+                ),
+              ],
+            ),
           ),
           Divider(height: 24, color: Theme.of(context).dividerColor),
           Wrap(
@@ -203,7 +221,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Buat Cadangan Baru (File JSON)',
+                  'Cadangan Baru',
                   style: AppTypography.titleMedium.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -211,9 +229,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
-            'Simpan seluruh transaksi, dompet, target, dan histori ke file JSON aman di folder Dokumen HP.',
+            'Simpan seluruh transaksi ke file JSON di memori HP.',
             style: AppTypography.bodyMedium,
           ),
           const SizedBox(height: 14),
@@ -231,7 +249,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
               ),
               icon: const Icon(Icons.save_alt_rounded, size: 20),
               label: const Text(
-                'Cadangkan Data Sekarang',
+                'Cadangkan Sekarang',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -461,8 +479,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       final file = await BackupService.createBackupFile();
       await _loadBackupInfo();
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(milliseconds: 1800),
             content: Text('Cadangan tersimpan: ${file.path.split(Platform.pathSeparator).last}'),
             backgroundColor: const Color(0xFF059669),
             behavior: SnackBarBehavior.floating,
@@ -471,8 +491,12 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal membuat cadangan: $e')),
+          SnackBar(
+            duration: const Duration(milliseconds: 2000),
+            content: Text('Gagal membuat cadangan: $e'),
+          ),
         );
       }
     }
@@ -521,8 +545,10 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     final content = await file.readAsString();
     await Clipboard.setData(ClipboardData(text: content));
     if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
+          duration: Duration(milliseconds: 1600),
           content: Text('Teks JSON berhasil disalin ke clipboard!'),
           behavior: SnackBarBehavior.floating,
         ),
@@ -534,8 +560,12 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     await BackupService.deleteBackupFile(file);
     await _loadBackupInfo();
     if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('File cadangan dihapus')),
+        const SnackBar(
+          duration: Duration(milliseconds: 1600),
+          content: Text('File cadangan dihapus'),
+        ),
       );
     }
   }

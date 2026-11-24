@@ -189,74 +189,67 @@ class GoalCard extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Sumber Akun & Deadline Chip
+              // Sumber Akun & Deadline
               Expanded(
-                child: Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 6,
-                  runSpacing: 2,
+                child: Row(
                   children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        BankLogoHelper.buildAccountBadge(
-                          context: context,
-                          accountName: detail.sourceAccountName,
-                          accountColor: sourceColor,
-                          logoKey: detail.sourceAccountLogoKey,
-                          iconCodePoint: detail.sourceAccountIconCodePoint,
-                          size: 14,
-                          iconSize: 9,
-                          borderRadius: 3,
-                        ),
-                        const SizedBox(width: 4),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 65),
-                          child: Text(
-                            detail.sourceAccountName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.labelSmall.copyWith(
-                              fontSize: 10,
-                              color: AppColors.textSecondaryOf(context),
-                            ),
-                          ),
-                        ),
-                      ],
+                    BankLogoHelper.buildAccountBadge(
+                      context: context,
+                      accountName: detail.sourceAccountName,
+                      accountColor: sourceColor,
+                      logoKey: detail.sourceAccountLogoKey,
+                      iconCodePoint: detail.sourceAccountIconCodePoint,
+                      size: 16,
+                      iconSize: 10,
+                      borderRadius: 4,
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.calendar_today_rounded,
-                          size: 10,
-                          color: isUrgent
-                              ? AppColors.danger
-                              : AppColors.textSecondaryOf(context),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        detail.sourceAccountName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.labelSmall.copyWith(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textSecondaryOf(context),
                         ),
-                        const SizedBox(width: 3),
-                        Text(
-                          DateFormatter.formatShort(detail.deadline)
-                              .split(' ')
-                              .take(2)
-                              .join(' '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.labelSmall.copyWith(
-                            fontSize: 10.5,
-                            color: isUrgent
-                                ? AppColors.danger
-                                : AppColors.textSecondaryOf(context),
-                            fontWeight: isUrgent
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Text(
+                        '•',
+                        style: TextStyle(
+                          color: AppColors.textSecondaryOf(context),
+                          fontSize: 10,
                         ),
-                      ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 11,
+                      color: isUrgent
+                          ? AppColors.danger
+                          : AppColors.textSecondaryOf(context),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      DateFormatter.formatShort(detail.deadline),
+                      style: AppTypography.labelSmall.copyWith(
+                        fontSize: 11,
+                        color: isUrgent
+                            ? AppColors.danger
+                            : AppColors.textSecondaryOf(context),
+                        fontWeight: isUrgent
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
 
               // Action button
               if (!isDone)

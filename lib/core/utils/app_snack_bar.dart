@@ -17,7 +17,7 @@ class AppSnackBar {
     AppSnackBarType type = AppSnackBarType.info,
     String? actionLabel,
     VoidCallback? onAction,
-    Duration duration = const Duration(seconds: 3),
+    Duration duration = const Duration(milliseconds: 1600),
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 

@@ -92,8 +92,10 @@ class _SplitBillViewState extends State<SplitBillView> {
 
     Clipboard.setData(ClipboardData(text: buffer.toString()));
 
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
+        duration: Duration(milliseconds: 1600),
         content: Row(
           children: [
             Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
@@ -103,7 +105,6 @@ class _SplitBillViewState extends State<SplitBillView> {
         ),
         behavior: SnackBarBehavior.floating,
         backgroundColor: Color(0xFF059669),
-        duration: Duration(seconds: 2),
       ),
     );
   }
@@ -131,19 +132,19 @@ class _SplitBillViewState extends State<SplitBillView> {
           const SizedBox(height: 18),
 
           // 2. Input Subtotal Makanan & Diskon
-          _buildSectionHeader('Tagihan Pokok'),
+          _buildSectionHeader('Tagihan'),
           const SizedBox(height: 8),
           _buildSubtotalAndDiscountInput(context, isDark),
           const SizedBox(height: 18),
 
           // 3. Pengaturan Pajak (Tax) & Biaya Layanan (Service)
-          _buildSectionHeader('Pajak & Biaya Tambahan'),
+          _buildSectionHeader('Pajak & Servis'),
           const SizedBox(height: 8),
           _buildTaxAndServiceSection(context, isDark),
           const SizedBox(height: 18),
 
           // 4. Jumlah Orang (Pax) & Pembulatan
-          _buildSectionHeader('Pembagian Orang'),
+          _buildSectionHeader('Jumlah Orang'),
           const SizedBox(height: 8),
           _buildPaxSelector(context, isDark),
           const SizedBox(height: 24),

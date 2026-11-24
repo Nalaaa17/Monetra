@@ -83,7 +83,7 @@ class _PromoCalculatorScreenState extends ConsumerState<PromoCalculatorScreen>
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.textSecondaryOf(context),
           tabs: const [
-            Tab(icon: Icon(Icons.local_offer_rounded), text: 'Diskon & Promo Coret'),
+            Tab(icon: Icon(Icons.local_offer_rounded), text: 'Diskon Satuan'),
             Tab(icon: Icon(Icons.inventory_2_rounded), text: 'Paket Bundling'),
           ],
         ),
@@ -683,8 +683,12 @@ class _PromoCalculatorScreenState extends ConsumerState<PromoCalculatorScreen>
   void _pickFromCatalog({required ValueChanged<MenuItem> onSelect}) {
     final menus = ref.read(menusListProvider).valueOrNull ?? [];
     if (menus.isEmpty) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Katalog produk masih kosong. Tambahkan menu/produk di Katalog terlebih dahulu.')),
+        const SnackBar(
+          duration: Duration(milliseconds: 1800),
+          content: Text('Katalog produk masih kosong. Tambahkan menu/produk di Katalog terlebih dahulu.'),
+        ),
       );
       return;
     }

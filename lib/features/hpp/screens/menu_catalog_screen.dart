@@ -437,8 +437,10 @@ class _MenuCatalogScreenState extends ConsumerState<MenuCatalogScreen> {
                             Navigator.pop(modalCtx);
                           }
                           if (context.mounted) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
+                                duration: const Duration(milliseconds: 1600),
                                 content: Text(
                                   'Penjualan ${item.name} (${quantity}x) senilai ${CurrencyFormatter.format(totalAmount)} berhasil dicatat!',
                                 ),

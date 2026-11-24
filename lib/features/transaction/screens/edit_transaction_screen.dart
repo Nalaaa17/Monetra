@@ -195,7 +195,7 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
                   controller: _noteController,
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
-                    hintText: 'Tulis keterangan...',
+                    hintText: 'Catatan (opsional)',
                     hintStyle: AppTypography.bodyMedium,
                     prefixIcon: Icon(Icons.edit_note_rounded,
                         color: AppColors.textSecondaryOf(context)),
@@ -264,8 +264,10 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
                         _selectedCategoryId = match.id;
                       }
                     });
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
+                        duration: const Duration(milliseconds: 1600),
                         content: Row(
                           children: [
                             const Icon(Icons.check_circle_rounded,
@@ -280,7 +282,6 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
                         ),
                         backgroundColor: const Color(0xFF059669),
                         behavior: SnackBarBehavior.floating,
-                        duration: const Duration(seconds: 2),
                       ),
                     );
                   },
@@ -608,8 +609,10 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
 
       if (mounted) {
         _allowPop = true;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
+            duration: Duration(milliseconds: 1600),
             content: Text('Transaksi berhasil diperbarui'),
             backgroundColor: Color(0xFF059669),
           ),
@@ -642,8 +645,12 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
 
       if (mounted) {
         _allowPop = true;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transaksi telah dihapus')),
+          const SnackBar(
+            duration: Duration(milliseconds: 1600),
+            content: Text('Transaksi telah dihapus'),
+          ),
         );
         Navigator.of(context).pop();
       }

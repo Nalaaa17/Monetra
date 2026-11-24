@@ -277,9 +277,12 @@ class _ManageCategoriesScreenState
                   Navigator.pop(ctx);
                 }
                 if (!mounted) return;
+                ScaffoldMessenger.of(this.context).hideCurrentSnackBar();
                 ScaffoldMessenger.of(this.context).showSnackBar(
                   SnackBar(
-                      content: Text('Kategori "$name" berhasil disimpan!')),
+                    duration: const Duration(milliseconds: 1600),
+                    content: Text('Kategori "$name" berhasil disimpan!'),
+                  ),
                 );
               },
               child: const Text('Simpan'),

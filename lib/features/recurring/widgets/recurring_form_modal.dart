@@ -319,8 +319,10 @@ class _RecurringFormBottomSheetState
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedAccountId == null) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
+          duration: Duration(milliseconds: 1600),
           content: Text('Pilih dompet / rekening terlebih dahulu.'),
           backgroundColor: AppColors.danger,
         ),
@@ -331,8 +333,10 @@ class _RecurringFormBottomSheetState
     final parsedAmount =
         int.tryParse(_amountController.text.replaceAll('.', '').trim()) ?? 0;
     if (parsedAmount <= 0) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
+          duration: Duration(milliseconds: 1600),
           content: Text('Nominal harus lebih dari 0.'),
           backgroundColor: AppColors.danger,
         ),
@@ -397,16 +401,20 @@ class _RecurringFormBottomSheetState
           : (isEditing
               ? 'Jadwal transaksi berulang diperbarui.'
               : 'Jadwal transaksi berulang berhasil dibuat.');
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          duration: const Duration(milliseconds: 1600),
           content: Text(msg),
           backgroundColor: AppColors.tertiary,
         ),
       );
     } catch (e) {
       if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          duration: const Duration(milliseconds: 2000),
           content: Text('Gagal menyimpan jadwal: $e'),
           backgroundColor: AppColors.danger,
         ),
@@ -472,28 +480,15 @@ class _RecurringFormBottomSheetState
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isEditing
-                                  ? 'Edit Jadwal Rutin'
-                                  : 'Buat Transaksi Berulang',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.titleLarge.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'Catat gaji, Wi-Fi, cicilan, atau sewa otomatis',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.textSecondaryOf(context),
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          isEditing
+                              ? 'Edit Transaksi Berulang'
+                              : 'Transaksi Berulang',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.titleLarge.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       IconButton(

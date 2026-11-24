@@ -131,7 +131,7 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
                       ),
                       icon: const Icon(Icons.add_rounded, size: 20),
                       label: const Text(
-                        'Tambah Dompet / Rekening Baru',
+                        'Tambah Rekening Baru',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),

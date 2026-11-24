@@ -534,10 +534,15 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                     _showAddDebtSheet(context, existing: item);
                   } else if (val == 'toggle_settle') {
                     if (item.id != null) {
-                      await ref
-                          .read(debtRepositoryProvider)
-                          .toggleSettle(item.id!, item.isSettled);
-                      ref.read(debtRefreshProvider.notifier).state++;
+                      if (!item.isSettled && item.remainingAmount > 0) {
+                        _showRecordPaymentSheet(context, item);
+                      } else {
+                        await ref
+                            .read(debtRepositoryProvider)
+                            .toggleSettle(item.id!, item.isSettled);
+                        ref.read(debtRefreshProvider.notifier).state++;
+                        ref.read(homeRefreshTriggerProvider.notifier).state++;
+                      }
                     }
                   } else if (val == 'delete') {
                     if (item.id != null) {
@@ -669,9 +674,13 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                   icon: const Icon(Icons.check_rounded, color: AppColors.tertiary, size: 18),
                   onPressed: () async {
                     if (item.id != null) {
-                      await ref.read(debtRepositoryProvider).toggleSettle(item.id!, false);
-                      ref.read(debtRefreshProvider.notifier).state++;
-                      ref.read(homeRefreshTriggerProvider.notifier).state++;
+                      if (item.remainingAmount > 0) {
+                        _showRecordPaymentSheet(context, item);
+                      } else {
+                        await ref.read(debtRepositoryProvider).toggleSettle(item.id!, false);
+                        ref.read(debtRefreshProvider.notifier).state++;
+                        ref.read(homeRefreshTriggerProvider.notifier).state++;
+                      }
                     }
                   },
                 ),
@@ -786,7 +795,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                   children: [
                     Center(
                       child: Container(
-                        width: 40,
+                        width: 36,
                         height: 4,
                         decoration: BoxDecoration(
                           color: Colors.grey.withValues(alpha: 0.3),
@@ -794,90 +803,194 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      isEdit
-                          ? 'Edit Catatan'
-                          : (selectedType == 'debt' ? 'Catat Utang Baru' : 'Catat Piutang Baru'),
-                      style: AppTypography.titleMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimaryOf(context),
-                      ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          isEdit
+                              ? 'Edit Catatan'
+                              : (selectedType == 'debt'
+                                  ? 'Catat Utang'
+                                  : 'Catat Piutang'),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 20),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => Navigator.pop(modalCtx),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
-                    // Tipe Selector (Utang vs Piutang - Disembunyikan pada profil bisnis)
+                    // Tipe Selector (Utang vs Piutang)
                     if (!isBusiness) ...[
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ChoiceChip(
-                              selected: selectedType == 'debt',
-                              label: const Center(child: Text('Utang (Saya Berutang)')),
-                              selectedColor: AppColors.danger.withValues(alpha: 0.2),
-                              labelStyle: AppTypography.labelSmall.copyWith(
-                                color: selectedType == 'debt' ? AppColors.danger : AppColors.textSecondaryOf(context),
-                                fontWeight: selectedType == 'debt' ? FontWeight.bold : FontWeight.w500,
+                      Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceOf(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: AppColors.dividerOf(context)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => setModalState(
+                                    () => selectedType = 'debt'),
+                                borderRadius: BorderRadius.circular(9),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: selectedType == 'debt'
+                                        ? AppColors.danger
+                                            .withValues(alpha: 0.18)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(9),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Utang (Saya Berutang)',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: selectedType == 'debt'
+                                            ? FontWeight.bold
+                                            : FontWeight.w500,
+                                        color: selectedType == 'debt'
+                                            ? AppColors.danger
+                                            : AppColors.textSecondaryOf(
+                                                context),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
-                              onSelected: (_) => setModalState(() => selectedType = 'debt'),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ChoiceChip(
-                              selected: selectedType == 'receivable',
-                              label: const Center(child: Text('Piutang (Orang Lain)')),
-                              selectedColor: AppColors.tertiary.withValues(alpha: 0.2),
-                              labelStyle: AppTypography.labelSmall.copyWith(
-                                color: selectedType == 'receivable' ? AppColors.tertiary : AppColors.textSecondaryOf(context),
-                                fontWeight: selectedType == 'receivable' ? FontWeight.bold : FontWeight.w500,
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => setModalState(
+                                    () => selectedType = 'receivable'),
+                                borderRadius: BorderRadius.circular(9),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: selectedType == 'receivable'
+                                        ? const Color(0xFF059669)
+                                            .withValues(alpha: 0.18)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(9),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Piutang (Orang Lain)',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: selectedType == 'receivable'
+                                            ? FontWeight.bold
+                                            : FontWeight.w500,
+                                        color: selectedType == 'receivable'
+                                            ? const Color(0xFF059669)
+                                            : AppColors.textSecondaryOf(
+                                                context),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
-                              onSelected: (_) => setModalState(() => selectedType = 'receivable'),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 14),
                     ],
 
-                    // Judul / Keterangan
-                    Text('Judul / Keperluan', style: AppTypography.labelSmall),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: titleCtrl,
-                      decoration: InputDecoration(
-                        hintText: 'Contoh: Pinjaman Motor, Patungan Liburan, KTA',
-                        filled: true,
-                        fillColor: AppColors.surfaceOf(context),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.dividerOf(context)),
+                    // Judul / Keperluan & Nama Pihak (Row)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Keperluan',
+                                  style: AppTypography.labelSmall),
+                              const SizedBox(height: 6),
+                              TextField(
+                                controller: titleCtrl,
+                                decoration: InputDecoration(
+                                  hintText: 'Misal: Pinjaman Motor',
+                                  filled: true,
+                                  fillColor: AppColors.surfaceOf(context),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                        color: Theme.of(context)
+                                            .dividerColor
+                                            .withValues(alpha: 0.4)),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                        color: Theme.of(context)
+                                            .dividerColor
+                                            .withValues(alpha: 0.4)),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 12),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // Nama Orang / Pihak
-                    Text(
-                      selectedType == 'debt' ? 'Nama Pemberi Pinjaman' : 'Nama Peminjam',
-                      style: AppTypography.labelSmall,
-                    ),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: personCtrl,
-                      decoration: InputDecoration(
-                        hintText: 'Contoh: Budi Santoso, BCA Finance, Tokopedia',
-                        filled: true,
-                        fillColor: AppColors.surfaceOf(context),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.dividerOf(context)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                selectedType == 'debt'
+                                    ? 'Pemberi Pinjaman'
+                                    : 'Peminjam',
+                                style: AppTypography.labelSmall,
+                              ),
+                              const SizedBox(height: 6),
+                              TextField(
+                                controller: personCtrl,
+                                decoration: InputDecoration(
+                                  hintText: 'Nama orang/bank',
+                                  filled: true,
+                                  fillColor: AppColors.surfaceOf(context),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                        color: Theme.of(context)
+                                            .dividerColor
+                                            .withValues(alpha: 0.4)),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                        color: Theme.of(context)
+                                            .dividerColor
+                                            .withValues(alpha: 0.4)),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 12),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
 
                     // Total Nominal & Sudah Dibayar
                     Row(
@@ -886,42 +999,70 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Total Nominal (Rp)', style: AppTypography.labelSmall),
+                              Text('Total Nominal',
+                                  style: AppTypography.labelSmall),
                               const SizedBox(height: 6),
                               TextField(
                                 controller: amountCtrl,
                                 keyboardType: TextInputType.number,
                                 decoration: InputDecoration(
                                   hintText: '0',
+                                  prefixText: 'Rp ',
                                   filled: true,
                                   fillColor: AppColors.surfaceOf(context),
                                   border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(color: AppColors.dividerOf(context)),
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                        color: Theme.of(context)
+                                            .dividerColor
+                                            .withValues(alpha: 0.4)),
                                   ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                        color: Theme.of(context)
+                                            .dividerColor
+                                            .withValues(alpha: 0.4)),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 12),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Sudah Dibayar (Rp)', style: AppTypography.labelSmall),
+                              Text('Sudah Dibayar',
+                                  style: AppTypography.labelSmall),
                               const SizedBox(height: 6),
                               TextField(
                                 controller: paidCtrl,
                                 keyboardType: TextInputType.number,
                                 decoration: InputDecoration(
                                   hintText: '0',
+                                  prefixText: 'Rp ',
                                   filled: true,
                                   fillColor: AppColors.surfaceOf(context),
                                   border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(color: AppColors.dividerOf(context)),
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                        color: Theme.of(context)
+                                            .dividerColor
+                                            .withValues(alpha: 0.4)),
                                   ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(
+                                        color: Theme.of(context)
+                                            .dividerColor
+                                            .withValues(alpha: 0.4)),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 12),
                                 ),
                               ),
                             ],
@@ -929,19 +1070,20 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
 
                     // Tanggal Jatuh Tempo
-                    Text('Jatuh Tempo (Opsional)', style: AppTypography.labelSmall),
+                    Text('Jatuh Tempo (Opsional)',
+                        style: AppTypography.labelSmall),
                     const SizedBox(height: 6),
                     InkWell(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                       onTap: () async {
                         final now = DateTime.now();
                         final picked = await showDatePicker(
                           context: context,
-                          initialDate: selectedDueDate ?? now.add(const Duration(days: 30)),
+                          initialDate: selectedDueDate ??
+                              now.add(const Duration(days: 30)),
                           firstDate: DateTime(2000),
                           lastDate: DateTime(2100),
                         );
@@ -950,18 +1092,23 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                         }
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceOf(context),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.dividerOf(context)),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: Theme.of(context)
+                                  .dividerColor
+                                  .withValues(alpha: 0.4)),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.primaryDark),
+                                const Icon(Icons.calendar_today_rounded,
+                                    size: 16, color: AppColors.primaryDark),
                                 const SizedBox(width: 10),
                                 Text(
                                   dueDateFormatted,
@@ -969,7 +1116,10 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                                     color: selectedDueDate != null
                                         ? AppColors.textPrimaryOf(context)
                                         : AppColors.textSecondaryOf(context),
-                                    fontWeight: selectedDueDate != null ? FontWeight.w600 : FontWeight.normal,
+                                    fontWeight: selectedDueDate != null
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
+                                    fontSize: 13,
                                   ),
                                 ),
                               ],
@@ -979,34 +1129,46 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                                 onTap: () {
                                   setModalState(() => selectedDueDate = null);
                                 },
-                                child: const Icon(Icons.close_rounded, size: 18, color: Colors.grey),
+                                child: const Icon(Icons.close_rounded,
+                                    size: 18, color: Colors.grey),
                               )
                             else
-                              const Icon(Icons.chevron_right_rounded, size: 18, color: Colors.grey),
+                              const Icon(Icons.chevron_right_rounded,
+                                  size: 18, color: Colors.grey),
                           ],
                         ),
                       ),
                     ),
-
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
 
                     // Catatan
-                    Text('Catatan Tambahan', style: AppTypography.labelSmall),
+                    Text('Catatan', style: AppTypography.labelSmall),
                     const SizedBox(height: 6),
                     TextField(
                       controller: noteCtrl,
                       decoration: InputDecoration(
-                        hintText: 'Keterangan rekening atau perjanjian',
+                        hintText: 'Keterangan rekening/perjanjian (opsional)',
                         filled: true,
                         fillColor: AppColors.surfaceOf(context),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.dividerOf(context)),
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                              color: Theme.of(context)
+                                  .dividerColor
+                                  .withValues(alpha: 0.4)),
                         ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                              color: Theme.of(context)
+                                  .dividerColor
+                                  .withValues(alpha: 0.4)),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
                       ),
                     ),
-
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 20),
 
                     SizedBox(
                       width: double.infinity,
@@ -1014,9 +1176,10 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                          elevation: 0,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(14),
                           ),
                         ),
                         onPressed: () async {
@@ -1053,9 +1216,10 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                         },
                         child: Text(
                           isEdit ? 'Simpan Perubahan' : 'Simpan Catatan',
-                          style: AppTypography.labelLarge.copyWith(
-                            color: Colors.white,
+                          style: const TextStyle(
+                            color: Colors.black,
                             fontWeight: FontWeight.bold,
+                            fontSize: 15,
                           ),
                         ),
                       ),
@@ -1096,6 +1260,14 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
   bool _isSubmitting = false;
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.debt.remainingAmount > 0) {
+      _amountController.text = widget.debt.remainingAmount.toString();
+    }
+  }
+
+  @override
   void dispose() {
     _amountController.dispose();
     _noteController.dispose();
@@ -1110,6 +1282,10 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
   @override
   Widget build(BuildContext context) {
     final accountsAsync = ref.watch(accountsWithBalanceProvider);
+    final accounts = accountsAsync.valueOrNull ?? [];
+    if (_selectedAccountId == null && accounts.isNotEmpty) {
+      _selectedAccountId = accounts.first.id;
+    }
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isDebt = widget.debt.isDebt;
@@ -1119,7 +1295,7 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(20, 18, 20, bottomInset + 20),
+        padding: EdgeInsets.fromLTRB(20, 12, 20, bottomInset + 20),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1128,7 +1304,7 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
               // Top drag indicator
               Center(
                 child: Container(
-                  width: 40,
+                  width: 36,
                   height: 4,
                   decoration: BoxDecoration(
                     color: Colors.grey.withValues(alpha: 0.3),
@@ -1136,98 +1312,68 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
 
               // Header
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isDebt
-                              ? 'Sisihkan / Bayar: ${widget.debt.title}'
-                              : 'Terima: ${widget.debt.title}',
+                          isDebt ? 'Bayar Utang' : 'Terima Piutang',
                           style: const TextStyle(
-                            fontSize: 17,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 2),
                         Text(
-                          isDebt
-                              ? 'Pilih dompet / rekening untuk mengambil dana pembayaran'
-                              : 'Pilih dompet / rekening tujuan penerimaan dana',
+                          widget.debt.title,
                           style: TextStyle(
                             fontSize: 12,
                             color: AppColors.textSecondaryOf(context),
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: (isDebt ? AppColors.danger : AppColors.tertiary)
+                          .withValues(alpha: isDark ? 0.2 : 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      'Sisa ${CurrencyFormatter.format(widget.debt.remainingAmount)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isDebt
+                            ? AppColors.danger
+                            : const Color(0xFF059669),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
 
-              // Sisa Tagihan & Quick Fill
-              SizedBox(
-                width: double.infinity,
-                child: Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: (isDebt ? AppColors.danger : AppColors.tertiary)
-                            .withValues(alpha: isDark ? 0.2 : 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Sisa ${isDebt ? 'utang' : 'piutang'}: ${CurrencyFormatter.format(widget.debt.remainingAmount)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isDebt ? AppColors.danger : const Color(0xFF059669),
-                        ),
-                      ),
-                    ),
-                    if (widget.debt.remainingAmount > 0)
-                      ActionChip(
-                        label: const Text(
-                          'Lunasi Semua',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () {
-                          setState(() {
-                            _amountController.text =
-                                widget.debt.remainingAmount.toString();
-                          });
-                        },
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Input Nominal
+              // Input Nominal dengan tombol 'Lunasi' terintegrasi
               Text(
-                isDebt ? 'Nominal Dibayar (Rp)' : 'Nominal Diterima (Rp)',
+                isDebt ? 'Nominal Dibayar' : 'Nominal Diterima',
                 style: AppTypography.labelSmall,
               ),
               const SizedBox(height: 6),
@@ -1238,31 +1384,61 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
                 autofocus: true,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  hintText: 'Contoh: 500000',
+                  hintText: '0',
                   prefixText: 'Rp ',
+                  filled: true,
+                  fillColor: AppColors.surfaceOf(context),
+                  suffixIcon: widget.debt.remainingAmount > 0
+                      ? TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _amountController.text =
+                                  widget.debt.remainingAmount.toString();
+                            });
+                          },
+                          child: Text(
+                            'Lunasi',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? AppColors.primary
+                                  : AppColors.primaryDark,
+                            ),
+                          ),
+                        )
+                      : null,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                        color: Theme.of(context)
+                            .dividerColor
+                            .withValues(alpha: 0.4)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                        color: Theme.of(context)
+                            .dividerColor
+                            .withValues(alpha: 0.4)),
                   ),
                   contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
                 ),
               ),
               const SizedBox(height: 14),
 
-              // Pilih Rekening / Dompet Sumber
+              // Pilih Rekening / Dompet Sumber (Horizontal Card Selector)
               Text(
-                isDebt
-                    ? 'Diambil dari Dompet / Rekening'
-                    : 'Disimpan ke Dompet / Rekening',
-                style: AppTypography.labelSmall.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                isDebt ? 'Sumber Saldo' : 'Tujuan Saldo',
+                style: AppTypography.labelSmall,
               ),
               const SizedBox(height: 8),
               accountsAsync.when(
                 data: (accounts) {
                   if (accounts.isEmpty) {
-                    return const Text('Tidak ada akun tersedia.');
+                    return const Text('Tidak ada akun tersedia.',
+                        style: TextStyle(fontSize: 12));
                   }
                   if (_selectedAccountId == null ||
                       !accounts.any((a) => a.id == _selectedAccountId)) {
@@ -1280,72 +1456,106 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: accounts.map((acc) {
-                          final isSelected = _selectedAccountId == acc.id;
-                          final accColor = ColorHelper.parseHex(acc.colorHex);
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: accounts.map((acc) {
+                            final isSelected = _selectedAccountId == acc.id;
+                            final accColor = ColorHelper.parseHex(acc.colorHex);
 
-                          return ChoiceChip(
-                            selected: isSelected,
-                            avatar: BankLogoHelper.buildAccountBadge(
-                              context: context,
-                              accountName: acc.name,
-                              accountColor: accColor,
-                              logoKey: acc.logoKey,
-                              iconCodePoint: acc.iconCodePoint,
-                              size: 20,
-                              iconSize: 12,
-                              borderRadius: 6,
-                            ),
-                            label: Text(
-                              '${acc.name} (${CurrencyFormatter.format(acc.balance)})',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                                color: isSelected ? Colors.black : null,
-                              ),
-                            ),
-                            selectedColor: AppColors.primary,
-                            onSelected: (selected) {
-                              if (selected) {
-                                setState(() {
-                                  _selectedAccountId = acc.id;
-                                });
-                              }
-                            },
-                          );
-                        }).toList(),
-                      ),
-                      if (isExceeding) ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.danger.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.warning_amber_rounded,
-                                  size: 16, color: AppColors.danger),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  'Melebihi saldo bebas "${selectedAcc.name}" (${CurrencyFormatter.format(selectedAcc.balance)})',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.danger,
-                                    fontWeight: FontWeight.w600,
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: InkWell(
+                                onTap: () => setState(
+                                    () => _selectedAccountId = acc.id),
+                                borderRadius: BorderRadius.circular(12),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppColors.primary
+                                            .withValues(alpha: isDark ? 0.22 : 0.16)
+                                        : AppColors.surfaceOf(context),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppColors.primary
+                                          : Theme.of(context)
+                                              .dividerColor
+                                              .withValues(alpha: 0.4),
+                                      width: isSelected ? 1.5 : 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      BankLogoHelper.buildAccountBadge(
+                                        context: context,
+                                        accountName: acc.name,
+                                        accountColor: accColor,
+                                        logoKey: acc.logoKey,
+                                        iconCodePoint: acc.iconCodePoint,
+                                        size: 24,
+                                        iconSize: 13,
+                                        borderRadius: 6,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            acc.name,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.bold
+                                                  : FontWeight.w500,
+                                              color: isSelected
+                                                  ? (isDark
+                                                      ? AppColors.primary
+                                                      : AppColors.primaryDark)
+                                                  : AppColors.textPrimaryOf(
+                                                      context),
+                                            ),
+                                          ),
+                                          Text(
+                                            CurrencyFormatter.format(
+                                                acc.balance),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.textSecondaryOf(
+                                                  context),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      if (isExceeding) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.warning_amber_rounded,
+                                size: 14, color: AppColors.danger),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Saldo "${selectedAcc.name}" kurang (${CurrencyFormatter.format(selectedAcc.balance)})',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.danger,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ],
@@ -1354,7 +1564,8 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
                 loading: () => const SizedBox(
                   height: 28,
                   child: Center(
-                    child: Text('Memuat akun...', style: TextStyle(fontSize: 12)),
+                    child:
+                        Text('Memuat akun...', style: TextStyle(fontSize: 12)),
                   ),
                 ),
                 error: (e, _) => Text('Gagal memuat akun: $e'),
@@ -1362,20 +1573,33 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
               const SizedBox(height: 14),
 
               // Catatan
-              Text('Catatan (Opsional)', style: AppTypography.labelSmall),
+              Text('Catatan', style: AppTypography.labelSmall),
               const SizedBox(height: 6),
               TextField(
                 controller: _noteController,
                 decoration: InputDecoration(
-                  hintText: isDebt ? 'Misal: Cicilan bulan ini' : 'Misal: Pelunasan tunai',
+                  hintText: 'Keterangan (opsional)',
+                  filled: true,
+                  fillColor: AppColors.surfaceOf(context),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                        color: Theme.of(context)
+                            .dividerColor
+                            .withValues(alpha: 0.4)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(
+                        color: Theme.of(context)
+                            .dividerColor
+                            .withValues(alpha: 0.4)),
                   ),
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
 
               // Submit Button
               SizedBox(
@@ -1386,6 +1610,7 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.black,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -1400,7 +1625,9 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
                           ),
                         )
                       : Text(
-                          isDebt ? 'Bayar Cicilan' : 'Simpan Pembayaran',
+                          isDebt
+                              ? 'Bayar & Potong Saldo'
+                              : 'Terima & Tambah Saldo',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
@@ -1418,8 +1645,10 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
   Future<void> _submit() async {
     final amount = _parsedAmount;
     if (amount <= 0) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
+          duration: Duration(milliseconds: 1600),
           content: Text('Masukkan nominal pembayaran lebih dari Rp 0.'),
           backgroundColor: AppColors.danger,
         ),
@@ -1428,8 +1657,10 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
     }
 
     if (_selectedAccountId == null) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
+          duration: Duration(milliseconds: 1600),
           content: Text('Pilih dompet / rekening terlebih dahulu.'),
           backgroundColor: AppColors.danger,
         ),
@@ -1477,17 +1708,25 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
 
       if (mounted) {
         Navigator.pop(context);
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Pembayaran "${widget.debt.title}" berhasil dicatat'),
+            duration: const Duration(milliseconds: 1600),
+            content: Text(
+              widget.debt.isDebt
+                  ? 'Pembayaran "${widget.debt.title}" berhasil dicatat & saldo terpotong'
+                  : 'Penerimaan piutang "${widget.debt.title}" berhasil dicatat & saldo bertambah',
+            ),
             behavior: SnackBarBehavior.floating,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(milliseconds: 2000),
             content: Text('Gagal mencatat pembayaran: $e'),
             backgroundColor: AppColors.danger,
           ),

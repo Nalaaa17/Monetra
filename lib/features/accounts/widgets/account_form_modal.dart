@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/constants/bank_brands.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/bank_logo_helper.dart';
 import '../../../core/utils/color_helper.dart';
 import '../../../data/models/account.dart';
@@ -629,28 +630,17 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
 
       ref.read(homeRefreshTriggerProvider.notifier).state++;
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 1600),
-            content: Text(isEditing
-                ? 'Akun "$name" berhasil diperbarui!'
-                : 'Akun "$name" berhasil ditambahkan!'),
-            backgroundColor: const Color(0xFF059669),
-          ),
+        AppSnackBar.showSuccess(
+          context,
+          isEditing
+              ? 'Akun "$name" berhasil diperbarui!'
+              : 'Akun "$name" berhasil ditambahkan!',
         );
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 2000),
-            content: Text('Gagal menyimpan akun: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        AppSnackBar.showError(context, 'Gagal menyimpan akun: $e');
       }
     } finally {
       if (mounted) {

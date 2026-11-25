@@ -354,7 +354,7 @@ class DailyTransactionGroupCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(11),
         ),
         child: Icon(
-          isIncome ? Icons.south_west_rounded : Icons.north_east_rounded,
+          isIncome ? Icons.savings_outlined : Icons.shopping_bag_outlined,
           color: color,
           size: 18,
         ),

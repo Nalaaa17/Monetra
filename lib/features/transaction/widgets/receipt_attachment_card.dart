@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../data/services/receipt_ocr_service.dart';
 import 'receipt_preview_dialog.dart';
 import 'receipt_scan_dialog.dart';
@@ -40,37 +41,13 @@ class ReceiptAttachmentCard extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 2000),
-            content: Text('Gagal mengambil foto: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        AppSnackBar.showError(context, 'Gagal mengambil foto: $e');
       }
     }
   }
 
   Future<void> _triggerOcrScan(BuildContext context, String path) async {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        duration: Duration(milliseconds: 1400),
-        content: Row(
-          children: [
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-            ),
-            SizedBox(width: 10),
-            Text('Memindai struk belanja...'),
-          ],
-        ),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    AppSnackBar.showInfo(context, 'Memindai struk belanja...');
 
     final result = await ReceiptOcrService.scanReceipt(path);
     if (!context.mounted) return;

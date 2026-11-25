@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/repositories/transfer_repository.dart';
@@ -418,14 +419,7 @@ class _EditTransferScreenState extends ConsumerState<EditTransferScreen> {
 
       if (mounted) {
         _allowPop = true;
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            duration: Duration(milliseconds: 1600),
-            content: Text('Transfer berhasil diperbarui'),
-            backgroundColor: Color(0xFF059669),
-          ),
-        );
+        AppSnackBar.showSuccess(context, 'Transfer berhasil diperbarui');
         Navigator.of(context).pop();
       }
     } catch (e) {
@@ -454,13 +448,7 @@ class _EditTransferScreenState extends ConsumerState<EditTransferScreen> {
 
       if (mounted) {
         _allowPop = true;
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            duration: Duration(milliseconds: 1600),
-            content: Text('Transfer telah dihapus'),
-          ),
-        );
+        AppSnackBar.showInfo(context, 'Transfer telah dihapus');
         Navigator.of(context).pop();
       }
     }

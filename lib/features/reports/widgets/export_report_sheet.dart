@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/repositories/report_repository.dart';
 import '../../../data/services/report_export_service.dart';
@@ -320,14 +321,7 @@ class _ExportReportSheetState extends ConsumerState<ExportReportSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _isExporting = false);
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 2000),
-            content: Text('Gagal mengekspor PDF: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        AppSnackBar.showError(context, 'Gagal mengekspor PDF: $e');
       }
     }
   }
@@ -362,14 +356,7 @@ class _ExportReportSheetState extends ConsumerState<ExportReportSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _isExporting = false);
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 2000),
-            content: Text('Gagal mengekspor Excel: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        AppSnackBar.showError(context, 'Gagal mengekspor Excel: $e');
       }
     }
   }

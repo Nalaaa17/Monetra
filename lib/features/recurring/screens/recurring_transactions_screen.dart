@@ -686,16 +686,11 @@ class _RecurringTransactionsScreenState
     await repo.toggleActive(item.id, active);
     ref.read(homeRefreshTriggerProvider.notifier).state++;
     if (!mounted) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(milliseconds: 1600),
-        content: Text(
-          active
-              ? "Jadwal '${item.title}' diaktifkan kembali."
-              : "Jadwal '${item.title}' dijeda sementara.",
-        ),
-      ),
+    AppSnackBar.showInfo(
+      context,
+      active
+          ? "Jadwal '${item.title}' diaktifkan kembali."
+          : "Jadwal '${item.title}' dijeda sementara.",
     );
   }
 
@@ -752,13 +747,7 @@ class _RecurringTransactionsScreenState
     ref.read(homeRefreshTriggerProvider.notifier).state++;
 
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(milliseconds: 1600),
-        content: Text("Jadwal '${item.title}' berhasil dihapus."),
-      ),
-    );
+    AppSnackBar.showInfo(context, "Jadwal '${item.title}' berhasil dihapus.");
   }
 
   Widget _buildEmptyState(BuildContext context) {

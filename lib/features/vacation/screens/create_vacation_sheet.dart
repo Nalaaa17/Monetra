@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../data/models/vacation.dart';
@@ -47,23 +48,14 @@ class _CreateVacationSheetState extends ConsumerState<CreateVacationSheet> {
   Future<void> _submit(List<AccountWithBalance> accounts) async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(milliseconds: 1600),
-          content: Text('Masukkan nama trip terlebih dahulu'),
-        ),
-      );
+      AppSnackBar.showWarning(context, 'Masukkan nama trip terlebih dahulu');
       return;
     }
 
     if (_totalBudget <= 0) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(milliseconds: 1600),
-          content: Text('Tentukan alokasi dana dari minimal 1 rekening'),
-        ),
+      AppSnackBar.showWarning(
+        context,
+        'Tentukan alokasi dana dari minimal 1 rekening',
       );
       return;
     }
@@ -71,14 +63,9 @@ class _CreateVacationSheetState extends ConsumerState<CreateVacationSheet> {
     for (final acc in accounts) {
       final alloc = _allocations[acc.id] ?? 0;
       if (alloc > acc.balance) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 1600),
-            content: Text(
-              'Alokasi ${acc.name} melebihi saldo bebas (Rp ${CurrencyFormatter.format(acc.balance)})',
-            ),
-          ),
+        AppSnackBar.showWarning(
+          context,
+          'Alokasi ${acc.name} melebihi saldo bebas (Rp ${CurrencyFormatter.format(acc.balance)})',
         );
         return;
       }
@@ -112,13 +99,7 @@ class _CreateVacationSheetState extends ConsumerState<CreateVacationSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 2000),
-            content: Text('Gagal membuat liburan: $e'),
-          ),
-        );
+        AppSnackBar.showError(context, 'Gagal membuat liburan: $e');
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);

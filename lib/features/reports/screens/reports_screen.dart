@@ -5,6 +5,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/repositories/report_repository.dart';
+import '../../../shared/widgets/app_shimmer.dart';
 import '../../home/providers/home_providers.dart';
 import '../providers/report_providers.dart';
 import '../widgets/category_ranking_list.dart';
@@ -158,7 +159,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                 selectedYear: selectedDate.year,
                                 selectedMonth: selectedDate.month,
                               ),
-                              const SizedBox(height: 80),
+                              const SizedBox(height: 108),
                             ],
                           );
                         }
@@ -213,12 +214,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                                 selectedMonth: selectedDate.month,
                               ),
                             ],
-                            const SizedBox(height: 80),
+                            const SizedBox(height: 108),
                           ],
                         );
                       },
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
+                      loading: () => const ReportsSkeleton(),
                       error: (e, _) =>
                           Center(child: Text('Error laporan: $e')),
                     ),

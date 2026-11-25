@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../providers/hpp_providers.dart';
@@ -1108,7 +1109,7 @@ class _HppCalculatorScreenState extends ConsumerState<HppCalculatorScreen>
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: Colors.black,
               minimumSize: const Size(double.infinity, 48),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
@@ -1416,7 +1417,7 @@ class _HppCalculatorScreenState extends ConsumerState<HppCalculatorScreen>
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
+                    foregroundColor: Colors.black,
                   ),
                   onPressed: () {
                     final name = nameCtrl.text.trim();
@@ -1468,14 +1469,7 @@ class _HppCalculatorScreenState extends ConsumerState<HppCalculatorScreen>
     List<HppIngredientItem>? ingredients,
   }) async {
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(milliseconds: 1600),
-          content: Text('Nama produk tidak boleh kosong'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      AppSnackBar.showWarning(context, 'Nama produk tidak boleh kosong');
       return;
     }
 
@@ -1497,18 +1491,13 @@ class _HppCalculatorScreenState extends ConsumerState<HppCalculatorScreen>
     ref.read(menuRefreshTriggerProvider.notifier).state++;
 
     if (mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          duration: const Duration(milliseconds: 1800),
-          content: Text('Produk "$name" berhasil disimpan ke Katalog Jualan!'),
-          backgroundColor: AppColors.primary,
-          action: SnackBarAction(
-            label: 'Lihat Katalog',
-            textColor: Colors.white,
-            onPressed: () => context.push(AppRouter.menuCatalog),
-          ),
-        ),
+      AppSnackBar.show(
+        context,
+        message: 'Produk "$name" berhasil disimpan ke Katalog Jualan!',
+        type: AppSnackBarType.success,
+        duration: const Duration(milliseconds: 1600),
+        actionLabel: 'Lihat Katalog',
+        onAction: () => context.push(AppRouter.menuCatalog),
       );
     }
   }

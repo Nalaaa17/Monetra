@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/repositories/transaction_repository.dart';
@@ -264,25 +265,9 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
                         _selectedCategoryId = match.id;
                       }
                     });
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        duration: const Duration(milliseconds: 1600),
-                        content: Row(
-                          children: [
-                            const Icon(Icons.check_circle_rounded,
-                                color: Colors.white, size: 20),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Struk diterapkan: ${CurrencyFormatter.format(result.detectedAmount ?? 0)}',
-                              ),
-                            ),
-                          ],
-                        ),
-                        backgroundColor: const Color(0xFF059669),
-                        behavior: SnackBarBehavior.floating,
-                      ),
+                    AppSnackBar.showSuccess(
+                      context,
+                      'Struk diterapkan: ${CurrencyFormatter.format(result.detectedAmount ?? 0)}',
                     );
                   },
                 ),
@@ -609,14 +594,7 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
 
       if (mounted) {
         _allowPop = true;
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            duration: Duration(milliseconds: 1600),
-            content: Text('Transaksi berhasil diperbarui'),
-            backgroundColor: Color(0xFF059669),
-          ),
-        );
+        AppSnackBar.showSuccess(context, 'Transaksi berhasil diperbarui');
         Navigator.of(context).pop();
       }
     } catch (e) {
@@ -645,13 +623,7 @@ class _EditTransactionScreenState extends ConsumerState<EditTransactionScreen> {
 
       if (mounted) {
         _allowPop = true;
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            duration: Duration(milliseconds: 1600),
-            content: Text('Transaksi telah dihapus'),
-          ),
-        );
+        AppSnackBar.showInfo(context, 'Transaksi telah dihapus');
         Navigator.of(context).pop();
       }
     }

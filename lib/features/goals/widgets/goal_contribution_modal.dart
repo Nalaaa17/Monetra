@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_typography.dart';
+import '../../../../core/utils/app_snack_bar.dart';
 import '../../../../core/utils/bank_logo_helper.dart';
 import '../../../../core/utils/color_helper.dart';
 import '../../../../core/utils/currency_formatter.dart';
@@ -426,24 +427,16 @@ class _AddContributionSheetState extends ConsumerState<_AddContributionSheet> {
   Future<void> _submit() async {
     final amount = _parsedAmount;
     if (amount <= 0) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(milliseconds: 1600),
-          content: Text('Masukkan nominal setoran lebih dari Rp 0.'),
-          backgroundColor: AppColors.danger,
-        ),
+      AppSnackBar.showWarning(
+        context,
+        'Masukkan nominal setoran lebih dari Rp 0.',
       );
       return;
     }
     if (_selectedAccountId == null) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(milliseconds: 1600),
-          content: Text('Pilih dompet / rekening sumber terlebih dahulu.'),
-          backgroundColor: AppColors.danger,
-        ),
+      AppSnackBar.showWarning(
+        context,
+        'Pilih dompet / rekening sumber terlebih dahulu.',
       );
       return;
     }
@@ -487,28 +480,15 @@ class _AddContributionSheetState extends ConsumerState<_AddContributionSheet> {
 
       if (mounted) {
         final sourceLabel = chosenAcc?.name ?? 'rekening sumber';
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 1600),
-            content: Text(
-              '${CurrencyFormatter.format(amount)} disisihkan dari $sourceLabel ke "${widget.detail.name}"!',
-            ),
-            backgroundColor: const Color(0xFF059669),
-          ),
+        AppSnackBar.showSuccess(
+          context,
+          '${CurrencyFormatter.format(amount)} disisihkan dari $sourceLabel ke "${widget.detail.name}"!',
         );
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 2000),
-            content: Text('Gagal menyisihkan dana: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        AppSnackBar.showError(context, 'Gagal menyisihkan dana: $e');
       }
     } finally {
       if (mounted) {

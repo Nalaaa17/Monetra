@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../data/models/vacation.dart';
@@ -60,12 +61,9 @@ class _AddVacationExpenseSheetState
   Future<void> _submit() async {
     final amount = _parsedAmount;
     if (amount <= 0) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(milliseconds: 1600),
-          content: Text('Masukkan nominal pengeluaran yang valid'),
-        ),
+      AppSnackBar.showWarning(
+        context,
+        'Masukkan nominal pengeluaran yang valid',
       );
       return;
     }
@@ -112,13 +110,7 @@ class _AddVacationExpenseSheetState
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 2000),
-            content: Text('Gagal mencatat pengeluaran: $e'),
-          ),
-        );
+        AppSnackBar.showError(context, 'Gagal mencatat pengeluaran: $e');
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);

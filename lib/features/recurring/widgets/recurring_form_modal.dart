@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/models/category.dart';
@@ -319,13 +320,9 @@ class _RecurringFormBottomSheetState
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedAccountId == null) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(milliseconds: 1600),
-          content: Text('Pilih dompet / rekening terlebih dahulu.'),
-          backgroundColor: AppColors.danger,
-        ),
+      AppSnackBar.showWarning(
+        context,
+        'Pilih dompet / rekening terlebih dahulu.',
       );
       return;
     }
@@ -333,14 +330,7 @@ class _RecurringFormBottomSheetState
     final parsedAmount =
         int.tryParse(_amountController.text.replaceAll('.', '').trim()) ?? 0;
     if (parsedAmount <= 0) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(milliseconds: 1600),
-          content: Text('Nominal harus lebih dari 0.'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      AppSnackBar.showWarning(context, 'Nominal harus lebih dari 0.');
       return;
     }
 
@@ -394,31 +384,16 @@ class _RecurringFormBottomSheetState
       ref.read(homeRefreshTriggerProvider.notifier).state++;
 
       if (!mounted) return;
-      Navigator.of(context).pop();
-
       final msg = syncResult.createdCount > 0
           ? 'Jadwal tersimpan & transaksi pertama hari ini otomatis dicatat!'
           : (isEditing
               ? 'Jadwal transaksi berulang diperbarui.'
               : 'Jadwal transaksi berulang berhasil dibuat.');
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          duration: const Duration(milliseconds: 1600),
-          content: Text(msg),
-          backgroundColor: AppColors.tertiary,
-        ),
-      );
+      AppSnackBar.showSuccess(context, msg);
+      Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          duration: const Duration(milliseconds: 2000),
-          content: Text('Gagal menyimpan jadwal: $e'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
+      AppSnackBar.showError(context, 'Gagal menyimpan jadwal: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

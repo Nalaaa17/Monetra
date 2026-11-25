@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -63,17 +64,22 @@ class HeroSekilasCard extends ConsumerWidget {
               ),
               InkWell(
                 onTap: () {
+                  HapticFeedback.selectionClick();
                   ref.read(isBalanceHiddenProvider.notifier).state = !isHidden;
                 },
                 borderRadius: BorderRadius.circular(20),
                 child: Padding(
                   padding: const EdgeInsets.all(4),
-                  child: Icon(
-                    isHidden
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    color: Colors.white.withValues(alpha: 0.72),
-                    size: 19,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    child: Icon(
+                      isHidden
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      key: ValueKey<bool>(isHidden),
+                      color: Colors.white.withValues(alpha: 0.72),
+                      size: 19,
+                    ),
                   ),
                 ),
               ),
@@ -82,19 +88,16 @@ class HeroSekilasCard extends ConsumerWidget {
 
           const SizedBox(height: 6),
 
-          // Baris 2: Nominal Utama Besar & Jelas (Anti-wrap)
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              isHidden ? '••••••••' : CurrencyFormatter.format(totalAssets),
-              maxLines: 1,
-              style: AppTypography.headlineLarge.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                fontSize: 30,
-                letterSpacing: -0.5,
-              ),
+          // Baris 2: Nominal Utama Besar & Jelas (Anti-wrap + animasi halus)
+          _buildAnimatedMaskText(
+            isHidden: isHidden,
+            visibleText: CurrencyFormatter.format(totalAssets),
+            hiddenText: '••••••••',
+            style: AppTypography.headlineLarge.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 30,
+              letterSpacing: -0.5,
             ),
           ),
 
@@ -147,18 +150,14 @@ class HeroSekilasCard extends ConsumerWidget {
                             ],
                           ),
                           const SizedBox(height: 4),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              isHidden
-                                  ? '••••••'
-                                  : CurrencyFormatter.format(today.income),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                              ),
+                          _buildAnimatedMaskText(
+                            isHidden: isHidden,
+                            visibleText: CurrencyFormatter.format(today.income),
+                            hiddenText: '••••••',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
                             ),
                           ),
                         ],
@@ -205,20 +204,16 @@ class HeroSekilasCard extends ConsumerWidget {
                             ],
                           ),
                           const SizedBox(height: 4),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              isHidden
-                                  ? '••••••'
-                                  : CurrencyFormatter.format(netProfit),
-                              style: TextStyle(
-                                color: netProfit >= 0
-                                    ? const Color(0xFF60A5FA)
-                                    : Colors.redAccent,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                              ),
+                          _buildAnimatedMaskText(
+                            isHidden: isHidden,
+                            visibleText: CurrencyFormatter.format(netProfit),
+                            hiddenText: '••••••',
+                            style: TextStyle(
+                              color: netProfit >= 0
+                                  ? const Color(0xFF60A5FA)
+                                  : Colors.redAccent,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
                             ),
                           ),
                         ],
@@ -264,18 +259,15 @@ class HeroSekilasCard extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          isHidden
-                              ? '••••••'
-                              : CurrencyFormatter.format(summary.dailySpendingBalance),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                          ),
+                      _buildAnimatedMaskText(
+                        isHidden: isHidden,
+                        visibleText: CurrencyFormatter.format(
+                            summary.dailySpendingBalance),
+                        hiddenText: '••••••',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
                         ),
                       ),
                     ],
@@ -320,18 +312,15 @@ class HeroSekilasCard extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          isHidden
-                              ? '••••••'
-                              : CurrencyFormatter.format(summary.savingsBalance),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                          ),
+                      _buildAnimatedMaskText(
+                        isHidden: isHidden,
+                        visibleText:
+                            CurrencyFormatter.format(summary.savingsBalance),
+                        hiddenText: '••••••',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
                         ),
                       ),
                     ],
@@ -444,19 +433,15 @@ class HeroSekilasCard extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          isHidden
-                              ? '••••••'
-                              : CurrencyFormatter.format(amount),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.2,
-                          ),
+                      _buildAnimatedMaskText(
+                        isHidden: isHidden,
+                        visibleText: CurrencyFormatter.format(amount),
+                        hiddenText: '••••••',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.2,
                         ),
                       ),
                     ],
@@ -470,6 +455,38 @@ class HeroSekilasCard extends ConsumerWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedMaskText({
+    required bool isHidden,
+    required String visibleText,
+    required String hiddenText,
+    required TextStyle style,
+  }) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 180),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      layoutBuilder: (currentChild, previousChildren) => Stack(
+        alignment: Alignment.centerLeft,
+        children: [
+          ...previousChildren,
+          ?currentChild,
+        ],
+      ),
+      child: KeyedSubtree(
+        key: ValueKey<bool>(isHidden),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            isHidden ? hiddenText : visibleText,
+            maxLines: 1,
+            style: style,
           ),
         ),
       ),

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/currency_formatter.dart';
 
 class SplitBillView extends StatefulWidget {
@@ -92,20 +93,9 @@ class _SplitBillViewState extends State<SplitBillView> {
 
     Clipboard.setData(ClipboardData(text: buffer.toString()));
 
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        duration: Duration(milliseconds: 1600),
-        content: Row(
-          children: [
-            Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-            SizedBox(width: 8),
-            Text('Rincian berhasil disalin ke clipboard!'),
-          ],
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Color(0xFF059669),
-      ),
+    AppSnackBar.showSuccess(
+      context,
+      'Rincian berhasil disalin ke clipboard!',
     );
   }
 

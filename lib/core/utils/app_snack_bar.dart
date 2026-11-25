@@ -17,7 +17,7 @@ class AppSnackBar {
     AppSnackBarType type = AppSnackBarType.info,
     String? actionLabel,
     VoidCallback? onAction,
-    Duration duration = const Duration(milliseconds: 1600),
+    Duration duration = const Duration(milliseconds: 1000),
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -49,12 +49,13 @@ class AppSnackBar {
     }
 
     final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
+    messenger.clearSnackBars();
 
     messenger.showSnackBar(
       SnackBar(
         duration: duration,
         behavior: SnackBarBehavior.floating,
+        dismissDirection: DismissDirection.horizontal,
         backgroundColor: Colors.transparent,
         elevation: 0,
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -132,19 +133,55 @@ class AppSnackBar {
     );
   }
 
-  static void showSuccess(BuildContext context, String message) {
-    show(context, message: message, type: AppSnackBarType.success);
+  static void showSuccess(
+    BuildContext context,
+    String message, {
+    Duration duration = const Duration(milliseconds: 1000),
+  }) {
+    show(
+      context,
+      message: message,
+      type: AppSnackBarType.success,
+      duration: duration,
+    );
   }
 
-  static void showError(BuildContext context, String message) {
-    show(context, message: message, type: AppSnackBarType.error);
+  static void showError(
+    BuildContext context,
+    String message, {
+    Duration duration = const Duration(milliseconds: 1500),
+  }) {
+    show(
+      context,
+      message: message,
+      type: AppSnackBarType.error,
+      duration: duration,
+    );
   }
 
-  static void showWarning(BuildContext context, String message) {
-    show(context, message: message, type: AppSnackBarType.warning);
+  static void showWarning(
+    BuildContext context,
+    String message, {
+    Duration duration = const Duration(milliseconds: 1200),
+  }) {
+    show(
+      context,
+      message: message,
+      type: AppSnackBarType.warning,
+      duration: duration,
+    );
   }
 
-  static void showInfo(BuildContext context, String message) {
-    show(context, message: message, type: AppSnackBarType.info);
+  static void showInfo(
+    BuildContext context,
+    String message, {
+    Duration duration = const Duration(milliseconds: 1000),
+  }) {
+    show(
+      context,
+      message: message,
+      type: AppSnackBarType.info,
+      duration: duration,
+    );
   }
 }

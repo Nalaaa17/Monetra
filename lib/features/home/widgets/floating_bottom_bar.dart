@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/router/app_router.dart';
@@ -17,9 +18,11 @@ class FloatingBottomBar extends StatefulWidget {
 
 class _FloatingBottomBarState extends State<FloatingBottomBar> {
   int? _pressingIndex;
+  bool _isCenterPressing = false;
 
   void _onTabSelected(int index) {
     if (index == widget.selectedIndex) return;
+    HapticFeedback.selectionClick();
 
     switch (index) {
       case 0:
@@ -113,7 +116,7 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
-                                  Icons.arrow_upward_rounded,
+                                  Icons.shopping_bag_rounded,
                                   color: Colors.white,
                                   size: 20,
                                 ),
@@ -164,7 +167,7 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
-                                  Icons.arrow_downward_rounded,
+                                  Icons.savings_rounded,
                                   color: Colors.white,
                                   size: 20,
                                 ),
@@ -402,32 +405,43 @@ class _FloatingBottomBarState extends State<FloatingBottomBar> {
 
   Widget _buildCenterActionButton(BuildContext context) {
     return GestureDetector(
-      onTap: () => _showAddActionModal(context),
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [
-              Color(0xFFFFB800), // Primary Monetra Amber
-              Color(0xFFF59E0B), // Primary Dark
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.45),
-              blurRadius: 14,
-              offset: const Offset(0, 4),
+      onTapDown: (_) => setState(() => _isCenterPressing = true),
+      onTapUp: (_) => setState(() => _isCenterPressing = false),
+      onTapCancel: () => setState(() => _isCenterPressing = false),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _showAddActionModal(context);
+      },
+      child: AnimatedScale(
+        scale: _isCenterPressing ? 0.88 : 1.0,
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOutBack,
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFFFFB800), // Primary Monetra Amber
+                Color(0xFFF59E0B), // Primary Dark
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
-        ),
-        child: const Icon(
-          Icons.add_rounded,
-          color: Colors.black87,
-          size: 28,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.45),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.add_rounded,
+            color: Colors.black87,
+            size: 28,
+          ),
         ),
       ),
     );

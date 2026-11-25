@@ -8,6 +8,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../data/repositories/account_repository.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_shimmer.dart';
 import '../../home/providers/home_providers.dart';
 import '../widgets/account_form_modal.dart';
 
@@ -44,19 +45,19 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
             child: TextButton.icon(
               style: TextButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
               onPressed: () => showAccountFormModal(context, ref),
-              icon: const Icon(Icons.add, size: 18),
+              icon: const Icon(Icons.add_rounded, size: 18),
               label: Text(
                 'Akun',
                 style: AppTypography.labelMedium.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Colors.black,
                 ),
               ),
             ),
@@ -88,8 +89,12 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
             color: AppColors.primary,
             onRefresh: () async {
               ref.read(homeRefreshTriggerProvider.notifier).state++;
+              final refreshFuture =
+                  ref.refresh(accountsWithBalanceProvider.future);
+              await refreshFuture;
             },
             child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
                 // 1. HERO TOTAL ASET CARD
@@ -123,7 +128,7 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
                       onPressed: () => showAccountFormModal(context, ref),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Colors.black,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
@@ -141,9 +146,7 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
             ),
           );
         },
-        loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
+        loading: () => const ManageAccountsSkeleton(),
         error: (e, _) => Center(
           child: Text('Gagal memuat akun: $e', style: const TextStyle(color: AppColors.danger)),
         ),
@@ -278,7 +281,7 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
       selectedColor: AppColors.primary,
       backgroundColor: AppColors.cardOf(context),
       labelStyle: AppTypography.labelSmall.copyWith(
-        color: isSelected ? Colors.white : AppColors.textSecondaryOf(context),
+        color: isSelected ? Colors.black : AppColors.textSecondaryOf(context),
         fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
       ),
       shape: RoundedRectangleBorder(
@@ -524,7 +527,7 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: Colors.black,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () => showAccountFormModal(context, ref),

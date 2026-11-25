@@ -7,6 +7,7 @@ import '../../../../core/utils/date_formatter.dart';
 import '../../../../data/repositories/report_repository.dart';
 import '../../../../data/repositories/transaction_repository.dart';
 import '../../../../shared/providers/repository_providers.dart';
+import '../../../../shared/widgets/app_shimmer.dart';
 import '../providers/home_providers.dart';
 
 class MonthlyActivityCalendar extends ConsumerWidget {
@@ -168,9 +169,20 @@ class MonthlyActivityCalendar extends ConsumerWidget {
               dailyMap,
               isCurrentMonth ? now.day : -1,
             ),
-            loading: () => const SizedBox(
-              height: 200,
-              child: Center(child: CircularProgressIndicator()),
+            loading: () => AppShimmer(
+              child: Column(
+                children: List.generate(
+                  5,
+                  (_) => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 4),
+                    child: SkeletonBox(
+                      width: double.infinity,
+                      height: 44,
+                      borderRadius: 10,
+                    ),
+                  ),
+                ),
+              ),
             ),
             error: (err, _) => Center(
               child: Padding(

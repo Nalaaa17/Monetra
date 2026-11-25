@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/bank_logo_helper.dart';
 import '../../../core/utils/color_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -527,9 +528,7 @@ class _GoalFormBottomSheetContentState
   Future<void> _saveGoal() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedAccountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih rekening/dompet sumber')),
-      );
+      AppSnackBar.showWarning(context, 'Pilih rekening/dompet sumber');
       return;
     }
 
@@ -611,15 +610,11 @@ class _GoalFormBottomSheetContentState
         ref.read(homeRefreshTriggerProvider.notifier).state++;
 
         if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              duration: const Duration(milliseconds: 1600),
-              content: Text('Target "${updatedGoal.name}" berhasil diperbarui!'),
-              backgroundColor: const Color(0xFF059669),
-            ),
+          AppSnackBar.showSuccess(
+            context,
+            'Target "${updatedGoal.name}" berhasil diperbarui!',
           );
+          Navigator.pop(context);
         }
       } else {
         final newGoal = Goal(
@@ -648,28 +643,16 @@ class _GoalFormBottomSheetContentState
         ref.read(homeRefreshTriggerProvider.notifier).state++;
 
         if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              duration: const Duration(milliseconds: 1600),
-              content: Text(
-                  'Target "${newGoal.name}" senilai ${CurrencyFormatter.format(targetAmount)} berhasil dibuat!'),
-              backgroundColor: const Color(0xFF059669),
-            ),
+          AppSnackBar.showSuccess(
+            context,
+            'Target "${newGoal.name}" senilai ${CurrencyFormatter.format(targetAmount)} berhasil dibuat!',
           );
+          Navigator.pop(context);
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 2000),
-            content: Text('Gagal menyimpan target: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        AppSnackBar.showError(context, 'Gagal menyimpan target: $e');
       }
     } finally {
       if (mounted) {

@@ -185,140 +185,147 @@ class GoalCard extends ConsumerWidget {
 
           const SizedBox(height: 12),
 
-          // Row 3: Meta & Quick Action
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Sumber Akun & Deadline
-              Expanded(
-                child: Row(
+          // Row 3: Meta & Quick Action (aman di layar sempit 320px)
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                // Sumber Akun & Deadline
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  runSpacing: 4,
                   children: [
-                    BankLogoHelper.buildAccountBadge(
-                      context: context,
-                      accountName: detail.sourceAccountName,
-                      accountColor: sourceColor,
-                      logoKey: detail.sourceAccountLogoKey,
-                      iconCodePoint: detail.sourceAccountIconCodePoint,
-                      size: 16,
-                      iconSize: 10,
-                      borderRadius: 4,
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        detail.sourceAccountName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.labelSmall.copyWith(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondaryOf(context),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        BankLogoHelper.buildAccountBadge(
+                          context: context,
+                          accountName: detail.sourceAccountName,
+                          accountColor: sourceColor,
+                          logoKey: detail.sourceAccountLogoKey,
+                          iconCodePoint: detail.sourceAccountIconCodePoint,
+                          size: 16,
+                          iconSize: 10,
+                          borderRadius: 4,
                         ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Text(
-                        '•',
-                        style: TextStyle(
-                          color: AppColors.textSecondaryOf(context),
-                          fontSize: 10,
+                        const SizedBox(width: 5),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 130),
+                          child: Text(
+                            detail.sourceAccountName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.labelSmall.copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textSecondaryOf(context),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                    Icon(
-                      Icons.calendar_today_rounded,
-                      size: 11,
-                      color: isUrgent
-                          ? AppColors.danger
-                          : AppColors.textSecondaryOf(context),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      DateFormatter.formatShort(detail.deadline),
-                      style: AppTypography.labelSmall.copyWith(
-                        fontSize: 11,
-                        color: isUrgent
-                            ? AppColors.danger
-                            : AppColors.textSecondaryOf(context),
-                        fontWeight: isUrgent
-                            ? FontWeight.bold
-                            : FontWeight.w500,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          size: 11,
+                          color: isUrgent
+                              ? AppColors.danger
+                              : AppColors.textSecondaryOf(context),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          DateFormatter.formatShort(detail.deadline),
+                          style: AppTypography.labelSmall.copyWith(
+                            fontSize: 11,
+                            color: isUrgent
+                                ? AppColors.danger
+                                : AppColors.textSecondaryOf(context),
+                            fontWeight: isUrgent
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 8),
 
-              // Action button
-              if (!isDone)
-                InkWell(
-                  onTap: () => showAddContributionModal(context, ref, detail),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.add,
-                          size: 14,
-                          color: AppColors.primaryDark,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Setor',
-                          style: AppTypography.labelSmall.copyWith(
+                // Action button
+                if (!isDone)
+                  InkWell(
+                    onTap: () => showAddContributionModal(context, ref, detail),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.add,
+                            size: 14,
                             color: AppColors.primaryDark,
-                            fontWeight: FontWeight.bold,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Text(
+                            'Setor',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.primaryDark,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                )
-              else if (detail.lockedAmount > 0)
-                InkWell(
-                  onTap: () => _showRealizeOptionsDialog(context, ref),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.tertiary.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.check,
-                          size: 14,
-                          color: AppColors.tertiary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Pakai Dana',
-                          style: AppTypography.labelSmall.copyWith(
+                  )
+                else if (detail.lockedAmount > 0)
+                  InkWell(
+                    onTap: () => _showRealizeOptionsDialog(context, ref),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.tertiary.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.check,
+                            size: 14,
                             color: AppColors.tertiary,
-                            fontWeight: FontWeight.bold,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Text(
+                            'Pakai Dana',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.tertiary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

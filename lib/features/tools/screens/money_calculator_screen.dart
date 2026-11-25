@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/bank_logo_helper.dart';
 import '../../../core/utils/color_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -84,15 +85,7 @@ class _MoneyCalculatorScreenState extends ConsumerState<MoneyCalculatorScreen> {
   Future<void> _copyResult(String formatted) async {
     await Clipboard.setData(ClipboardData(text: formatted));
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('Disalin: $formatted'),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(milliseconds: 1400),
-        ),
-      );
+    AppSnackBar.showSuccess(context, 'Disalin: $formatted');
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../home/providers/home_providers.dart';
@@ -531,20 +532,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
       if (success) {
         _allowPop = true;
         _intraNoteController.clear();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text('Transfer saldo berhasil!'),
-              ],
-            ),
-            backgroundColor: Color(0xFF059669),
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(milliseconds: 1500),
-          ),
-        );
+        AppSnackBar.showSuccess(context, 'Transfer saldo berhasil!');
         context.pop();
         return;
       }
@@ -597,22 +585,7 @@ class _TransferScreenState extends ConsumerState<TransferScreen> {
             break;
         }
 
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 1600),
-            content: Row(
-              children: [
-                const Icon(Icons.sync_alt_rounded,
-                    color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Expanded(child: Text(successMessage)),
-              ],
-            ),
-            backgroundColor: const Color(0xFF059669),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppSnackBar.showSuccess(context, successMessage);
         context.pop();
         return;
       }

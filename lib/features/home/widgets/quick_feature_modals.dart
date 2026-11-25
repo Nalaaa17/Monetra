@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_typography.dart';
+import '../../../../core/utils/app_snack_bar.dart';
 
 class QuickFeatureModals {
   static void showAIAdvisorModal(BuildContext context) {
@@ -495,11 +496,9 @@ class QuickFeatureModals {
   }
 
   static void showUbahMenuModal(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Semua 8 menu pintasan utama sudah aktif dan siap digunakan! ✨'),
-        duration: Duration(seconds: 2),
-      ),
+    AppSnackBar.showInfo(
+      context,
+      'Semua 8 menu pintasan utama sudah aktif dan siap digunakan! ✨',
     );
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_typography.dart';
 import '../../../../data/repositories/report_repository.dart';
+import '../../../../shared/widgets/app_shimmer.dart';
 import '../providers/home_providers.dart';
 
 class SpendingProgressCard extends ConsumerWidget {
@@ -34,10 +35,7 @@ class SpendingProgressCard extends ConsumerWidget {
       ),
       child: allocationAsync.when(
         data: (allocation) => _buildContent(context, allocation),
-        loading: () => const SizedBox(
-          height: 140,
-          child: Center(child: CircularProgressIndicator()),
-        ),
+        loading: () => const SpendingProgressCardSkeleton(),
         error: (_, _) => _buildFallback(context),
       ),
     );

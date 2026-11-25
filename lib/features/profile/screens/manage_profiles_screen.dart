@@ -156,7 +156,11 @@ class _ManageProfilesScreenState extends ConsumerState<ManageProfilesScreen> {
                                     child: Text(
                                       p.isBusiness ? 'Bisnis' : 'Pribadi',
                                       style: AppTypography.labelSmall.copyWith(
-                                        color: p.isBusiness ? const Color(0xFF3B82F6) : AppColors.primary,
+                                        color: p.isBusiness
+                                            ? const Color(0xFF3B82F6)
+                                            : (isDark
+                                                ? AppColors.primary
+                                                : AppColors.primaryDark),
                                         fontWeight: FontWeight.bold,
                                         fontSize: 10,
                                       ),
@@ -216,13 +220,9 @@ class _ManageProfilesScreenState extends ConsumerState<ManageProfilesScreen> {
                             onPressed: () async {
                               await switchActiveProfile(ref, p.key);
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Beralih ke profil "${p.name}"'),
-                                    backgroundColor: color,
-                                    duration: const Duration(milliseconds: 1400),
-                                  ),
+                                AppSnackBar.showSuccess(
+                                  context,
+                                  'Beralih ke profil "${p.name}"',
                                 );
                               }
                             },

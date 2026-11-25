@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/color_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -15,6 +16,7 @@ import '../../../data/repositories/transaction_repository.dart';
 import '../../../data/repositories/transfer_repository.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_shimmer.dart';
 import '../../home/providers/home_providers.dart';
 import '../../transaction/screens/edit_transaction_screen.dart';
 import '../../transaction/screens/edit_transfer_screen.dart';
@@ -115,24 +117,18 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     required String message,
     required Future<void> Function() onUndo,
   }) {
-    final messenger = ScaffoldMessenger.of(context);
     var undoHandled = false;
-    messenger.clearSnackBars();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(milliseconds: 2200),
-        action: SnackBarAction(
-          label: 'Urungkan',
-          textColor: AppColors.primary,
-          onPressed: () {
-            if (undoHandled) return;
-            undoHandled = true;
-            onUndo();
-          },
-        ),
-      ),
+    AppSnackBar.show(
+      context,
+      message: message,
+      type: AppSnackBarType.info,
+      duration: const Duration(milliseconds: 2000),
+      actionLabel: 'Urungkan',
+      onAction: () {
+        if (undoHandled) return;
+        undoHandled = true;
+        onUndo();
+      },
     );
   }
 
@@ -260,7 +256,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     },
                   );
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const HistoryListSkeleton(),
                 error: (e, _) => Center(child: Text('Error riwayat: $e')),
               ),
             ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/bank_logo_helper.dart';
 import '../../../core/utils/color_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -54,7 +55,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
             child: TextButton.icon(
               style: TextButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -66,7 +67,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
                 'Catat',
                 style: AppTypography.labelMedium.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Colors.black,
                 ),
               ),
             ),
@@ -77,6 +78,9 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
         color: AppColors.primary,
         onRefresh: () async {
           ref.read(debtRefreshProvider.notifier).state++;
+          final f1 = ref.refresh(debtOverallSummaryProvider.future);
+          final f2 = ref.refresh(debtsListProvider(_activeTab).future);
+          await Future.wait([f1, f2]);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -306,7 +310,9 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
             child: InkWell(
               onTap: () => setState(() => _activeTab = 'debt'),
               borderRadius: BorderRadius.circular(10),
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: _activeTab == 'debt'
@@ -345,7 +351,9 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
             child: InkWell(
               onTap: () => setState(() => _activeTab = 'receivable'),
               borderRadius: BorderRadius.circular(10),
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: _activeTab == 'receivable'
@@ -732,7 +740,7 @@ class _DebtScreenState extends ConsumerState<DebtScreen> {
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: Colors.black,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -1645,25 +1653,17 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
   Future<void> _submit() async {
     final amount = _parsedAmount;
     if (amount <= 0) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(milliseconds: 1600),
-          content: Text('Masukkan nominal pembayaran lebih dari Rp 0.'),
-          backgroundColor: AppColors.danger,
-        ),
+      AppSnackBar.showWarning(
+        context,
+        'Masukkan nominal pembayaran lebih dari Rp 0.',
       );
       return;
     }
 
     if (_selectedAccountId == null) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(milliseconds: 1600),
-          content: Text('Pilih dompet / rekening terlebih dahulu.'),
-          backgroundColor: AppColors.danger,
-        ),
+      AppSnackBar.showWarning(
+        context,
+        'Pilih dompet / rekening terlebih dahulu.',
       );
       return;
     }
@@ -1707,29 +1707,19 @@ class _DebtPaymentSheetState extends ConsumerState<_DebtPaymentSheet> {
       ref.read(homeRefreshTriggerProvider.notifier).state++;
 
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 1600),
-            content: Text(
-              widget.debt.isDebt
-                  ? 'Pembayaran "${widget.debt.title}" berhasil dicatat & saldo terpotong'
-                  : 'Penerimaan piutang "${widget.debt.title}" berhasil dicatat & saldo bertambah',
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppSnackBar.showSuccess(
+          context,
+          widget.debt.isDebt
+              ? 'Pembayaran "${widget.debt.title}" berhasil dicatat!'
+              : 'Penerimaan "${widget.debt.title}" berhasil dicatat!',
         );
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 2000),
-            content: Text('Gagal mencatat pembayaran: $e'),
-            backgroundColor: AppColors.danger,
-          ),
+        AppSnackBar.showError(
+          context,
+          'Gagal mencatat pembayaran: $e',
         );
       }
     } finally {

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../hpp/providers/hpp_providers.dart';
 import '../utils/promo_engine.dart';
@@ -683,12 +684,10 @@ class _PromoCalculatorScreenState extends ConsumerState<PromoCalculatorScreen>
   void _pickFromCatalog({required ValueChanged<MenuItem> onSelect}) {
     final menus = ref.read(menusListProvider).valueOrNull ?? [];
     if (menus.isEmpty) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(milliseconds: 1800),
-          content: Text('Katalog produk masih kosong. Tambahkan menu/produk di Katalog terlebih dahulu.'),
-        ),
+      AppSnackBar.showInfo(
+        context,
+        'Katalog produk masih kosong. Tambahkan menu/produk di Katalog terlebih dahulu.',
+        duration: const Duration(milliseconds: 1400),
       );
       return;
     }

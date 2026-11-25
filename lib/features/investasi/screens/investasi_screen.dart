@@ -58,7 +58,7 @@ class _InvestasiScreenState extends ConsumerState<InvestasiScreen> {
             child: TextButton.icon(
               style: TextButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -70,7 +70,7 @@ class _InvestasiScreenState extends ConsumerState<InvestasiScreen> {
                 'Aset',
                 style: AppTypography.labelMedium.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Colors.black,
                 ),
               ),
             ),
@@ -81,6 +81,9 @@ class _InvestasiScreenState extends ConsumerState<InvestasiScreen> {
         color: AppColors.primary,
         onRefresh: () async {
           ref.read(investmentRefreshProvider.notifier).state++;
+          final f1 = ref.refresh(investmentSummaryProvider.future);
+          final f2 = ref.refresh(investmentsListProvider.future);
+          await Future.wait([f1, f2]);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -522,7 +525,7 @@ class _InvestasiScreenState extends ConsumerState<InvestasiScreen> {
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: Colors.black,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -922,7 +925,7 @@ class _InvestasiScreenState extends ConsumerState<InvestasiScreen> {
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
+                          foregroundColor: Colors.black,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),

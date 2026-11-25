@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/services/backup_service.dart';
 import '../../home/providers/home_providers.dart';
@@ -479,25 +480,14 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       final file = await BackupService.createBackupFile();
       await _loadBackupInfo();
       if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 1800),
-            content: Text('Cadangan tersimpan: ${file.path.split(Platform.pathSeparator).last}'),
-            backgroundColor: const Color(0xFF059669),
-            behavior: SnackBarBehavior.floating,
-          ),
+        AppSnackBar.showSuccess(
+          context,
+          'Cadangan tersimpan: ${file.path.split(Platform.pathSeparator).last}',
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 2000),
-            content: Text('Gagal membuat cadangan: $e'),
-          ),
-        );
+        AppSnackBar.showError(context, 'Gagal membuat cadangan: $e');
       }
     }
   }
@@ -521,20 +511,13 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         ref.read(homeRefreshTriggerProvider.notifier).state++;
         await _loadBackupInfo();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Data berhasil dipulihkan 100%!'),
-              backgroundColor: Color(0xFF059669),
-            ),
-          );
+          AppSnackBar.showSuccess(context, 'Data berhasil dipulihkan 100%!');
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Gagal memulihkan data dari file cadangan.'),
-              backgroundColor: AppColors.danger,
-            ),
+          AppSnackBar.showError(
+            context,
+            'Gagal memulihkan data dari file cadangan.',
           );
         }
       }
@@ -545,13 +528,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     final content = await file.readAsString();
     await Clipboard.setData(ClipboardData(text: content));
     if (mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(milliseconds: 1600),
-          content: Text('Teks JSON berhasil disalin ke clipboard!'),
-          behavior: SnackBarBehavior.floating,
-        ),
+      AppSnackBar.showSuccess(
+        context,
+        'Teks JSON berhasil disalin ke clipboard!',
       );
     }
   }
@@ -560,13 +539,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     await BackupService.deleteBackupFile(file);
     await _loadBackupInfo();
     if (mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          duration: Duration(milliseconds: 1600),
-          content: Text('File cadangan dihapus'),
-        ),
-      );
+      AppSnackBar.showInfo(context, 'File cadangan dihapus');
     }
   }
 
@@ -622,21 +595,14 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                   Navigator.pop(ctx);
                 }
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Data berhasil dipulihkan dari teks!'),
-                      backgroundColor: Color(0xFF059669),
-                    ),
+                  AppSnackBar.showSuccess(
+                    context,
+                    'Data berhasil dipulihkan dari teks!',
                   );
                 }
               } else {
                 if (ctx.mounted) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(
-                      content: Text('Format teks JSON tidak valid.'),
-                      backgroundColor: AppColors.danger,
-                    ),
-                  );
+                  AppSnackBar.showError(ctx, 'Format teks JSON tidak valid.');
                 }
               }
             },

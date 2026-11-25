@@ -67,9 +67,9 @@ class SecuritySettingsScreen extends ConsumerWidget {
                       color: AppColors.primary.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.fingerprint_rounded,
-                      color: AppColors.primary,
+                      color: isDark ? AppColors.primary : AppColors.primaryDark,
                       size: 22,
                     ),
                   ),
@@ -190,8 +190,11 @@ class SecuritySettingsScreen extends ConsumerWidget {
             icon: const Icon(Icons.touch_app_rounded, size: 20),
             label: const Text('Tes Sensor Biometrik Sekarang'),
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: const BorderSide(color: AppColors.primary, width: 1.2),
+              foregroundColor: isDark ? AppColors.primary : AppColors.primaryDark,
+              side: BorderSide(
+                color: isDark ? AppColors.primary : AppColors.primaryDark,
+                width: 1.2,
+              ),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -212,10 +215,10 @@ class SecuritySettingsScreen extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.shield_outlined,
                   size: 20,
-                  color: AppColors.primary,
+                  color: isDark ? AppColors.primary : AppColors.primaryDark,
                 ),
                 const SizedBox(width: 10),
                 Expanded(

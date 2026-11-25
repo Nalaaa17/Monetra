@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/repositories/goal_repository.dart';
+import '../../../shared/widgets/app_shimmer.dart';
 import '../../home/providers/home_providers.dart';
 import '../providers/goal_providers.dart';
 import '../widgets/goal_card.dart';
@@ -249,9 +250,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen>
             ),
             );
           },
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          ),
+          loading: () => const GoalsScreenSkeleton(),
           error: (err, _) => Center(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -361,72 +360,78 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen>
     required bool isActiveTab,
   }) {
     if (goals.isEmpty) {
-      return Center(
-        child: SingleChildScrollView(
+      return LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isActiveTab ? Icons.track_changes_rounded : Icons.celebration_rounded,
-                  size: 48,
-                  color: AppColors.primaryDark,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                emptyTitle,
-                style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                emptySubtitle,
-                textAlign: TextAlign.center,
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textSecondaryOf(context),
-                ),
-              ),
-              if (isActiveTab) ...[
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  onPressed: () => showGoalFormModal(context, ref),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: (constraints.maxHeight - 64).clamp(0.0, double.infinity),
+            ),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isActiveTab
+                          ? Icons.track_changes_rounded
+                          : Icons.celebration_rounded,
+                      size: 48,
+                      color: AppColors.primaryDark,
                     ),
                   ),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Buat Target Sekarang'),
-                ),
-              ],
-            ],
+                  const SizedBox(height: 16),
+                  Text(
+                    emptyTitle,
+                    style: AppTypography.titleMedium
+                        .copyWith(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    emptySubtitle,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textSecondaryOf(context),
+                    ),
+                  ),
+                  if (isActiveTab) ...[
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      onPressed: () => showGoalFormModal(context, ref),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Buat Target Sekarang'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       );
     }
 
-    return RefreshIndicator(
-      color: AppColors.primary,
-      onRefresh: () async {
-        ref.read(homeRefreshTriggerProvider.notifier).state++;
+    return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+      itemCount: goals.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        return GoalCard(detail: goals[index]);
       },
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-        itemCount: goals.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (context, index) {
-          return GoalCard(detail: goals[index]);
-        },
-      ),
     );
   }
 }

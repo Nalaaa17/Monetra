@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../data/database/app_database.dart';
 import '../../../data/models/account.dart';
 import '../../home/providers/home_providers.dart';
@@ -219,12 +220,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         if (_selectedAccountIds.length > 1) {
           _selectedAccountIds.remove(id);
         } else {
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Pilih minimal 1 akun untuk memulai Monetra'),
-              duration: Duration(milliseconds: 1400),
-            ),
+          AppSnackBar.showWarning(
+            context,
+            'Pilih minimal 1 akun untuk memulai Monetra',
           );
         }
       } else {
@@ -338,7 +336,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: Colors.black,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -1149,7 +1147,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           onPressed: _isSubmitting ? null : _nextPage,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
+            foregroundColor: Colors.black,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
@@ -1161,7 +1159,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
                   ),
                 )
               : Row(
@@ -1170,7 +1168,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     Text(
                       buttonLabel,
                       style: AppTypography.titleMedium.copyWith(
-                        color: Colors.white,
+                        color: Colors.black,
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
                       ),

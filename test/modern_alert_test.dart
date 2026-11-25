@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:monetra/core/theme/app_theme.dart';
 import 'package:monetra/core/utils/app_snack_bar.dart';
+import 'package:monetra/features/home/widgets/floating_bottom_bar.dart';
 import 'package:monetra/shared/widgets/app_dialog.dart';
 
 void main() {
@@ -116,5 +117,62 @@ void main() {
 
     expect(find.text('Data berhasil disimpan dengan aman!'), findsOneWidget);
     expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+  });
+
+  testWidgets(
+      'AppSnackBar in ShellRoute appears above FloatingBottomBar and auto-dismisses even with accessibleNavigation',
+      (tester) async {
+    var undoPressed = false;
+
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(accessibleNavigation: true),
+        child: MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            extendBody: true,
+            bottomNavigationBar: const FloatingBottomBar(selectedIndex: 1),
+            body: Scaffold(
+              body: Builder(
+                builder: (context) => Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      AppSnackBar.show(
+                        context,
+                        message: 'Transaksi dihapus',
+                        actionLabel: 'Urungkan',
+                        duration: const Duration(milliseconds: 1000),
+                        onAction: () => undoPressed = true,
+                      );
+                    },
+                    child: const Text('Hapus'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Hapus'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final snackBarFinder = find.byType(SnackBar);
+    final bottomBarFinder = find.byType(FloatingBottomBar);
+    expect(snackBarFinder, findsOneWidget);
+    expect(find.text('Urungkan'), findsOneWidget);
+
+    // SnackBar harus berada di atas FloatingBottomBar (tidak tertutup)
+    final snackBarRect = tester.getRect(snackBarFinder);
+    final bottomBarRect = tester.getRect(bottomBarFinder);
+    expect(snackBarRect.bottom, lessThanOrEqualTo(bottomBarRect.top));
+
+    // Harus otomatis hilang setelah durasi habis meski accessibleNavigation=true
+    await tester.pump(const Duration(milliseconds: 1200));
+    await tester.pumpAndSettle();
+    expect(find.byType(SnackBar), findsNothing);
+    expect(undoPressed, isFalse);
   });
 }

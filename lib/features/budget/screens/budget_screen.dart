@@ -9,6 +9,8 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../data/models/category_budget.dart';
 import '../../../shared/providers/repository_providers.dart';
+import '../../../shared/widgets/app_shimmer.dart';
+import '../../home/providers/home_providers.dart';
 import '../../home/widgets/spending_progress_card.dart';
 import '../providers/budget_providers.dart';
 
@@ -41,10 +43,17 @@ class BudgetScreen extends ConsumerWidget {
         ],
       ),
       body: RefreshIndicator(
+        color: AppColors.primary,
         onRefresh: () async {
           ref.read(budgetRefreshTriggerProvider.notifier).state++;
+          ref.read(homeRefreshTriggerProvider.notifier).state++;
+          final f1 = ref.refresh(overallBudgetSummaryProvider.future);
+          final f2 = ref.refresh(categoryBudgetsProvider.future);
+          final f3 = ref.refresh(spendingAllocationProvider.future);
+          await Future.wait([f1, f2, f3]);
         },
         child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           children: [
             // 1. Selector Bulan
@@ -54,10 +63,7 @@ class BudgetScreen extends ConsumerWidget {
             // 2. Kartu Ringkasan Total Budget Bulanan
             overallAsync.when(
               data: (summary) => _buildOverallBudgetCard(context, ref, summary),
-              loading: () => const SizedBox(
-                height: 160,
-                child: Center(child: CircularProgressIndicator()),
-              ),
+              loading: () => const HeroCardSkeleton(height: 162),
               error: (err, _) => Text('Gagal memuat budget: $err'),
             ),
 
@@ -111,12 +117,7 @@ class BudgetScreen extends ConsumerWidget {
                       .toList(),
                 );
               },
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
+              loading: () => const BudgetCategoriesSkeleton(),
               error: (err, _) => Text('Error: $err'),
             ),
             const SizedBox(height: 40),

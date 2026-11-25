@@ -13,6 +13,7 @@ import '../../../core/utils/icon_helper.dart';
 import '../../../data/repositories/account_repository.dart';
 import '../../../data/repositories/transaction_repository.dart';
 import '../../../shared/widgets/animated_currency.dart';
+import '../../../shared/widgets/app_shimmer.dart';
 import '../../goals/widgets/home_goal_preview_section.dart';
 import '../../history/providers/history_providers.dart';
 import '../../onboarding/providers/onboarding_providers.dart';
@@ -217,7 +218,7 @@ class HomeScreen extends ConsumerWidget {
             // 1. Hero Card: Sekilas Hari Ini (Sesuai Referensi Gambar 1)
             balanceSummaryAsync.when(
               data: (summary) => HeroSekilasCard(summary: summary),
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const HeroCardSkeleton(),
               error: (err, _) => Text('Gagal memuat saldo: $err'),
             ),
             const SizedBox(height: 18),
@@ -258,10 +259,7 @@ class HomeScreen extends ConsumerWidget {
             accountsAsync.when(
               data: (accounts) =>
                   _buildAccountsHorizontalList(context, ref, accounts),
-              loading: () => const SizedBox(
-                height: 100,
-                child: Center(child: CircularProgressIndicator()),
-              ),
+              loading: () => const HorizontalAccountsSkeleton(),
               error: (err, _) => Text('Error: $err'),
             ),
 
@@ -308,7 +306,7 @@ class HomeScreen extends ConsumerWidget {
                       .toList(),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const TransactionListSkeleton(),
               error: (err, _) => Text('Error transaksi: $err'),
             ),
             const SizedBox(height: 100),

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../core/router/app_router.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../home/providers/home_providers.dart';
@@ -186,25 +186,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           );
                           formNotifier.setCategory(match.id!);
                         }
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            duration: const Duration(milliseconds: 1600),
-                            content: Row(
-                              children: [
-                                const Icon(Icons.check_circle_rounded,
-                                    color: Colors.white, size: 20),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Struk diterapkan: ${CurrencyFormatter.format(result.detectedAmount ?? 0)}',
-                                  ),
-                                ),
-                              ],
-                            ),
-                            backgroundColor: const Color(0xFF059669),
-                            behavior: SnackBarBehavior.floating,
-                          ),
+                        AppSnackBar.showSuccess(
+                          context,
+                          'Struk diterapkan: ${CurrencyFormatter.format(result.detectedAmount ?? 0)}',
                         );
                       },
                     ),
@@ -410,7 +394,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             child: InkWell(
               onTap: () => formNotifier.setType('expense'),
               borderRadius: BorderRadius.circular(10),
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
@@ -459,7 +445,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             child: InkWell(
               onTap: () => formNotifier.setType('income'),
               borderRadius: BorderRadius.circular(10),
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
@@ -589,7 +577,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         }
       }
 
-      final savedType = ref.read(transactionFormNotifierProvider).type;
       final success = await notifier.submit();
       if (!mounted) return;
 
@@ -600,39 +587,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         await Future.delayed(const Duration(milliseconds: 400));
         if (!mounted) return;
 
-        final messenger = ScaffoldMessenger.of(context);
-        messenger.clearSnackBars();
-        messenger.showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    '✨ Transaksi berhasil dicatat!',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: const Color(0xFF059669),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            duration: const Duration(milliseconds: 1600),
-            action: SnackBarAction(
-              label: 'Catat Lagi',
-              textColor: AppColors.primary,
-              onPressed: () {
-                AppRouter.router
-                    .push('${AppRouter.addTransaction}?type=$savedType');
-              },
-            ),
-          ),
-        );
+        AppSnackBar.showSuccess(context, 'Transaksi dicatat!');
         context.pop();
         return;
       }

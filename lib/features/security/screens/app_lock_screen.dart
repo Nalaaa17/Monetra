@@ -7,6 +7,8 @@ import '../../../core/router/app_router.dart';
 import '../../../core/utils/bank_logo_helper.dart';
 import '../../../core/utils/color_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/icon_helper.dart';
 import '../../../data/services/biometric_service.dart';
 import '../../home/providers/home_providers.dart';
 import '../../profile/providers/profile_provider.dart';
@@ -51,12 +53,22 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   }
 
   void _openQuickAction(String route) {
+    HapticFeedback.selectionClick();
+    if (_isBalancePeekOpen) {
+      setState(() => _isBalancePeekOpen = false);
+    }
     if (widget.onQuickAction != null) {
       widget.onQuickAction!(route);
     } else {
       ref.read(isQuickAccessActiveProvider.notifier).state = true;
       AppRouter.router.push(route);
     }
+  }
+
+  void _setBalancePeekOpen(bool open) {
+    if (_isBalancePeekOpen == open) return;
+    HapticFeedback.lightImpact();
+    setState(() => _isBalancePeekOpen = open);
   }
 
   void _onVerticalDragUpdate(DragUpdateDetails details) {
@@ -66,9 +78,9 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   void _onVerticalDragEnd(DragEndDetails details) {
     final velocity = details.primaryVelocity ?? 0.0;
     if (!_isBalancePeekOpen && (_dragDelta > 28 || velocity > 200)) {
-      setState(() => _isBalancePeekOpen = true);
+      _setBalancePeekOpen(true);
     } else if (_isBalancePeekOpen && (_dragDelta < -28 || velocity < -200)) {
-      setState(() => _isBalancePeekOpen = false);
+      _setBalancePeekOpen(false);
     }
     _dragDelta = 0.0;
   }
@@ -245,58 +257,118 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
   }) {
     final summaryAsync = ref.watch(balanceSummaryProvider);
     final accountsAsync = ref.watch(accountsWithBalanceProvider);
+    final recentTxAsync = ref.watch(recentTransactionsProvider);
+    final profileColor = ColorHelper.fromHex(activeProfileColorHex);
 
     return AnimatedSize(
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
       alignment: Alignment.topCenter,
-      child: _isBalancePeekOpen
-          ? Container(
-              margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, anim) =>
+            FadeTransition(opacity: anim, child: child),
+        child: _isBalancePeekOpen
+            ? Container(
+                key: const ValueKey('balance_peek_open'),
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.58,
+                ),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: BorderRadius.circular(22),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.account_balance_wallet_rounded,
+                                size: 16,
+                                color: isDark
+                                    ? AppColors.primary
+                                    : AppColors.primaryDark,
+                              ),
                             ),
-                            child: Icon(
-                              Icons.account_balance_wallet_rounded,
-                              size: 16,
-                              color: isDark
-                                  ? AppColors.primary
-                                  : AppColors.primaryDark,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'Saldo Tersisa',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.labelMedium.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textSecondaryOf(context),
+                                ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Saldo Tersisa',
-                            style: AppTypography.labelMedium.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textSecondaryOf(context),
+                            const SizedBox(width: 8),
+                            InkWell(
+                              onTap: () => ProfileSwitcherSheet.show(context),
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: profileColor.withValues(alpha: 0.14),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: profileColor.withValues(alpha: 0.35),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      profileIcon,
+                                      size: 12,
+                                      color: profileColor,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    ConstrainedBox(
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 72),
+                                      child: Text(
+                                        activeProfileName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: profileColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -310,8 +382,11 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                               size: 18,
                               color: AppColors.textSecondaryOf(context),
                             ),
-                            onPressed: () => setState(
-                                () => _isBalanceMasked = !_isBalanceMasked),
+                            onPressed: () {
+                              HapticFeedback.selectionClick();
+                              setState(
+                                  () => _isBalanceMasked = !_isBalanceMasked);
+                            },
                           ),
                           IconButton(
                             visualDensity: VisualDensity.compact,
@@ -320,8 +395,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                               size: 22,
                               color: AppColors.textSecondaryOf(context),
                             ),
-                            onPressed: () =>
-                                setState(() => _isBalancePeekOpen = false),
+                            onPressed: () => _setBalancePeekOpen(false),
                           ),
                         ],
                       ),
@@ -381,7 +455,18 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                   ),
                   accountsAsync.when(
                     data: (accounts) {
-                      if (accounts.isEmpty) return const SizedBox.shrink();
+                      if (accounts.isEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Text(
+                            'Belum ada rekening di profil ini',
+                            style: AppTypography.bodySmall.copyWith(
+                              fontSize: 11.5,
+                              color: AppColors.textSecondaryOf(context),
+                            ),
+                          ),
+                        );
+                      }
                       return Padding(
                         padding: const EdgeInsets.only(top: 10),
                         child: SizedBox(
@@ -458,10 +543,114 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                     loading: () => const SizedBox.shrink(),
                     error: (_, _) => const SizedBox.shrink(),
                   ),
-                  const SizedBox(height: 8),
+                  // 2 Transaksi Terakhir
+                  recentTxAsync.when(
+                    data: (txs) {
+                      final latest = txs.take(2).toList();
+                      if (latest.isEmpty) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Transaksi Terakhir',
+                              style: AppTypography.labelSmall.copyWith(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textSecondaryOf(context),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            ...latest.map((tx) {
+                              final isIncome = tx.isIncome;
+                              final sign = isIncome ? '+' : '-';
+                              final amountColor = isIncome
+                                  ? const Color(0xFF10B981)
+                                  : AppColors.danger;
+                              final catColor = tx.categoryColorHex != null
+                                  ? ColorHelper.parseHex(tx.categoryColorHex!)
+                                  : amountColor;
+                              final catIcon = tx.categoryIconCodePoint != null
+                                  ? IconHelper.getIcon(
+                                      tx.categoryIconCodePoint!)
+                                  : (isIncome
+                                      ? Icons.savings_outlined
+                                      : Icons.shopping_bag_outlined);
+                              final title = tx.note?.isNotEmpty == true
+                                  ? tx.note!
+                                  : (tx.categoryName ??
+                                      (isIncome ? 'Pemasukan' : 'Pengeluaran'));
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30,
+                                      height: 30,
+                                      decoration: BoxDecoration(
+                                        color: catColor.withValues(
+                                            alpha: isDark ? 0.18 : 0.12),
+                                        borderRadius: BorderRadius.circular(9),
+                                      ),
+                                      child: Icon(catIcon,
+                                          size: 15, color: catColor),
+                                    ),
+                                    const SizedBox(width: 9),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            title,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          Text(
+                                            '${tx.accountName} • ${DateFormatter.formatShort(tx.date)}',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: AppColors.textSecondaryOf(
+                                                  context),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _isBalanceMasked
+                                          ? '••••'
+                                          : '$sign${CurrencyFormatter.format(tx.amount)}',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: amountColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 6),
                   Center(
                     child: InkWell(
-                      onTap: () => setState(() => _isBalancePeekOpen = false),
+                      onTap: () => _setBalancePeekOpen(false),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         width: 40,
@@ -474,16 +663,18 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                     ),
                   ),
                 ],
+                ),
               ),
             )
           : Padding(
+              key: const ValueKey('balance_peek_closed'),
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   // Tengah: Geser untuk Intip Saldo (gaya Livin')
                   InkWell(
-                    onTap: () => setState(() => _isBalancePeekOpen = true),
+                    onTap: () => _setBalancePeekOpen(true),
                     borderRadius: BorderRadius.circular(16),
                     child: const Padding(
                       padding:
@@ -558,6 +749,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                 ],
               ),
             ),
+      ),
     );
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../shared/providers/repository_providers.dart';
 import '../utils/tax_engine.dart';
@@ -35,27 +36,14 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
       final report = await reportRepo.getMonthlyReport(now.year, now.month);
       _monthlyRevenueCtrl.text = report.totalIncome.toString();
       if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 1600),
-            content: Text(
-              'Omzet bulan ini berhasil dimuat: ${CurrencyFormatter.format(report.totalIncome)}',
-            ),
-            backgroundColor: AppColors.primary,
-          ),
+        AppSnackBar.showSuccess(
+          context,
+          'Omzet bulan ini berhasil dimuat: ${CurrencyFormatter.format(report.totalIncome)}',
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(milliseconds: 2000),
-            content: Text('Gagal memuat omzet: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
+        AppSnackBar.showError(context, 'Gagal memuat omzet: $e');
       }
     } finally {
       if (mounted) {
@@ -525,13 +513,9 @@ class _TaxCalculatorScreenState extends ConsumerState<TaxCalculatorScreen> {
     summary.writeln('Batas Setor: Tanggal 15 bulan berikutnya.');
 
     Clipboard.setData(ClipboardData(text: summary.toString()));
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        duration: Duration(milliseconds: 1600),
-        content: Text('Rincian perhitungan pajak disalin ke clipboard!'),
-        backgroundColor: AppColors.primary,
-      ),
+    AppSnackBar.showSuccess(
+      context,
+      'Rincian perhitungan pajak disalin ke clipboard!',
     );
   }
 }

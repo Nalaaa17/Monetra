@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../data/models/account.dart';
 import '../../../shared/providers/repository_providers.dart';
@@ -99,7 +100,7 @@ class _MenuCatalogScreenState extends ConsumerState<MenuCatalogScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: Colors.black,
         onPressed: () => context.push(AppRouter.hppCalculator),
         icon: const Icon(Icons.add_rounded),
         label: const Text('Hitung & Tambah Menu'),
@@ -109,12 +110,15 @@ class _MenuCatalogScreenState extends ConsumerState<MenuCatalogScreen> {
 
   Widget _buildFilterChip(String type, String label) {
     final isSelected = _filterType == type;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ChoiceChip(
       selected: isSelected,
       label: Text(label),
       selectedColor: AppColors.primary.withValues(alpha: 0.18),
       labelStyle: AppTypography.labelSmall.copyWith(
-        color: isSelected ? AppColors.primary : AppColors.textSecondaryOf(context),
+        color: isSelected
+            ? (isDark ? AppColors.primary : AppColors.primaryDark)
+            : AppColors.textSecondaryOf(context),
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
       onSelected: (_) => setState(() => _filterType = type),
@@ -229,7 +233,9 @@ class _MenuCatalogScreenState extends ConsumerState<MenuCatalogScreen> {
                   Text(
                     CurrencyFormatter.format(item.sellingPrice),
                     style: AppTypography.titleLarge.copyWith(
-                      color: AppColors.primary,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? AppColors.primary
+                          : AppColors.primaryDark,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -238,7 +244,7 @@ class _MenuCatalogScreenState extends ConsumerState<MenuCatalogScreen> {
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -403,7 +409,7 @@ class _MenuCatalogScreenState extends ConsumerState<MenuCatalogScreen> {
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
+                          foregroundColor: Colors.black,
                           minimumSize: const Size(double.infinity, 50),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
@@ -437,15 +443,9 @@ class _MenuCatalogScreenState extends ConsumerState<MenuCatalogScreen> {
                             Navigator.pop(modalCtx);
                           }
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                duration: const Duration(milliseconds: 1600),
-                                content: Text(
-                                  'Penjualan ${item.name} (${quantity}x) senilai ${CurrencyFormatter.format(totalAmount)} berhasil dicatat!',
-                                ),
-                                backgroundColor: AppColors.primary,
-                              ),
+                            AppSnackBar.showSuccess(
+                              context,
+                              'Penjualan ${item.name} (${quantity}x) senilai ${CurrencyFormatter.format(totalAmount)} berhasil dicatat!',
                             );
                           }
                         },
@@ -502,7 +502,7 @@ class _MenuCatalogScreenState extends ConsumerState<MenuCatalogScreen> {
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: Colors.black,
               ),
               onPressed: () => context.push(AppRouter.hppCalculator),
               icon: const Icon(Icons.calculate_outlined),

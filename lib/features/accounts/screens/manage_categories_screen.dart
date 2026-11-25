@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/color_helper.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../data/models/category.dart';
@@ -277,12 +278,9 @@ class _ManageCategoriesScreenState
                   Navigator.pop(ctx);
                 }
                 if (!mounted) return;
-                ScaffoldMessenger.of(this.context).hideCurrentSnackBar();
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  SnackBar(
-                    duration: const Duration(milliseconds: 1600),
-                    content: Text('Kategori "$name" berhasil disimpan!'),
-                  ),
+                AppSnackBar.showSuccess(
+                  this.context,
+                  'Kategori "$name" berhasil disimpan!',
                 );
               },
               child: const Text('Simpan'),

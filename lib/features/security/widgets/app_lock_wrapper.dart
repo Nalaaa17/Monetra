@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/router/app_router.dart';
 import '../../../data/services/biometric_service.dart';
+import '../../../data/services/receipt_ocr_service.dart';
+import '../../../data/services/share_intent_service.dart';
 import '../../onboarding/providers/onboarding_providers.dart';
 import '../providers/security_providers.dart';
 import '../screens/app_lock_screen.dart';
@@ -18,16 +21,74 @@ class AppLockWrapper extends ConsumerStatefulWidget {
 class _AppLockWrapperState extends ConsumerState<AppLockWrapper>
     with WidgetsBindingObserver {
   DateTime? _pausedAt;
+  StreamSubscription<SharedReceiptPayload>? _shareSub;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
+    _shareSub = ShareIntentService.shareStream().listen((payload) {
+      _handleIncomingShare(payload);
+    });
+
     // Tampilkan halaman awal bergaya Livin saat cold launch setelah onboarding selesai
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkInitialLockState();
+      _checkInitialShare();
     });
+  }
+
+  Future<void> _checkInitialShare() async {
+    final initialPayload = await ShareIntentService.getInitialShare();
+    if (initialPayload != null && mounted) {
+      await _handleIncomingShare(initialPayload);
+    }
+  }
+
+  Future<void> _handleIncomingShare(SharedReceiptPayload payload) async {
+    final isDone = await OnboardingService.isCompleted();
+    if (!isDone || !mounted) return;
+
+    // Tunggu SplashScreen selesai menavigasi agar rute /add tidak tertimpa Home
+    for (int i = 0; i < 20; i++) {
+      if (!mounted) return;
+      final currentPath =
+          AppRouter.router.routeInformationProvider.value.uri.path;
+      if (currentPath != AppRouter.splash) break;
+      await Future.delayed(const Duration(milliseconds: 80));
+    }
+    if (!mounted) return;
+
+    String resolvedType = 'expense';
+    if (payload.hasText) {
+      final parsed = ReceiptOcrParser.parseReceiptText(payload.text!);
+      if (parsed.isIncomeSuggestion) {
+        resolvedType = 'income';
+      }
+    }
+
+    ref.read(pendingSharedReceiptProvider.notifier).state = payload;
+
+    final currentPath =
+        AppRouter.router.routeInformationProvider.value.uri.path;
+    if (currentPath == AppRouter.addTransaction) {
+      // Sudah berada di halaman tambah transaksi: listener akan langsung menerapkan resi
+      return;
+    }
+
+    final isLocked = ref.read(isAppLockedProvider);
+    if (isLocked) {
+      await _handleQuickAction(
+        AppRouter.addTransaction,
+        extra: {'type': resolvedType},
+      );
+    } else {
+      await AppRouter.router.push(
+        AppRouter.addTransaction,
+        extra: {'type': resolvedType},
+      );
+    }
   }
 
   Future<void> _checkInitialLockState() async {
@@ -39,10 +100,10 @@ class _AppLockWrapperState extends ConsumerState<AppLockWrapper>
     }
   }
 
-  Future<void> _handleQuickAction(String route) async {
+  Future<void> _handleQuickAction(String route, {Object? extra}) async {
     ref.read(isQuickAccessActiveProvider.notifier).state = true;
     try {
-      await AppRouter.router.push(route);
+      await AppRouter.router.push(route, extra: extra);
     } finally {
       if (mounted) {
         ref.read(isQuickAccessActiveProvider.notifier).state = false;
@@ -84,6 +145,7 @@ class _AppLockWrapperState extends ConsumerState<AppLockWrapper>
 
   @override
   void dispose() {
+    _shareSub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

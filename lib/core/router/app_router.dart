@@ -164,11 +164,20 @@ class AppRouter {
           } else if (path == goals) {
             selectedIndex = 3;
           }
-          return Scaffold(
-            extendBody: true,
-            body: child,
-            bottomNavigationBar:
-                FloatingBottomBar(selectedIndex: selectedIndex),
+          return PopScope(
+            canPop: selectedIndex == 0,
+            onPopInvokedWithResult: (didPop, _) {
+              if (didPop) return;
+              if (selectedIndex != 0) {
+                context.go(home);
+              }
+            },
+            child: Scaffold(
+              extendBody: true,
+              body: child,
+              bottomNavigationBar:
+                  FloatingBottomBar(selectedIndex: selectedIndex),
+            ),
           );
         },
         routes: [

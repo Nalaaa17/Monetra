@@ -90,17 +90,17 @@ class MainMenuGrid extends ConsumerWidget {
               children: [
                 _buildMenuItem(
                   context,
-                  icon: Icons.receipt_long_rounded,
-                  label: 'Riwayat',
+                  icon: Icons.local_offer_outlined,
+                  label: 'Promo',
                   color: const Color(0xFF0284C7),
-                  onTap: () => context.go(AppRouter.history),
+                  onTap: () => context.push(AppRouter.promoCalculator),
                 ),
                 _buildMenuItem(
                   context,
-                  icon: Icons.bar_chart_rounded,
-                  label: 'Laporan',
+                  icon: Icons.account_balance_outlined,
+                  label: 'Pajak',
                   color: const Color(0xFF6366F1),
-                  onTap: () => context.go(AppRouter.reports),
+                  onTap: () => context.push(AppRouter.taxCalculator),
                 ),
                 _buildMenuItem(
                   context,
@@ -131,10 +131,10 @@ class MainMenuGrid extends ConsumerWidget {
                 ),
                 _buildMenuItem(
                   context,
-                  icon: Icons.track_changes_rounded,
-                  label: 'Goals',
-                  color: const Color(0xFF10B981),
-                  onTap: () => context.go(AppRouter.goals),
+                  icon: Icons.beach_access_rounded,
+                  label: 'Liburan',
+                  color: const Color(0xFF0284C7),
+                  onTap: () => context.push(AppRouter.vacations),
                 ),
                 _buildMenuItem(
                   context,
@@ -173,10 +173,10 @@ class MainMenuGrid extends ConsumerWidget {
                 ),
                 _buildMenuItem(
                   context,
-                  icon: Icons.bar_chart_rounded,
-                  label: 'Laporan',
-                  color: const Color(0xFF0EA5E9),
-                  onTap: () => context.go(AppRouter.reports),
+                  icon: Icons.repeat_rounded,
+                  label: 'Rutin',
+                  color: const Color(0xFF8B5CF6),
+                  onTap: () => context.push(AppRouter.recurring),
                 ),
                 _buildMenuItem(
                   context,

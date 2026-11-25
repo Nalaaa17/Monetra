@@ -7,6 +7,9 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../data/services/receipt_ocr_service.dart';
+import '../../../data/services/share_intent_service.dart';
+import '../../../shared/providers/repository_providers.dart';
 import '../../home/providers/home_providers.dart';
 import '../providers/transaction_form_provider.dart';
 import '../widgets/account_chips_selector.dart';
@@ -51,6 +54,109 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         });
       }
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final pendingShare = ref.read(pendingSharedReceiptProvider);
+      if (pendingShare != null) {
+        _consumeSharedReceipt(pendingShare);
+      }
+    });
+  }
+
+  Future<void> _consumeSharedReceipt(SharedReceiptPayload payload) async {
+    ref.read(pendingSharedReceiptProvider.notifier).state = null;
+    final formNotifier = ref.read(transactionFormNotifierProvider.notifier);
+
+    if (payload.hasImage) {
+      formNotifier.setImagePath(payload.imagePath);
+    }
+
+    final result = await ReceiptOcrService.scanReceipt(
+      payload.imagePath ?? '',
+      sharedText: payload.text,
+    );
+    if (!mounted) return;
+
+    await _applyOcrResult(result, fromShare: true);
+  }
+
+  Future<void> _applyOcrResult(
+    ReceiptOcrResult result, {
+    bool fromShare = false,
+  }) async {
+    final formNotifier = ref.read(transactionFormNotifierProvider.notifier);
+    final currentType = ref.read(transactionFormNotifierProvider).type;
+    final targetType =
+        (fromShare && result.isIncomeSuggestion) ? 'income' : currentType;
+
+    if (targetType != currentType) {
+      formNotifier.setType(targetType);
+    }
+
+    if (result.detectedAmount != null) {
+      formNotifier.setAmount(result.detectedAmount!);
+    }
+
+    if (result.noteSuggestion != null &&
+        result.noteSuggestion!.trim().isNotEmpty &&
+        (fromShare || _noteController.text.trim().isEmpty)) {
+      _noteController.text = result.noteSuggestion!;
+      formNotifier.setNote(result.noteSuggestion!);
+    }
+
+    if (result.detectedDate != null) {
+      formNotifier.setDate(result.detectedDate!);
+    }
+
+    if (result.bankName != null) {
+      final accounts = await ref.read(accountRepositoryProvider).getAllAccounts();
+      if (!mounted) return;
+      final bankLower = result.bankName!.toLowerCase();
+      for (final acc in accounts) {
+        final nameLower = acc.name.toLowerCase();
+        if (nameLower.contains(bankLower) || bankLower.contains(nameLower)) {
+          if (acc.id != null) {
+            formNotifier.setAccount(acc.id!);
+          }
+          break;
+        }
+      }
+    }
+
+    if (result.suggestedCategory != null) {
+      final cats = await ref
+          .read(categoryRepositoryProvider)
+          .getAllCategories(type: targetType);
+      if (!mounted) return;
+      if (cats.isNotEmpty) {
+        final target = result.suggestedCategory!.toLowerCase();
+        final match = cats.firstWhere(
+          (c) =>
+              c.name.toLowerCase().contains(target) ||
+              target.contains(c.name.toLowerCase()),
+          orElse: () => cats.first,
+        );
+        if (match.id != null) {
+          formNotifier.setCategory(match.id!);
+        }
+      }
+    }
+
+    if (!mounted) return;
+    if (result.hasDetection) {
+      AppSnackBar.showSuccess(
+        context,
+        fromShare
+            ? 'Resi diterapkan: ${CurrencyFormatter.format(result.detectedAmount!)}'
+            : 'Struk diterapkan: ${CurrencyFormatter.format(result.detectedAmount!)}',
+      );
+    } else if (fromShare) {
+      AppSnackBar.showInfo(
+        context,
+        'Resi terlampir. Silakan lengkapi nominal transaksi.',
+      );
+    }
   }
 
   @override
@@ -62,6 +168,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<SharedReceiptPayload?>(
+      pendingSharedReceiptProvider,
+      (previous, next) {
+        if (next != null) {
+          _consumeSharedReceipt(next);
+        }
+      },
+    );
+
     final formState = ref.watch(transactionFormNotifierProvider);
     final formNotifier = ref.read(transactionFormNotifierProvider.notifier);
     final accountsAsync = ref.watch(accountsWithBalanceProvider);
@@ -163,33 +278,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                       imagePath: formState.imagePath,
                       onImageSelected: formNotifier.setImagePath,
                       onOcrResultApplied: (result) {
-                        if (result.detectedAmount != null) {
-                          formNotifier.setAmount(result.detectedAmount!);
-                        }
-                        if (result.noteSuggestion != null &&
-                            _noteController.text.trim().isEmpty) {
-                          _noteController.text = result.noteSuggestion!;
-                          formNotifier.setNote(result.noteSuggestion!);
-                        }
-                        if (result.detectedDate != null) {
-                          formNotifier.setDate(result.detectedDate!);
-                        }
-                        if (result.suggestedCategory != null &&
-                            categoriesAsync.valueOrNull != null) {
-                          final cats = categoriesAsync.value!;
-                          final target = result.suggestedCategory!.toLowerCase();
-                          final match = cats.firstWhere(
-                            (c) =>
-                                c.name.toLowerCase().contains(target) ||
-                                target.contains(c.name.toLowerCase()),
-                            orElse: () => cats.first,
-                          );
-                          formNotifier.setCategory(match.id!);
-                        }
-                        AppSnackBar.showSuccess(
-                          context,
-                          'Struk diterapkan: ${CurrencyFormatter.format(result.detectedAmount ?? 0)}',
-                        );
+                        _applyOcrResult(result);
                       },
                     ),
                     const SizedBox(height: 18),

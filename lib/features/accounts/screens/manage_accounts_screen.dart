@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/utils/app_snack_bar.dart';
 import '../../../core/utils/bank_logo_helper.dart';
 import '../../../core/utils/color_helper.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -388,7 +390,9 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
                   color: AppColors.textSecondaryOf(context),
                 ),
                 onSelected: (val) async {
-                  if (val == 'edit') {
+                  if (val == 'reconcile') {
+                    _showReconcileBalanceModal(context, ref, item);
+                  } else if (val == 'edit') {
                     showAccountFormModal(context, ref, existing: item);
                   } else if (val == 'toggle_category') {
                     final newCat = isSavings ? 'harian' : 'tabungan';
@@ -401,6 +405,10 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
                   }
                 },
                 itemBuilder: (ctx) => [
+                  const PopupMenuItem(
+                    value: 'reconcile',
+                    child: Text('Sesuaikan Saldo'),
+                  ),
                   PopupMenuItem(
                     value: 'toggle_category',
                     child: Text(isSavings ? 'Ubah ke Uang Harian' : 'Ubah ke Tabungan'),
@@ -555,6 +563,342 @@ class _ManageAccountsScreenState extends ConsumerState<ManageAccountsScreen> {
     if (confirmed) {
       await ref.read(accountRepositoryProvider).deleteAccount(item.id);
       ref.read(homeRefreshTriggerProvider.notifier).state++;
+    }
+  }
+
+  Future<void> _showReconcileBalanceModal(
+    BuildContext context,
+    WidgetRef ref,
+    AccountWithBalance item,
+  ) async {
+    final balanceController = TextEditingController();
+    final noteController = TextEditingController(text: 'Penyesuaian Saldo');
+    bool isSubmitting = false;
+
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (sheetCtx) {
+          final isDark = Theme.of(sheetCtx).brightness == Brightness.dark;
+          final brandColor = ColorHelper.parseHex(item.colorHex);
+
+          return StatefulBuilder(
+            builder: (ctx, setSheetState) {
+              final rawText = balanceController.text.trim();
+              final parsedActual =
+                  rawText.isEmpty ? null : int.tryParse(rawText);
+              final diff = parsedActual == null
+                  ? null
+                  : parsedActual - item.physicalBalance;
+
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardOf(ctx),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.dividerOf(ctx),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          BankLogoHelper.buildAccountBadge(
+                            context: ctx,
+                            accountName: item.name,
+                            accountColor: brandColor,
+                            logoKey: item.logoKey,
+                            iconCodePoint: item.iconCodePoint,
+                            size: 40,
+                            iconSize: 22,
+                            borderRadius: 12,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Sesuaikan Saldo Asli',
+                                  style: AppTypography.titleMedium.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimaryOf(ctx),
+                                  ),
+                                ),
+                                Text(
+                                  item.name,
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.textSecondaryOf(ctx),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceOf(ctx),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.dividerOf(ctx)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Saldo tercatat di Monetra',
+                              style: AppTypography.labelSmall.copyWith(
+                                color: AppColors.textSecondaryOf(ctx),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              CurrencyFormatter.format(item.physicalBalance),
+                              style: AppTypography.titleMedium.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimaryOf(ctx),
+                              ),
+                            ),
+                            if (item.totalAllocated > 0) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Termasuk alokasi ${CurrencyFormatter.format(item.totalAllocated)} (Saldo bebas ${CurrencyFormatter.format(item.balance)})',
+                                style: AppTypography.labelSmall.copyWith(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondaryOf(ctx),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Saldo Asli Saat Ini',
+                        style: AppTypography.labelMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimaryOf(ctx),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: balanceController,
+                        autofocus: true,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        onChanged: (_) => setSheetState(() {}),
+                        decoration: InputDecoration(
+                          prefixText: 'Rp ',
+                          hintText: item.physicalBalance.toString(),
+                          filled: true,
+                          fillColor: AppColors.surfaceOf(ctx),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: AppColors.dividerOf(ctx)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: AppColors.dividerOf(ctx)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: isDark
+                                  ? AppColors.primary
+                                  : AppColors.primaryDark,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      if (diff != null)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: diff == 0
+                                ? AppColors.surfaceOf(ctx)
+                                : (diff > 0
+                                    ? AppColors.tertiary.withValues(alpha: 0.12)
+                                    : AppColors.danger.withValues(alpha: 0.12)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                diff == 0
+                                    ? Icons.check_circle_outline_rounded
+                                    : (diff > 0
+                                        ? Icons.add_circle_outline_rounded
+                                        : Icons.remove_circle_outline_rounded),
+                                size: 18,
+                                color: diff == 0
+                                    ? AppColors.textSecondaryOf(ctx)
+                                    : (diff > 0
+                                        ? AppColors.tertiary
+                                        : AppColors.danger),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  diff == 0
+                                      ? 'Saldo sudah sesuai, tidak ada selisih.'
+                                      : diff > 0
+                                          ? 'Selisih +${CurrencyFormatter.format(diff)} akan dicatat sebagai Pemasukan.'
+                                          : 'Selisih -${CurrencyFormatter.format(diff.abs())} akan dicatat sebagai Pengeluaran.',
+                                  style: AppTypography.bodySmall.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: diff == 0
+                                        ? AppColors.textSecondaryOf(ctx)
+                                        : (diff > 0
+                                            ? AppColors.tertiary
+                                            : AppColors.danger),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Catatan Penyesuaian (Opsional)',
+                        style: AppTypography.labelMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimaryOf(ctx),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: noteController,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: InputDecoration(
+                          hintText: 'Contoh: Biaya admin bank / selisih tunai',
+                          filled: true,
+                          fillColor: AppColors.surfaceOf(ctx),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: AppColors.dividerOf(ctx)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: AppColors.dividerOf(ctx)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.black,
+                            disabledBackgroundColor: AppColors.dividerOf(ctx),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: (isSubmitting || parsedActual == null)
+                              ? null
+                              : () async {
+                                  if (diff == 0) {
+                                    Navigator.of(ctx).pop();
+                                    if (context.mounted) {
+                                      AppSnackBar.showInfo(
+                                        context,
+                                        'Saldo ${item.name} sudah sesuai.',
+                                      );
+                                    }
+                                    return;
+                                  }
+                                  setSheetState(() => isSubmitting = true);
+                                  try {
+                                    final res = await ref
+                                        .read(accountRepositoryProvider)
+                                        .reconcileAccountBalance(
+                                          accountId: item.id,
+                                          actualPhysicalBalance: parsedActual,
+                                          note: noteController.text,
+                                        );
+                                    ref
+                                        .read(homeRefreshTriggerProvider.notifier)
+                                        .state++;
+                                    if (ctx.mounted) {
+                                      Navigator.of(ctx).pop();
+                                    }
+                                    if (context.mounted && res.hasAdjustment) {
+                                      final sign = res.difference > 0 ? '+' : '-';
+                                      AppSnackBar.showSuccess(
+                                        context,
+                                        'Saldo ${item.name} disesuaikan ($sign${CurrencyFormatter.format(res.difference.abs())})',
+                                      );
+                                    }
+                                  } finally {
+                                    if (ctx.mounted) {
+                                      setSheetState(() => isSubmitting = false);
+                                    }
+                                  }
+                                },
+                          child: isSubmitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.black,
+                                  ),
+                                )
+                              : Text(
+                                  diff == 0
+                                      ? 'Saldo Sudah Sesuai'
+                                      : 'Simpan Penyesuaian',
+                                  style: AppTypography.labelLarge.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      balanceController.dispose();
+      noteController.dispose();
     }
   }
 }

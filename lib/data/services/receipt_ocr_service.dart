@@ -4,9 +4,11 @@ import 'package:flutter/foundation.dart';
 class ReceiptOcrResult {
   final int? detectedAmount;
   final String? merchantName;
+  final String? bankName;
   final String? suggestedCategory;
   final DateTime? detectedDate;
   final String? noteSuggestion;
+  final bool isIncomeSuggestion;
   final List<int> candidateAmounts;
   final String rawText;
   final double confidence;
@@ -14,9 +16,11 @@ class ReceiptOcrResult {
   const ReceiptOcrResult({
     this.detectedAmount,
     this.merchantName,
+    this.bankName,
     this.suggestedCategory,
     this.detectedDate,
     this.noteSuggestion,
+    this.isIncomeSuggestion = false,
     this.candidateAmounts = const [],
     required this.rawText,
     this.confidence = 0.0,
@@ -179,22 +183,115 @@ class ReceiptOcrParser {
     return null;
   }
 
-  /// Ekstraksi teks struk lengkap
+  /// Daftar nama bank & e-wallet populer Indonesia untuk pencocokan akun
+  static final List<({String name, List<String> aliases})> _knownBanks = [
+    (name: 'Mandiri', aliases: ['LIVIN', 'BANK MANDIRI', 'MANDIRI']),
+    (
+      name: 'BCA',
+      aliases: [
+        'MYBCA',
+        'BCA MOBILE',
+        'KLIKBCA',
+        'BANK CENTRAL ASIA',
+        'M-TRANSFER',
+        'QRIS BCA',
+        'FLAZZ',
+        'BCA',
+      ]
+    ),
+    (name: 'SeaBank', aliases: ['SEABANK']),
+    (name: 'BRI', aliases: ['BRIMO', 'BANK BRI', 'BRIVA', 'BANK RAKYAT INDONESIA']),
+    (name: 'BNI', aliases: ['WONDR', 'BNI MOBILE', 'BANK NEGARA INDONESIA', 'BNI']),
+    (name: 'Jago', aliases: ['BANK JAGO', 'JAGO']),
+    (name: 'GoPay', aliases: ['GOPAY', 'GO-PAY']),
+    (name: 'OVO', aliases: ['OVO CASH', 'OVO POINTS', 'OVO']),
+    (name: 'ShopeePay', aliases: ['SHOPEEPAY', 'SHOPEE PAY']),
+    (name: 'DANA', aliases: ['DOMPET DANA', 'APLIKASI DANA', 'SALDO DANA', 'DANA INDONESIA']),
+  ];
+
+  static const Map<String, int> _monthMap = {
+    'JAN': 1,
+    'JANUARI': 1,
+    'JANUARY': 1,
+    'FEB': 2,
+    'FEBRUARI': 2,
+    'FEBRUARY': 2,
+    'MAR': 3,
+    'MARET': 3,
+    'MARCH': 3,
+    'APR': 4,
+    'APRIL': 4,
+    'MEI': 5,
+    'MAY': 5,
+    'JUN': 6,
+    'JUNI': 6,
+    'JUNE': 6,
+    'JUL': 7,
+    'JULI': 7,
+    'JULY': 7,
+    'AGU': 8,
+    'AGS': 8,
+    'AUG': 8,
+    'AGUSTUS': 8,
+    'AUGUST': 8,
+    'SEP': 9,
+    'SEPT': 9,
+    'SEPTEMBER': 9,
+    'OKT': 10,
+    'OCT': 10,
+    'OKTOBER': 10,
+    'OCTOBER': 10,
+    'NOV': 11,
+    'NOVEMBER': 11,
+    'DES': 12,
+    'DEC': 12,
+    'DESEMBER': 12,
+    'DECEMBER': 12,
+  };
+
+  /// Ekstraksi teks struk / resi m-banking lengkap
   static ReceiptOcrResult parseReceiptText(String rawText) {
     if (rawText.trim().isEmpty) {
       return const ReceiptOcrResult(rawText: '');
     }
 
-    final lines = rawText.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+    final lines = rawText
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
+    final fullUpper = rawText.toUpperCase();
 
     String? detectedMerchant;
+    String? detectedBank;
     String? suggestedCategory;
     DateTime? detectedDate;
     int? detectedTotal;
     final List<int> candidates = [];
 
-    // 1. Deteksi Merchant / Toko
-    for (final line in lines.take(12)) {
+    // 1. Deteksi Bank / E-Wallet pengirim resi m-banking
+    for (final line in lines) {
+      final upper = line.toUpperCase();
+      for (final b in _knownBanks) {
+        if (b.aliases.any((alias) => RegExp(r'(?:^|[^A-Z0-9])' + RegExp.escape(alias) + r'(?:$|[^A-Z0-9])').hasMatch(upper))) {
+          detectedBank = b.name;
+          break;
+        }
+      }
+      if (detectedBank != null) break;
+    }
+
+    // 1b. Deteksi Jenis Transaksi M-Banking (Pemasukan vs Pengeluaran)
+    final hasExpenseCue = RegExp(
+      r'\b(TRANSFER KE|KEPADA|KE REKENING|PEMBAYARAN|PEMBELIAN|BAYAR|QRIS|TAGIHAN|TOP\s*UP|BELANJA)\b',
+    ).hasMatch(fullUpper);
+    final hasIncomeCue = RegExp(
+      r'\b(DANA MASUK|TRANSFER MASUK|UANG MASUK|TERIMA DANA|BERHASIL DITERIMA|PENERIMAAN DANA|SALDO DITERIMA)\b',
+    ).hasMatch(fullUpper);
+    final isIncomeSuggestion = hasIncomeCue && !hasExpenseCue;
+
+    // 2. Deteksi Merchant / Toko
+    for (final line in lines.take(16)) {
       final upper = line.toUpperCase();
       for (final m in _knownMerchants) {
         for (final alias in m.aliases) {
@@ -209,23 +306,102 @@ class ReceiptOcrParser {
       if (detectedMerchant != null) break;
     }
 
-    // 2. Deteksi Tanggal (Format: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, dsb)
-    final dateRegex = RegExp(r'\b(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})\b');
+    // Deteksi pihak tujuan / merchant pada resi m-banking bila belum ketemu di _knownMerchants
+    String? counterparty;
+    final counterpartyRegex = RegExp(
+      r'^(?:PENERIMA|NAMA\s+PENERIMA|MERCHANT|TOKO|TUJUAN|KEPADA|DARI|PENGIRIM)\s*[:=-]?\s*(.+)$',
+      caseSensitive: false,
+    );
+    for (int i = 0; i < lines.length; i++) {
+      final m = counterpartyRegex.firstMatch(lines[i]);
+      if (m != null) {
+        final val = m.group(1)?.trim() ?? '';
+        if (val.isNotEmpty && !RegExp(r'^[*X0-9\s-]+$').hasMatch(val)) {
+          counterparty = val;
+          break;
+        }
+      } else {
+        final upper = lines[i].toUpperCase();
+        if ((upper == 'PENERIMA' ||
+                upper == 'MERCHANT' ||
+                upper == 'TUJUAN' ||
+                upper == 'KEPADA' ||
+                upper == 'NAMA PENERIMA') &&
+            i + 1 < lines.length) {
+          final nextVal = lines[i + 1].trim();
+          if (nextVal.isNotEmpty && !nextVal.contains(':')) {
+            counterparty = nextVal;
+            break;
+          }
+        }
+      }
+    }
+
+    if (suggestedCategory == null) {
+      if (fullUpper.contains('PLN') ||
+          fullUpper.contains('LISTRIK') ||
+          fullUpper.contains('PDAM') ||
+          fullUpper.contains('BPJS') ||
+          fullUpper.contains('INDIHOME') ||
+          fullUpper.contains('PULSA') ||
+          fullUpper.contains('PAKET DATA') ||
+          fullUpper.contains('TAGIHAN')) {
+        suggestedCategory = 'Tagihan';
+      } else if (fullUpper.contains('QRIS') ||
+          fullUpper.contains('KOPI') ||
+          fullUpper.contains('RESTO') ||
+          fullUpper.contains('CAFE') ||
+          fullUpper.contains('WARUNG')) {
+        suggestedCategory = 'Makan';
+      } else if (isIncomeSuggestion) {
+        suggestedCategory = 'Tambahan Uang';
+      }
+    }
+
+    // 3. Deteksi Tanggal (DD/MM/YYYY, YYYY-MM-DD, maupun 25 Nov 2026 / 25 November 2026)
+    final numericDateRegex = RegExp(r'\b(\d{1,4})[-/.](\d{1,2})[-/.](\d{1,4})\b');
+    final namedDateRegex = RegExp(
+      r'\b(\d{1,2})\s+([A-Za-z]+)\s+(20\d{2})\b',
+      caseSensitive: false,
+    );
+
     for (final line in lines) {
-      final match = dateRegex.firstMatch(line);
+      final named = namedDateRegex.firstMatch(line);
+      if (named != null) {
+        final d = int.tryParse(named.group(1)!);
+        final monthKey = named.group(2)!.toUpperCase();
+        final m = _monthMap[monthKey];
+        final y = int.tryParse(named.group(3)!);
+        if (d != null && m != null && y != null && d >= 1 && d <= 31) {
+          detectedDate = DateTime(y, m, d);
+          break;
+        }
+      }
+
+      final match = numericDateRegex.firstMatch(line);
       if (match != null) {
         try {
-          int d = int.parse(match.group(1)!);
-          int m = int.parse(match.group(2)!);
-          int y = int.parse(match.group(3)!);
+          final g1 = match.group(1)!;
+          final g2 = match.group(2)!;
+          final g3 = match.group(3)!;
 
-          if (y < 100) y += 2000;
-
-          // Swap jika format MM/DD
-          if (m > 12 && d <= 12) {
-            final tmp = m;
-            m = d;
-            d = tmp;
+          int d;
+          int m;
+          int y;
+          if (g1.length == 4) {
+            y = int.parse(g1);
+            m = int.parse(g2);
+            d = int.parse(g3);
+          } else {
+            d = int.parse(g1);
+            m = int.parse(g2);
+            y = int.parse(g3);
+            if (y < 100) y += 2000;
+            if (m > 12 && d <= 12) {
+              final tmp = m;
+              m = d;
+              d = tmp;
+            }
           }
 
           if (m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 2020 && y <= 2035) {
@@ -236,30 +412,35 @@ class ReceiptOcrParser {
       }
     }
 
-    // 3. Deteksi Total Belanja
-    // Regex prioritas tinggi: Baris yang mengandung kata kunci TOTAL, GRAND TOTAL, TOTAL BELANJA, TOTAL BAYAR, JUMLAH
+    // 4. Deteksi Total Transaksi / Nominal (Struk Retail & Resi M-Banking)
     final totalKeywordsRegex = RegExp(
-      r'(?:TOTAL(?:\s+BELANJA|\s+BAYAR|\s+HARGA|\s+AKHIR|\s+TAGIHAN)?|GRAND\s+TOTAL|NET\s+TOTAL|JUMLAH(?:\s+TOTAL)?|HARGA\s+TOTAL|TAGIHAN)\s*(?:RP\.?|IDR)?\s*[:=]?\s*([0-9.,]+)',
+      r'(?:TOTAL(?:\s+TRANSAKSI|\s+PEMBAYARAN|\s+TRANSFER|\s+BELANJA|\s+BAYAR|\s+HARGA|\s+AKHIR|\s+TAGIHAN)?|GRAND\s+TOTAL|NET\s+TOTAL|NOMINAL(?:\s+TRANSFER|\s+TRANSAKSI)?|JUMLAH(?:\s+TOTAL|\s+TRANSFER)?|HARGA\s+TOTAL|DANA\s+SEBESAR|TAGIHAN)\s*(?:[:=]?\s*(?:RP\.?|IDR)?)?\s*([0-9][0-9.,]*)',
       caseSensitive: false,
     );
 
-    // Kata kunci yang harus dihindari karena BUKAN total belanja (misal: Tunai yang dibayar, Kembalian, Diskon)
-    final avoidKeywords = ['KEMBALI', 'KEMBALIAN', 'CHANGE', 'TUNAI', 'CASH', 'DITERIMA', 'BAYAR TUNAI'];
+    final avoidKeywords = [
+      'KEMBALI',
+      'KEMBALIAN',
+      'CHANGE',
+      'TUNAI',
+      'CASH',
+      'BAYAR TUNAI',
+      'SISA SALDO',
+      'SALDO AKHIR',
+      'BIAYA ADMIN',
+      'ADMIN BANK',
+      'NO. REFERENSI',
+      'REF',
+    ];
 
-    // Scan dari baris paling bawah ke atas (karena Total biasanya ada di bagian bawah struk)
+    // Scan dari baris paling bawah ke atas agar "TOTAL TRANSAKSI" mengalahkan "NOMINAL" di atasnya
     for (int i = lines.length - 1; i >= 0; i--) {
       final line = lines[i];
       final upper = line.toUpperCase();
 
-      // Cek apakah ada kata yang harus dihindari
-      bool shouldAvoid = false;
-      for (final avoid in avoidKeywords) {
-        if (upper.contains(avoid)) {
-          shouldAvoid = true;
-          break;
-        }
+      if (avoidKeywords.any((avoid) => upper.contains(avoid))) {
+        continue;
       }
-      if (shouldAvoid) continue;
 
       final match = totalKeywordsRegex.firstMatch(line);
       if (match != null) {
@@ -275,11 +456,23 @@ class ReceiptOcrParser {
       }
     }
 
-    // Jika belum ketemu dari satu baris, coba cari jika kata "TOTAL" ada di satu baris, lalu nominalnya di baris berikutnya
+    // Dukungan format multi-baris: kata kunci di satu baris, nominal di baris berikutnya
     if (detectedTotal == null) {
-      for (int i = 0; i < lines.length - 1; i++) {
-        final line = lines[i].toUpperCase();
-        if (line == 'TOTAL' || line == 'TOTAL BELANJA' || line == 'GRAND TOTAL' || line == 'TOTAL BAYAR') {
+      const multilineHeaders = {
+        'TOTAL',
+        'TOTAL BELANJA',
+        'GRAND TOTAL',
+        'TOTAL BAYAR',
+        'TOTAL TRANSAKSI',
+        'TOTAL PEMBAYARAN',
+        'TOTAL TRANSFER',
+        'NOMINAL',
+        'NOMINAL TRANSFER',
+        'JUMLAH TRANSFER',
+      };
+      for (int i = lines.length - 2; i >= 0; i--) {
+        final line = lines[i].toUpperCase().replaceAll(':', '').trim();
+        if (multilineHeaders.contains(line)) {
           final nextLine = lines[i + 1];
           final amt = parseAmount(nextLine);
           if (amt != null) {
@@ -291,11 +484,19 @@ class ReceiptOcrParser {
       }
     }
 
-    // 4. Kumpulkan kandidat angka lain untuk cadangan (pilihan alternatif user)
-    final amountPattern = RegExp(r'(?:RP\.?|IDR)?\s*([0-9]{1,3}(?:[.,][0-9]{3})+(?:[.,]00)?)', caseSensitive: false);
+    // 5. Kumpulkan kandidat angka lain untuk cadangan (pilihan alternatif user)
+    final amountPattern = RegExp(
+      r'(?:RP\.?|IDR)?\s*([0-9]{1,3}(?:[.,][0-9]{3})+(?:[.,]00)?)',
+      caseSensitive: false,
+    );
     for (final line in lines) {
       final upper = line.toUpperCase();
-      if (upper.contains('KEMBALI') || upper.contains('KEMBALIAN')) continue;
+      if (upper.contains('KEMBALI') ||
+          upper.contains('KEMBALIAN') ||
+          upper.contains('SISA SALDO') ||
+          upper.contains('SALDO AKHIR')) {
+        continue;
+      }
 
       for (final m in amountPattern.allMatches(line)) {
         final matchStr = m.group(1);
@@ -308,26 +509,41 @@ class ReceiptOcrParser {
       }
     }
 
-    // Jika masih null tapi ada kandidat, pilih kandidat tertinggi (umumnya total adalah nilai tertinggi sebelum uang tunai)
     if (detectedTotal == null && candidates.isNotEmpty) {
       candidates.sort((a, b) => b.compareTo(a));
       detectedTotal = candidates.first;
     }
 
-    // Buat saran catatan
+    // 6. Buat saran catatan yang informatif
     String? noteSuggestion;
     if (detectedMerchant != null) {
       noteSuggestion = 'Struk $detectedMerchant';
+    } else if (counterparty != null) {
+      if (isIncomeSuggestion) {
+        noteSuggestion = 'Terima dari $counterparty';
+      } else if (fullUpper.contains('QRIS')) {
+        noteSuggestion = 'QRIS $counterparty';
+      } else {
+        noteSuggestion = 'Transfer ke $counterparty';
+      }
+    } else if (detectedBank != null) {
+      noteSuggestion = isIncomeSuggestion
+          ? 'Dana masuk $detectedBank'
+          : (fullUpper.contains('QRIS')
+              ? 'Pembayaran QRIS ($detectedBank)'
+              : 'Transaksi $detectedBank');
     } else {
       noteSuggestion = 'Belanja fisik (struk)';
     }
 
     return ReceiptOcrResult(
       detectedAmount: detectedTotal,
-      merchantName: detectedMerchant,
+      merchantName: detectedMerchant ?? counterparty,
+      bankName: detectedBank,
       suggestedCategory: suggestedCategory,
       detectedDate: detectedDate,
       noteSuggestion: noteSuggestion,
+      isIncomeSuggestion: isIncomeSuggestion,
       candidateAmounts: candidates,
       rawText: rawText,
       confidence: detectedTotal != null ? 0.9 : 0.0,
@@ -336,25 +552,33 @@ class ReceiptOcrParser {
 }
 
 class ReceiptOcrService {
-  /// Membaca foto struk dan mengembalikan hasil parsing
-  static Future<ReceiptOcrResult> scanReceipt(String imagePath) async {
+  /// Membaca foto struk (atau teks yang dibagikan) dan mengembalikan hasil parsing
+  static Future<ReceiptOcrResult> scanReceipt(
+    String imagePath, {
+    String? sharedText,
+  }) async {
+    if (sharedText != null && sharedText.trim().isNotEmpty) {
+      return ReceiptOcrParser.parseReceiptText(sharedText);
+    }
+
     final file = File(imagePath);
     if (!await file.exists()) {
       return const ReceiptOcrResult(rawText: '');
     }
 
     try {
-      // 1. Coba ekstraksi teks dari nama file / sample jika ada
-      final fileName = file.uri.pathSegments.isNotEmpty ? file.uri.pathSegments.last : '';
-      
-      // 2. Pada lingkungan yang memiliki file teks dampingan atau metadata
-      final txtCompanion = File('${imagePath.replaceAll(RegExp(r'\.[^.]+$'), '')}.txt');
+      final fileName =
+          file.uri.pathSegments.isNotEmpty ? file.uri.pathSegments.last : '';
+
+      // 1. Cek file teks pendamping bila ada
+      final txtCompanion =
+          File('${imagePath.replaceAll(RegExp(r'\.[^.]+$'), '')}.txt');
       if (await txtCompanion.exists()) {
         final content = await txtCompanion.readAsString();
         return ReceiptOcrParser.parseReceiptText(content);
       }
 
-      // 3. Fallback cerdas: Deteksi pola umum berdasarkan nama file foto
+      // 2. Fallback cerdas: deteksi pola umum berdasarkan nama file foto
       final nameUpper = fileName.toUpperCase();
       final mockBuilder = StringBuffer();
 
@@ -372,13 +596,22 @@ class ReceiptOcrService {
         mockBuilder.writeln('KOPI KENANGAN');
         mockBuilder.writeln('1 KOPI KENANGAN MANTAN 22.000');
         mockBuilder.writeln('TOTAL 22.000');
+      } else if (nameUpper.contains('LIVIN') || nameUpper.contains('MANDIRI')) {
+        mockBuilder.writeln("LIVIN' BY MANDIRI");
+      } else if (nameUpper.contains('BCA') || nameUpper.contains('MYBCA')) {
+        mockBuilder.writeln('MYBCA');
+      } else if (nameUpper.contains('SEABANK')) {
+        mockBuilder.writeln('SEABANK');
+      } else if (nameUpper.contains('BRIMO') || nameUpper.contains('BRI')) {
+        mockBuilder.writeln('BRIMO');
+      } else if (nameUpper.contains('QRIS')) {
+        mockBuilder.writeln('PEMBAYARAN QRIS');
       }
 
       if (mockBuilder.isNotEmpty) {
         return ReceiptOcrParser.parseReceiptText(mockBuilder.toString());
       }
 
-      // Jika tidak ada teks terdeteksi langsung, kembalikan hasil kosong
       return const ReceiptOcrResult(rawText: '');
     } catch (e) {
       debugPrint('Error OCR scanning: $e');

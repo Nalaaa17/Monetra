@@ -3,7 +3,26 @@ import '../models/account.dart';
 import '../models/goal.dart';
 import '../models/transaction.dart';
 import '../services/notification_service.dart';
+import 'transaction_repository.dart';
 import 'vacation_repository.dart';
+
+class AccountReconciliationResult {
+  final int previousPhysicalBalance;
+  final int actualPhysicalBalance;
+  final int difference; // actual - previous (> 0 income, < 0 expense, 0 none)
+  final int? transactionId;
+
+  const AccountReconciliationResult({
+    required this.previousPhysicalBalance,
+    required this.actualPhysicalBalance,
+    required this.difference,
+    this.transactionId,
+  });
+
+  bool get hasAdjustment => difference != 0;
+  String? get adjustmentType =>
+      difference == 0 ? null : (difference > 0 ? 'income' : 'expense');
+}
 
 class BalanceProjectionWarning {
   final String accountName;
@@ -585,6 +604,77 @@ class AccountRepository {
       {'isArchived': 1},
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  /// Menyesuaikan saldo fisik rekening dengan saldo asli di bank/dompet.
+  /// Mencatat transaksi penyesuaian otomatis sebesar selisihnya (`income` jika
+  /// saldo asli lebih besar, `expense` jika lebih kecil). Mengembalikan hasil
+  /// tanpa membuat transaksi baru bila selisih bernilai 0.
+  Future<AccountReconciliationResult> reconcileAccountBalance({
+    required int accountId,
+    required int actualPhysicalBalance,
+    int? categoryId,
+    String? note,
+  }) async {
+    final freeBalance = await calculateAccountBalance(accountId);
+    final allocatedGoals = await calculateGoalAllocatedForAccount(accountId);
+    final allocatedDebts = await calculateDebtAllocatedForAccount(accountId);
+    final allocatedVacations =
+        await VacationRepository().calculateVacationAllocatedForAccount(accountId);
+    final currentPhysicalBalance =
+        freeBalance + allocatedGoals + allocatedDebts + allocatedVacations;
+
+    final diff = actualPhysicalBalance - currentPhysicalBalance;
+    if (diff == 0) {
+      return AccountReconciliationResult(
+        previousPhysicalBalance: currentPhysicalBalance,
+        actualPhysicalBalance: actualPhysicalBalance,
+        difference: 0,
+      );
+    }
+
+    final type = diff > 0 ? 'income' : 'expense';
+    final amount = diff.abs();
+    int? resolvedCategoryId = categoryId;
+
+    if (resolvedCategoryId == null) {
+      final db = await AppDatabase.instance;
+      final catRows = await db.query(
+        'categories',
+        where: 'type = ? AND isActive = 1',
+        orderBy:
+            "CASE WHEN LOWER(name) IN ('lainnya', 'tambahan uang') THEN 0 ELSE 1 END, id ASC",
+        limit: 1,
+        whereArgs: [type],
+      );
+      if (catRows.isNotEmpty) {
+        resolvedCategoryId = catRows.first['id'] as int?;
+      }
+    }
+
+    final cleanNote = (note != null && note.trim().isNotEmpty)
+        ? note.trim()
+        : 'Penyesuaian Saldo';
+    final now = DateTime.now();
+
+    final txId = await TransactionRepository().insertTransaction(
+      TransactionModel(
+        type: type,
+        amount: amount,
+        accountId: accountId,
+        categoryId: resolvedCategoryId,
+        note: cleanNote,
+        date: now,
+        createdAt: now,
+      ),
+    );
+
+    return AccountReconciliationResult(
+      previousPhysicalBalance: currentPhysicalBalance,
+      actualPhysicalBalance: actualPhysicalBalance,
+      difference: diff,
+      transactionId: txId,
     );
   }
 }
